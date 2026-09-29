@@ -76,7 +76,7 @@ public class PictureRepository {
 			storage.delete(fileName);
 			return Optional.empty();
 		}
-		return Optional.of(new PictureInfo(pictureId, thumbnail != null));
+		return Optional.of(new PictureInfo(pictureId, picture.contentType(), thumbnail != null));
 	}
 
 	/**
@@ -84,7 +84,7 @@ public class PictureRepository {
 	 */
 	public List<PictureInfo> list(UUID ownerId) {
 		return jdbc.sql("""
-				SELECT id, thumbnail IS NOT NULL AS has_thumbnail FROM %s WHERE %s = ? ORDER BY position
+				SELECT id, content_type, thumbnail IS NOT NULL AS has_thumbnail FROM %s WHERE %s = ? ORDER BY position
 				""".formatted(table, ownerColumn))
 			.param(ownerId.toString())
 			.query((rs, rowNum) -> mapInfo(rs))
@@ -96,7 +96,7 @@ public class PictureRepository {
 	 */
 	public Map<UUID, List<PictureInfo>> listAll() {
 		return jdbc.sql("""
-				SELECT id, %1$s, thumbnail IS NOT NULL AS has_thumbnail FROM %2$s ORDER BY %1$s, position
+				SELECT id, %1$s, content_type, thumbnail IS NOT NULL AS has_thumbnail FROM %2$s ORDER BY %1$s, position
 				""".formatted(ownerColumn, table))
 			.query((rs, rowNum) -> Map.entry(UUID.fromString(rs.getString(ownerColumn)), mapInfo(rs)))
 			// list() rather than stream(): a JdbcClient stream keeps its connection until closed
@@ -186,7 +186,8 @@ public class PictureRepository {
 	}
 
 	private static PictureInfo mapInfo(ResultSet rs) throws SQLException {
-		return new PictureInfo(UUID.fromString(rs.getString("id")), rs.getBoolean("has_thumbnail"));
+		return new PictureInfo(UUID.fromString(rs.getString("id")), rs.getString("content_type"),
+				rs.getBoolean("has_thumbnail"));
 	}
 
 }

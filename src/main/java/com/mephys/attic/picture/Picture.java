@@ -4,8 +4,9 @@ import java.util.Map;
 
 public record Picture(String contentType, byte[] data) {
 
+	// PDF only arrives through PictureUploads.readImageOrPdf, for files of official documents
 	private static final Map<String, String> EXTENSIONS = Map.of("image/jpeg", "jpg", "image/png", "png", "image/gif",
-			"gif", "image/webp", "webp", "image/heic", "heic", "image/avif", "avif");
+			"gif", "image/webp", "webp", "image/heic", "heic", "image/avif", "avif", "application/pdf", "pdf");
 
 	public Picture {
 		if (contentType == null || !EXTENSIONS.containsKey(contentType)) {
