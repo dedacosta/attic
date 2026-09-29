@@ -2,7 +2,7 @@ import { documentName, documentTypeLabel, formatDate } from '../lib/format'
 import { validity } from '../lib/validity'
 import { useI18n } from '../i18n'
 import { usePermissions } from '../lib/permissions'
-import { IdCardIcon, TrashIcon } from './icons'
+import { IdCardIcon, ImageIcon, TrashIcon } from './icons'
 import ValidityBadge from './ValidityBadge'
 import type { HeirDocument } from '../api/types'
 
@@ -21,10 +21,15 @@ export default function DocumentCard({ document, onEdit, onDelete }: Props) {
     <article className={status === 'expired' ? 'card card-expired' : 'card'}>
       <button type="button" className="card-main" onClick={onEdit} aria-label={t.editNamed(documentName(document, t))}>
         <div className="card-image card-image-document">
-          {document.thumbnailUrl ? (
-            <img src={document.thumbnailUrl} alt="" loading="lazy" />
+          {document.pictures[0]?.thumbnailUrl ? (
+            <img src={document.pictures[0].thumbnailUrl} alt="" loading="lazy" />
           ) : (
             <IdCardIcon className="card-placeholder" width={44} height={44} />
+          )}
+          {document.pictures.length > 1 && (
+            <span className="card-photo-count" aria-label={t.photoCount(document.pictures.length)}>
+              <ImageIcon width={14} height={14} /> {document.pictures.length}
+            </span>
           )}
         </div>
         <div className="card-body">

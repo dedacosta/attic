@@ -5,8 +5,9 @@ import { useModal } from '../lib/useModal'
 import { useI18n } from '../i18n'
 import { usePermissions } from '../lib/permissions'
 import { CloseIcon, TrashIcon } from './icons'
-import PictureField from './PictureField'
-import type { DocumentInput, Heir, HeirDocument, PictureChange } from '../api/types'
+import PhotosField from './PhotosField'
+import { PhotoUploadError } from '../lib/photos'
+import { storedPhotos, type DocumentInput, type Heir, type HeirDocument, type PhotoEntry } from '../api/types'
 
 interface Props {
   document: HeirDocument | null
@@ -14,7 +15,7 @@ interface Props {
   heirs: Heir[]
   /** Heir to select for a new document, e.g. the one being filtered on */
   defaultHeirId?: string
-  onSave: (input: DocumentInput, picture: PictureChange) => Promise<void>
+  onSave: (input: DocumentInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) => Promise<void>
   onDelete: () => void
   onClose: () => void
 }
@@ -27,7 +28,7 @@ export default function DocumentDialog({ document, types, heirs, defaultHeirId, 
   const [type, setType] = useState(document?.type ?? '')
   const [validUntil, setValidUntil] = useState(document?.validUntil ?? '')
   const [comments, setComments] = useState(document?.comments ?? '')
-  const [picture, setPicture] = useState<PictureChange>({ kind: 'keep' })
+  const [photos, setPhotos] = useState<PhotoEntry[]>(() => storedPhotos(document?.pictures ?? []))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,10 +42,11 @@ export default function DocumentDialog({ document, types, heirs, defaultHeirId, 
     try {
       await onSave(
         { heirId: heirId || null, type, validUntil: validUntil || null, comments: comments.trim() || null },
-        picture,
+        photos,
+        setPhotos,
       )
     } catch (e) {
-      setError(apiErrorMessage(e, t))
+      setError(e instanceof PhotoUploadError ? t.errorPhotoUpload(e.fileName, apiErrorMessage(e.reason, t)) : apiErrorMessage(e, t))
       setSaving(false)
     }
   }
@@ -64,8 +66,7 @@ export default function DocumentDialog({ document, types, heirs, defaultHeirId, 
         </header>
 
         <div className="dialog-content">
-          <PictureField readOnly={!canEdit} current={document?.thumbnailUrl ?? document?.pictureUrl ?? null}
-            fullUrl={document?.pictureUrl ?? null} change={picture} onChange={setPicture} onError={setError} />
+          <PhotosField readOnly={!canEdit} photos={photos} onChange={setPhotos} onError={setError} />
 
           <fieldset className="fields" disabled={!canEdit}>
             <label className="field">

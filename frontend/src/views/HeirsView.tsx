@@ -6,12 +6,12 @@ import HeirCard from '../components/HeirCard'
 import HeirDialog from '../components/HeirDialog'
 import SearchBar from '../components/SearchBar'
 import { PlusIcon } from '../components/icons'
-import { saveDocument } from '../lib/documents'
+import { saveWithPhotos } from '../lib/photos'
 import { documentName, formatDate, normalize } from '../lib/format'
 import { add, compare, formatFraction, formatPercent, ONE, parseFraction, subtract, ZERO } from '../lib/fraction'
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
-import type { DocumentInput, Heir, HeirDocument, HeirInput, PictureChange } from '../api/types'
+import type { DocumentInput, Heir, HeirDocument, HeirInput, PhotoEntry } from '../api/types'
 
 function matches(heir: Heir, words: string[], t: Messages): boolean {
   const text = normalize(
@@ -101,9 +101,12 @@ export default function HeirsView() {
     setEditing(editingHeir ? null : saved)
   }
 
-  async function saveDocumentOfHeir(input: DocumentInput, picture: PictureChange) {
+  async function saveDocumentOfHeir(input: DocumentInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) {
     const existing = editingDocument !== null && editingDocument !== 'new' ? editingDocument : null
-    await saveDocument(existing, input, picture, setEditingDocument)
+    await saveWithPhotos(
+      () => (existing ? api.updateDocument(existing.id, input) : api.createDocument(input)),
+      '/api/documents', photos, setEditingDocument, onPhotos,
+    )
     await reload()
     setEditingDocument(null)
   }

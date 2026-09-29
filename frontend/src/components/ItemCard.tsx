@@ -17,10 +17,15 @@ export default function ItemCard({ item, onEdit, onDelete }: Props) {
     <article className={item.existent ? 'card' : 'card card-missing'}>
       <button type="button" className="card-main" onClick={onEdit} aria-label={t.editNamed(item.name)}>
         <div className="card-image">
-          {item.thumbnailUrl ? (
-            <img src={item.thumbnailUrl} alt="" loading="lazy" />
+          {item.pictures[0]?.thumbnailUrl ? (
+            <img src={item.pictures[0].thumbnailUrl} alt="" loading="lazy" />
           ) : (
             <ImageIcon className="card-placeholder" width={40} height={40} />
+          )}
+          {item.pictures.length > 1 && (
+            <span className="card-photo-count" aria-label={t.photoCount(item.pictures.length)}>
+              <ImageIcon width={14} height={14} /> {item.pictures.length}
+            </span>
           )}
           {item.quantity !== 1 && <span className="card-quantity">×{item.quantity}</span>}
         </div>

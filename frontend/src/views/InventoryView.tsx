@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, apiErrorMessage } from '../api/api'
+import { saveWithPhotos } from '../lib/photos'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ItemCard from '../components/ItemCard'
 import ItemDialog from '../components/ItemDialog'
@@ -8,7 +9,7 @@ import { formatDate, locationLabel, normalize } from '../lib/format'
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
 import { FileIcon, PlusIcon } from '../components/icons'
-import type { Item, ItemInput, PictureChange } from '../api/types'
+import type { Item, ItemInput, PhotoEntry } from '../api/types'
 
 type Presence = 'all' | 'present' | 'missing'
 
@@ -74,17 +75,13 @@ export default function InventoryView() {
     await exportPdf(visible, items?.length ?? 0, filters, t)
   }
 
-  async function save(input: ItemInput, picture: PictureChange) {
-    const saved = editing === 'new' || editing === null
-      ? await api.createItem(input)
-      : await api.updateItem(editing.id, input)
-    // From here on the item exists: a retry after a failed picture upload must update, not create again
-    setEditing(saved)
-    if (picture.kind === 'replace') {
-      await api.putPicture(`/api/items/${saved.id}`, picture.file)
-    } else if (picture.kind === 'remove' && saved.pictureUrl) {
-      await api.deletePicture(`/api/items/${saved.id}`)
-    }
+  async function save(input: ItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) {
+    const existing = editing === 'new' || editing === null ? null : editing
+    // From the first save on the item exists: a retry after a failed upload updates it
+    await saveWithPhotos(
+      () => (existing ? api.updateItem(existing.id, input) : api.createItem(input)),
+      '/api/items', photos, setEditing, onPhotos,
+    )
     await reload()
     setEditing(null)
   }

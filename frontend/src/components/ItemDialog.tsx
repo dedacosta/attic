@@ -4,16 +4,17 @@ import { decimalSeparator, locationLabel, shortId } from '../lib/format'
 import { useI18n } from '../i18n'
 import { usePermissions } from '../lib/permissions'
 import { CloseIcon, TrashIcon } from './icons'
-import PictureField from './PictureField'
+import PhotosField from './PhotosField'
+import { PhotoUploadError } from '../lib/photos'
 import { useModal } from '../lib/useModal'
-import type { Item, ItemInput, PictureChange } from '../api/types'
+import { storedPhotos, type Item, type ItemInput, type PhotoEntry } from '../api/types'
 
 const VALUE_PATTERN = /^\d+([.,]\d{1,2})?$/
 
 interface Props {
   item: Item | null
   locations: string[]
-  onSave: (input: ItemInput, picture: PictureChange) => Promise<void>
+  onSave: (input: ItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) => Promise<void>
   onDelete: () => void
   onClose: () => void
 }
@@ -47,7 +48,7 @@ export default function ItemDialog({ item, locations, onSave, onDelete, onClose 
   const { canEdit } = usePermissions()
   const ref = useModal()
   const [form, setForm] = useState(() => initialState(item, t.locale))
-  const [picture, setPicture] = useState<PictureChange>({ kind: 'keep' })
+  const [photos, setPhotos] = useState<PhotoEntry[]>(() => storedPhotos(item?.pictures ?? []))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -81,10 +82,11 @@ export default function ItemDialog({ item, locations, onSave, onDelete, onClose 
           owner: form.owner.trim(),
           comments: form.comments.trim() || null,
         },
-        picture,
+        photos,
+        setPhotos,
       )
     } catch (e) {
-      setError(apiErrorMessage(e, t))
+      setError(e instanceof PhotoUploadError ? t.errorPhotoUpload(e.fileName, apiErrorMessage(e.reason, t)) : apiErrorMessage(e, t))
       setSaving(false)
     }
   }
@@ -104,8 +106,7 @@ export default function ItemDialog({ item, locations, onSave, onDelete, onClose 
         </header>
 
         <div className="dialog-content">
-          <PictureField readOnly={!canEdit} current={item?.thumbnailUrl ?? item?.pictureUrl ?? null} fullUrl={item?.pictureUrl ?? null}
-            change={picture} onChange={setPicture} onError={setError} />
+          <PhotosField readOnly={!canEdit} photos={photos} onChange={setPhotos} onError={setError} />
 
           <fieldset className="fields" disabled={!canEdit}>
             <label className="field field-wide">
