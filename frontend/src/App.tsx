@@ -4,20 +4,28 @@ import AccountMenu from './components/AccountMenu'
 import Footer from './components/Footer'
 import LanguageSwitch from './components/LanguageSwitch'
 import SignInScreen from './components/SignInScreen'
-import { BoxIcon, HouseIcon, IdCardIcon, KeyIcon, HeirsIcon } from './components/icons'
+import { BoxIcon, HouseIcon, IdCardIcon, KeyIcon, HeirsIcon, LandIcon } from './components/icons'
 import { useI18n } from './i18n'
 import { PermissionsProvider, usePermissions } from './lib/permissions'
 import DocumentsView from './views/DocumentsView'
 import InventoryView from './views/InventoryView'
 import HeirsView from './views/HeirsView'
+import HouseView from './views/HouseView'
+import LandView from './views/LandView'
 import UsersView from './views/UsersView'
 import type { Session } from './api/types'
 
-type View = 'inventory' | 'heirs' | 'documents' | 'users'
+type View = 'inventory' | 'heirs' | 'documents' | 'house' | 'land' | 'users'
 
 // The view lives in the URL hash (#/documents) so that reloading keeps it
 function viewFromHash(): View {
+  // A land parcel's page is #/land/<id>
+  if (window.location.hash.startsWith('#/land')) {
+    return 'land'
+  }
   switch (window.location.hash) {
+    case '#/house':
+      return 'house'
     case '#/heirs':
       return 'heirs'
     case '#/documents':
@@ -83,8 +91,9 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
   const { seesHeirs, isAdmin } = usePermissions()
   const [hashView, setView] = useState(viewFromHash)
   // Tabs this account has: users without a linked heir have no Heirs and Documents tabs, and
-  // only administrators have the Users tab
-  const allowed = (id: View) => id === 'inventory' || (id === 'users' ? isAdmin : seesHeirs)
+  // only administrators have the Users tab. Everybody sees the house and the land.
+  const allowed = (id: View) =>
+    id === 'inventory' || id === 'house' || id === 'land' || (id === 'users' ? isAdmin : seesHeirs)
   const view: View = allowed(hashView) ? hashView : 'inventory'
 
   useEffect(() => {
@@ -97,6 +106,8 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
     { id: 'inventory', href: '#/', label: t.tabInventory, Icon: BoxIcon },
     { id: 'heirs', href: '#/heirs', label: t.tabHeirs, Icon: HeirsIcon },
     { id: 'documents', href: '#/documents', label: t.tabDocuments, Icon: IdCardIcon },
+    { id: 'house', href: '#/house', label: t.tabHouse, Icon: HouseIcon },
+    { id: 'land', href: '#/land', label: t.tabLand, Icon: LandIcon },
     { id: 'users', href: '#/users', label: t.users, Icon: KeyIcon },
   ] as const).filter((tab) => allowed(tab.id))
 
@@ -123,6 +134,8 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
       {view === 'inventory' && <InventoryView />}
       {view === 'heirs' && <HeirsView />}
       {view === 'documents' && <DocumentsView />}
+      {view === 'house' && <HouseView />}
+      {view === 'land' && <LandView />}
       {view === 'users' && <UsersView currentUser={username} />}
 
       <Footer />
