@@ -96,7 +96,7 @@ export default function PhotosField({ photos, onChange, onError, readOnly = fals
                       {t.makeCover}
                     </button>
                   )}
-                  <span className="spacer" />
+                  {allowPdf && <span className="spacer" />}
                   <button type="button" className="icon-button" onClick={() => remove(index)}
                     aria-label={t.removePhoto}>
                     <TrashIcon width={16} height={16} />

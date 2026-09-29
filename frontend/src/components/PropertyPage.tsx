@@ -137,7 +137,9 @@ export default function PropertyPage({ property, onChanged, onDeleted }: Props) 
 
       {openDocument !== null && (
         <PropertyDocumentDialog propertyId={property.id} document={openDocument === 'new' ? null : openDocument}
-          types={documentTypes} onChanged={onChanged} onClose={() => setOpenDocument(null)} />
+          types={documentTypes} onChanged={onChanged}
+          // A document may exist even when the dialog is cancelled after a failed upload
+          onClose={() => { setOpenDocument(null); onChanged() }} />
       )}
 
       {deleting && onDeleted && (

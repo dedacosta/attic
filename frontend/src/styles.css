@@ -760,21 +760,24 @@ form > .dialog-actions {
 }
 
 @media (max-width: 640px) {
+  /* Up to six tabs: they share the width, and the row scrolls sideways when labels need more */
   .tabs {
     order: 3;
     flex-basis: 100%;
     margin-right: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
-  /* Icon above the label so three tabs fit side by side */
+  /* Icon above the label */
   .tab {
-    flex: 1;
+    flex: 1 0 auto;
     flex-direction: column;
     justify-content: center;
     gap: 2px;
-    min-width: 0;
+    min-width: 56px;
     height: 52px;
-    padding: 0 4px;
+    padding: 0 6px;
     border-radius: var(--radius-small);
     font-size: 0.78rem;
   }
