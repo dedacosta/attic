@@ -96,3 +96,15 @@ export const CloseIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="M6 6l12 12M18 6 6 18" />
   </svg>
 )
+
+export const ChevronLeftIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="m15 18-6-6 6-6" />
+  </svg>
+)
+
+export const ChevronRightIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+)
