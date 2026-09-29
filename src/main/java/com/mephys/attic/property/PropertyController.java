@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -72,9 +72,13 @@ class PropertyController {
 		try {
 			saved = repository.save(property);
 		}
-		catch (DataIntegrityViolationException ex) {
-			// Another request created the house in the meantime: the unique index refused this one
-			throw new HouseAlreadyExistsException();
+		catch (DataAccessException ex) {
+			// Another request created the house in the meantime: the unique index refused this one.
+			// SQLite's constraint errors are not translated to DataIntegrityViolationException.
+			if (property.kind() == PropertyKind.HOUSE && repository.findHouse().isPresent()) {
+				throw new HouseAlreadyExistsException();
+			}
+			throw ex;
 		}
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").build(saved.id());
 		return ResponseEntity.created(location).body(toResponse(saved));

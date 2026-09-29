@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -24,6 +25,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -102,6 +104,15 @@ class PropertyControllerTests {
 
 		mvc.perform(post("/api/properties").contentType(MediaType.APPLICATION_JSON)
 			.content("{\"kind\":\"HOUSE\",\"name\":\"Outra casa\"}")).andExpect(status().isConflict());
+	}
+
+	@Test
+	void databaseRefusesASecondHouseEvenWithoutTheCheck() throws Exception {
+		create("{\"kind\":\"HOUSE\",\"name\":\"Casa\"}");
+
+		assertThatExceptionOfType(DataAccessException.class).isThrownBy(() -> jdbc
+			.sql("INSERT INTO property (id, kind, name) VALUES ('11111111-1111-4111-8111-111111111111', 'HOUSE', 'Outra')")
+			.update());
 	}
 
 	@Test
