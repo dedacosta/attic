@@ -1243,3 +1243,70 @@ fieldset.fields:disabled .checkbox {
 .user-contact a:hover {
   text-decoration: underline;
 }
+
+/* Full-screen photo viewer */
+
+.photo-viewer {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgb(0 0 0 / 0.92);
+  color: #fff;
+}
+
+.photo-viewer::backdrop {
+  background: rgb(0 0 0 / 0.92);
+}
+
+.photo-viewer-stage {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+}
+
+.photo-viewer-stage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.photo-viewer .icon-button {
+  position: absolute;
+  color: #fff;
+  background: rgb(0 0 0 / 0.4);
+}
+
+.photo-viewer-close {
+  top: 12px;
+  right: 12px;
+}
+
+.photo-viewer-previous,
+.photo-viewer-next {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.photo-viewer-previous {
+  left: 12px;
+}
+
+.photo-viewer-next {
+  right: 12px;
+}
+
+.photo-viewer-count {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 0.9rem;
+}
