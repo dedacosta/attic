@@ -1,0 +1,7 @@
+[Unit]
+Description=Back up Attic (database and pictures)
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/attic/attic.env
+ExecStart=/usr/bin/python3 %h/.local/share/attic/backup.py

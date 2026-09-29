@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up Attic every day
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30min
+# Catch up on the next start if the computer was off at backup time
+Persistent=true
+
+[Install]
+WantedBy=timers.target

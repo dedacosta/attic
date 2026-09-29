@@ -1,0 +1,18 @@
+[Unit]
+Description=Attic home inventory
+After=network-online.target
+
+[Service]
+# ATTIC_DATA and the backup settings, written by install.sh
+EnvironmentFile=%h/.config/attic/attic.env
+ExecStart=/usr/bin/java --enable-native-access=ALL-UNNAMED -jar %h/.local/share/attic/attic.jar \
+    --spring.profiles.active=prod --attic.database.file=${ATTIC_DATA}/attic.db
+# Java exits with 143 when stopped with SIGTERM
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

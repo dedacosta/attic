@@ -1,0 +1,7 @@
+package com.mephys.attic.inventory;
+
+enum Location {
+
+	LIVING_ROOM, KITCHEN, DINING_ROOM, BEDROOM, BATHROOM, OFFICE, HALLWAY, ATTIC, BASEMENT, GARAGE, GARDEN, OTHER
+
+}
