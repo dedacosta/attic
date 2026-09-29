@@ -45,7 +45,8 @@ export default function PhotoViewer({ sources, start, onClose }: Props) {
 
   return (
     <dialog ref={ref} className="photo-viewer" aria-label={t.photoOf(index + 1, sources.length)}
-      onCancel={(e) => { e.preventDefault(); onClose() }} onKeyDown={onKeyDown}>
+      // React passes cancel on to the dialog around this one, which would close it too
+      onCancel={(e) => { e.preventDefault(); e.stopPropagation(); onClose() }} onKeyDown={onKeyDown}>
       <div className="photo-viewer-stage"
         onPointerDown={(e) => { swipeStart.current = e.clientX }}
         onPointerUp={onPointerUp}

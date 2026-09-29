@@ -66,7 +66,7 @@ export default function DocumentDialog({ document, types, heirs, defaultHeirId, 
         </header>
 
         <div className="dialog-content">
-          <PhotosField readOnly={!canEdit} photos={photos} onChange={setPhotos} onError={setError} />
+          <PhotosField readOnly={!canEdit || saving} photos={photos} onChange={setPhotos} onError={setError} />
 
           <fieldset className="fields" disabled={!canEdit}>
             <label className="field">
