@@ -1,6 +1,7 @@
 package com.mephys.attic.document;
 
 import com.mephys.attic.picture.PictureInfo;
+import com.mephys.attic.picture.PictureResponse;
 import com.mephys.attic.security.CurrentAccount;
 import com.mephys.attic.picture.PictureUploads;
 
@@ -12,6 +13,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,11 +46,11 @@ class DocumentController {
 
 	@GetMapping("/documents")
 	List<DocumentResponse> list() {
-		Map<UUID, PictureInfo> pictures = repository.findAllPictureInfo();
+		Map<UUID, List<PictureInfo>> pictures = repository.listAllPictures();
 		return repository.findAll()
 			.stream()
 			.filter((named) -> account.maySee(named.document().heirId()))
-			.map((named) -> DocumentResponse.of(named, pictures.get(named.document().id())))
+			.map((named) -> DocumentResponse.of(named, pictures.getOrDefault(named.document().id(), List.of())))
 			.toList();
 	}
 
@@ -78,26 +80,43 @@ class DocumentController {
 		return repository.deleteById(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
 	}
 
-	@GetMapping("/documents/{id}/picture")
-	ResponseEntity<byte[]> getPicture(@PathVariable UUID id) {
-		return PictureUploads.pictureResponse(maySee(id) ? repository.findPicture(id) : Optional.empty());
+	@PostMapping(path = "/documents/{id}/pictures", consumes = "image/*")
+	ResponseEntity<PictureResponse> addPicture(@PathVariable UUID id,
+			@RequestHeader(HttpHeaders.CONTENT_TYPE) String contentType, @RequestBody byte[] data) {
+		String base = DocumentResponse.base(id);
+		return repository.addPicture(id, uploads.read(contentType, data))
+			.map((info) -> ResponseEntity.created(URI.create(info.url(base))).body(PictureResponse.of(base, info)))
+			.orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
-	@PutMapping(path = "/documents/{id}/picture", consumes = "image/*")
-	ResponseEntity<Void> putPicture(@PathVariable UUID id, @RequestHeader(HttpHeaders.CONTENT_TYPE) String contentType,
-			@RequestBody byte[] data) {
-		boolean saved = repository.savePicture(id, uploads.read(contentType, data));
-		return saved ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+	@GetMapping("/documents/{id}/pictures/{pictureId}")
+	ResponseEntity<byte[]> getPicture(@PathVariable UUID id, @PathVariable UUID pictureId) {
+		return PictureUploads.pictureResponse(maySee(id) ? repository.findPicture(id, pictureId) : Optional.empty());
 	}
 
-	@GetMapping("/documents/{id}/thumbnail")
-	ResponseEntity<byte[]> getThumbnail(@PathVariable UUID id) {
-		return PictureUploads.thumbnailResponse(maySee(id) ? repository.findThumbnail(id) : Optional.empty());
+	@GetMapping("/documents/{id}/pictures/{pictureId}/thumbnail")
+	ResponseEntity<byte[]> getThumbnail(@PathVariable UUID id, @PathVariable UUID pictureId) {
+		return PictureUploads.thumbnailResponse(maySee(id) ? repository.findThumbnail(id, pictureId) : Optional.empty());
 	}
 
-	@DeleteMapping("/documents/{id}/picture")
-	ResponseEntity<Void> deletePicture(@PathVariable UUID id) {
-		return repository.deletePicture(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+	@DeleteMapping("/documents/{id}/pictures/{pictureId}")
+	@Transactional
+	ResponseEntity<Void> deletePicture(@PathVariable UUID id, @PathVariable UUID pictureId) {
+		return repository.deletePicture(id, pictureId) ? ResponseEntity.noContent().build()
+				: ResponseEntity.notFound().build();
+	}
+
+	/**
+	 * Put the document's photos in this order; the first becomes the cover.
+	 */
+	@PutMapping("/documents/{id}/pictures/order")
+	@Transactional
+	ResponseEntity<Void> reorderPictures(@PathVariable UUID id, @RequestBody List<UUID> pictureIds) {
+		if (repository.findById(id).isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		repository.reorderPictures(id, pictureIds);
+		return ResponseEntity.noContent().build();
 	}
 
 	/**
@@ -124,7 +143,7 @@ class DocumentController {
 	}
 
 	private DocumentResponse toResponse(DocumentRepository.NamedDocument named) {
-		return DocumentResponse.of(named, repository.findPictureInfo(named.document().id()).orElse(null));
+		return DocumentResponse.of(named, repository.listPictures(named.document().id()));
 	}
 
 }

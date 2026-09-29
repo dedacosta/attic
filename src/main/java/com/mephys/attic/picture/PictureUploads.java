@@ -3,6 +3,7 @@ package com.mephys.attic.picture;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -33,14 +34,24 @@ public class PictureUploads {
 		return new Picture("image/" + MediaType.parseMediaType(contentType).getSubtype(), data);
 	}
 
+	/** Picture ids are never reused, so a picture never changes behind its URL */
+	private static final String CACHE_FOREVER = "private, max-age=31536000, immutable";
+
 	public static ResponseEntity<byte[]> pictureResponse(Optional<Picture> picture) {
 		return picture
-			.map((p) -> ResponseEntity.ok().contentType(MediaType.parseMediaType(p.contentType())).body(p.data()))
+			.map((p) -> ResponseEntity.ok()
+				.header(HttpHeaders.CACHE_CONTROL, CACHE_FOREVER)
+				.contentType(MediaType.parseMediaType(p.contentType()))
+				.body(p.data()))
 			.orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
 	public static ResponseEntity<byte[]> thumbnailResponse(Optional<byte[]> thumbnail) {
-		return thumbnail.map((t) -> ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(t))
+		return thumbnail
+			.map((t) -> ResponseEntity.ok()
+				.header(HttpHeaders.CACHE_CONTROL, CACHE_FOREVER)
+				.contentType(MediaType.IMAGE_JPEG)
+				.body(t))
 			.orElseGet(() -> ResponseEntity.notFound().build());
 	}
 

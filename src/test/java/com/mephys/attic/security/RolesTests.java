@@ -106,8 +106,13 @@ class RolesTests {
 		String item = "00000000-0000-4000-8000-000000000000";
 		mvc.perform(json(put("/api/items/" + item).session(user), "{\"name\":\"X\"}")).andExpect(status().isForbidden());
 		mvc.perform(delete("/api/items/" + item).session(user).with(csrf())).andExpect(status().isForbidden());
-		mvc.perform(put("/api/items/" + item + "/picture").session(user).with(csrf())
+		mvc.perform(post("/api/items/" + item + "/pictures").session(user).with(csrf())
 			.contentType(MediaType.IMAGE_PNG).content(new byte[] { 1 })).andExpect(status().isForbidden());
+		String photo = "00000000-0000-4000-8000-000000000001";
+		mvc.perform(delete("/api/items/" + item + "/pictures/" + photo).session(user).with(csrf()))
+			.andExpect(status().isForbidden());
+		mvc.perform(json(put("/api/items/" + item + "/pictures/order").session(user), "[]"))
+			.andExpect(status().isForbidden());
 		mvc.perform(delete("/api/heirs/" + item).session(user).with(csrf())).andExpect(status().isForbidden());
 
 		// The administrator can

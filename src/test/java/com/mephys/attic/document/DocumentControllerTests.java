@@ -61,7 +61,7 @@ class DocumentControllerTests {
 			.andExpect(jsonPath("$.type").value("PASSPORT"))
 			.andExpect(jsonPath("$.validUntil").value("2031-05-17"))
 			.andExpect(jsonPath("$.comments").value("Renew 6 months before"))
-			.andExpect(jsonPath("$.pictureUrl").doesNotExist())
+			.andExpect(jsonPath("$.pictures").isEmpty())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
@@ -144,40 +144,48 @@ class DocumentControllerTests {
 	}
 
 	@Test
-	void pictureLifecycle() throws Exception {
+	void photosLifecycle() throws Exception {
 		String id = createDocument(createHeir("David"), "ID_CARD");
-		byte[] photo = TestImages.withExifOrientation(TestImages.jpeg(640, 400), 6);
+		byte[] front = TestImages.withExifOrientation(TestImages.jpeg(640, 400), 6);
+		String frontId = addPhoto(id, MediaType.IMAGE_JPEG, front);
+		String backId = addPhoto(id, MediaType.IMAGE_PNG, TestImages.png(40, 40));
 
-		mvc.perform(put("/api/documents/{id}/picture", id).contentType(MediaType.IMAGE_JPEG).content(photo))
-			.andExpect(status().isNoContent());
 		mvc.perform(get("/api/documents/{id}", id))
-			.andExpect(jsonPath("$.pictureUrl").value(startsWith("/api/documents/" + id + "/picture?v=")))
-			.andExpect(jsonPath("$.thumbnailUrl").value(startsWith("/api/documents/" + id + "/thumbnail?v=")));
-		mvc.perform(get("/api/documents/{id}/picture", id)).andExpect(status().isOk()).andExpect(content().bytes(photo));
-		mvc.perform(get("/api/documents/{id}/thumbnail", id))
+			.andExpect(jsonPath("$.pictures[0].id").value(frontId))
+			.andExpect(jsonPath("$.pictures[0].url").value("/api/documents/" + id + "/pictures/" + frontId))
+			.andExpect(jsonPath("$.pictures[1].id").value(backId));
+		mvc.perform(get("/api/documents/{id}/pictures/{pictureId}", id, frontId))
+			.andExpect(status().isOk())
+			.andExpect(content().bytes(front));
+		mvc.perform(get("/api/documents/{id}/pictures/{pictureId}/thumbnail", id, frontId))
 			.andExpect(status().isOk())
 			.andExpect(content().contentType(MediaType.IMAGE_JPEG));
 
-		mvc.perform(put("/api/documents/{id}/picture", id).contentType(MediaType.IMAGE_PNG).content(new byte[100 * 1024 + 1]))
+		mvc.perform(put("/api/documents/{id}/pictures/order", id).contentType(MediaType.APPLICATION_JSON)
+			.content("[\"" + backId + "\",\"" + frontId + "\"]")).andExpect(status().isNoContent());
+		mvc.perform(get("/api/documents/{id}", id)).andExpect(jsonPath("$.pictures[0].id").value(backId));
+
+		mvc.perform(post("/api/documents/{id}/pictures", id).contentType(MediaType.IMAGE_PNG).content(new byte[100 * 1024 + 1]))
 			.andExpect(status().isContentTooLarge());
-		mvc.perform(put("/api/documents/{id}/picture", id).contentType("image/svg+xml").content("<a/>"))
+		mvc.perform(post("/api/documents/{id}/pictures", id).contentType("image/svg+xml").content("<a/>"))
 			.andExpect(status().isBadRequest());
 
-		mvc.perform(delete("/api/documents/{id}/picture", id)).andExpect(status().isNoContent());
-		mvc.perform(get("/api/documents/{id}/picture", id)).andExpect(status().isNotFound());
-		mvc.perform(get("/api/documents/{id}", id)).andExpect(jsonPath("$.pictureUrl").doesNotExist());
+		mvc.perform(delete("/api/documents/{id}/pictures/{pictureId}", id, backId)).andExpect(status().isNoContent());
+		mvc.perform(get("/api/documents/{id}", id))
+			.andExpect(jsonPath("$.pictures.length()").value(1))
+			.andExpect(jsonPath("$.pictures[0].id").value(frontId));
 	}
 
 	@Test
-	void deletingDocumentDeletesPictureFile() throws Exception {
+	void deletingDocumentDeletesAllPhotoFiles() throws Exception {
 		String id = createDocument(createHeir("David"), "HEALTH_CARD");
-		mvc.perform(put("/api/documents/{id}/picture", id).contentType(MediaType.IMAGE_PNG).content(TestImages.png(50, 50)))
-			.andExpect(status().isNoContent());
+		addPhoto(id, MediaType.IMAGE_PNG, TestImages.png(50, 50));
+		addPhoto(id, MediaType.IMAGE_PNG, TestImages.png(50, 50));
 		long before = countPictureFiles();
 
 		mvc.perform(delete("/api/documents/{id}", id)).andExpect(status().isNoContent());
 
-		assertThat(countPictureFiles()).isEqualTo(before - 1);
+		assertThat(countPictureFiles()).isEqualTo(before - 2);
 	}
 
 	@Test
@@ -186,6 +194,15 @@ class DocumentControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[0]").value("ID_CARD"))
 			.andExpect(jsonPath("$.length()").value(DocumentType.values().length));
+	}
+
+	private String addPhoto(String documentId, MediaType type, byte[] image) throws Exception {
+		String body = mvc.perform(post("/api/documents/{id}/pictures", documentId).contentType(type).content(image))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		return JsonPath.read(body, "$.id");
 	}
 
 	private long countPictureFiles() throws Exception {

@@ -119,8 +119,8 @@ class HeirControllerTests {
 		String passport = createDocument(david, "PASSPORT");
 		createDocument(david, "ID_CARD");
 		String anasCard = createDocument(ana, "HEALTH_CARD");
-		mvc.perform(put("/api/documents/{id}/picture", passport).contentType(MediaType.IMAGE_PNG).content(TestImages.png(40, 40)))
-			.andExpect(status().isNoContent());
+		mvc.perform(post("/api/documents/{id}/pictures", passport).contentType(MediaType.IMAGE_PNG).content(TestImages.png(40, 40)))
+			.andExpect(status().isCreated());
 		long picturesBefore = countPictureFiles();
 
 		mvc.perform(delete("/api/heirs/{id}", david)).andExpect(status().isNoContent());
@@ -129,7 +129,7 @@ class HeirControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.heirId").doesNotExist())
 			.andExpect(jsonPath("$.heir").doesNotExist())
-			.andExpect(jsonPath("$.pictureUrl").exists());
+			.andExpect(jsonPath("$.pictures.length()").value(1));
 		mvc.perform(get("/api/documents/{id}", anasCard)).andExpect(jsonPath("$.heirId").value(ana));
 		assertThat(countPictureFiles()).isEqualTo(picturesBefore);
 	}
