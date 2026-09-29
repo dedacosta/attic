@@ -24,16 +24,17 @@ function viewFromHash(): View {
     return 'land'
   }
   switch (window.location.hash) {
-    case '#/house':
-      return 'house'
+    case '#/inventory':
+      return 'inventory'
     case '#/heirs':
       return 'heirs'
     case '#/documents':
       return 'documents'
     case '#/users':
       return 'users'
+    // The house is the start page (#/ or #/house)
     default:
-      return 'inventory'
+      return 'house'
   }
 }
 
@@ -94,7 +95,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
   // only administrators have the Users tab. Everybody sees the house and the land.
   const allowed = (id: View) =>
     id === 'inventory' || id === 'house' || id === 'land' || (id === 'users' ? isAdmin : seesHeirs)
-  const view: View = allowed(hashView) ? hashView : 'inventory'
+  const view: View = allowed(hashView) ? hashView : 'house'
 
   useEffect(() => {
     const onHashChange = () => setView(viewFromHash())
@@ -103,10 +104,10 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
   }, [])
 
   const tabs = ([
-    { id: 'house', href: '#/house', label: t.tabHouse, Icon: HouseIcon },
+    { id: 'house', href: '#/', label: t.tabHouse, Icon: HouseIcon },
     { id: 'land', href: '#/land', label: t.tabLand, Icon: LandIcon },
     { id: 'heirs', href: '#/heirs', label: t.tabHeirs, Icon: HeirsIcon },
-    { id: 'inventory', href: '#/', label: t.tabInventory, Icon: BoxIcon },
+    { id: 'inventory', href: '#/inventory', label: t.tabInventory, Icon: BoxIcon },
     { id: 'documents', href: '#/documents', label: t.tabDocuments, Icon: IdCardIcon },
     { id: 'users', href: '#/users', label: t.users, Icon: KeyIcon },
   ] as const).filter((tab) => allowed(tab.id))
