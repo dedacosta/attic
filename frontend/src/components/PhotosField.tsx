@@ -22,6 +22,11 @@ interface Props {
   allowPdf?: boolean
 }
 
+// Keys for photos not uploaded yet. Not crypto.randomUUID(): browsers only offer it on HTTPS
+// pages, and the development server is opened over plain HTTP from phones on the Wi-Fi
+let newPhotoCount = 0
+const newPhotoKey = () => `new-${++newPhotoCount}`
+
 const keyOf = (entry: PhotoEntry) => (entry.kind === 'stored' ? entry.picture.id : entry.key)
 
 export const isPdf = (entry: PhotoEntry) =>
@@ -65,7 +70,7 @@ export default function PhotosField({ photos, onChange, onError, readOnly = fals
       return
     }
     onError(null)
-    onChange([...photos, ...chosen.map((file): PhotoEntry => ({ kind: 'new', key: crypto.randomUUID(), file }))])
+    onChange([...photos, ...chosen.map((file): PhotoEntry => ({ kind: 'new', key: newPhotoKey(), file }))])
   }
 
   const remove = (index: number) => onChange(photos.filter((_, i) => i !== index))
