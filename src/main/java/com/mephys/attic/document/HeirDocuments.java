@@ -17,11 +17,11 @@ public class HeirDocuments {
 	}
 
 	/**
-	 * Delete all documents of an heir, with their pictures.
-	 * @return the number of deleted documents
+	 * Keep the documents of an heir who is deleted, as documents without heir.
+	 * @return the number of changed documents
 	 */
-	public int deleteAllOf(UUID heirId) {
-		return repository.deleteAllOfHeir(heirId);
+	public int unlinkAllOf(UUID heirId) {
+		return repository.unlinkAllOfHeir(heirId);
 	}
 
 }

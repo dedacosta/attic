@@ -3,6 +3,8 @@ package com.mephys.attic.security;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,9 +41,12 @@ public class CurrentAccount {
 		return users.find(authentication.getName()).map(UserRepository.StoredUser::heirId);
 	}
 
-	/** Whether the signed-in account may see this heir and their documents */
-	public boolean maySee(UUID heirId) {
-		return isAdmin() || heirId().filter(heirId::equals).isPresent();
+	/**
+	 * Whether the signed-in account may see this heir and their documents. Only administrators
+	 * see documents without heir ({@code null}).
+	 */
+	public boolean maySee(@Nullable UUID heirId) {
+		return isAdmin() || (heirId != null && heirId().filter(heirId::equals).isPresent());
 	}
 
 }

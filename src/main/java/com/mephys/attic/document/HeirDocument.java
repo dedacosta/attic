@@ -6,16 +6,13 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A document belonging to an heir in the house. {@code validUntil} is {@code null} for
- * documents that do not expire.
+ * A document, usually belonging to an heir in the house. {@code heirId} is {@code null} for
+ * documents of nobody in particular, and {@code validUntil} for documents that do not expire.
  */
-record HeirDocument(UUID id, UUID heirId, DocumentType type, @Nullable LocalDate validUntil,
+record HeirDocument(UUID id, @Nullable UUID heirId, DocumentType type, @Nullable LocalDate validUntil,
 		@Nullable String comments) {
 
 	HeirDocument {
-		if (heirId == null) {
-			throw new IllegalArgumentException("heirId must not be null");
-		}
 		if (type == null) {
 			throw new IllegalArgumentException("type must not be null");
 		}

@@ -78,7 +78,7 @@ class HeirController {
 	}
 
 	/**
-	 * Delete the heir together with their documents and document pictures.
+	 * Delete the heir. Their documents are kept, without heir.
 	 */
 	@DeleteMapping("/heirs/{id}")
 	@Transactional
@@ -86,7 +86,7 @@ class HeirController {
 		if (repository.findById(id).isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
-		documents.deleteAllOf(id);
+		documents.unlinkAllOf(id);
 		repository.deleteById(id);
 		return ResponseEntity.noContent().build();
 	}

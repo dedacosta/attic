@@ -83,6 +83,7 @@ class OwnHeirTests {
 
 	@Test
 	void linkedUserSeesOnlyTheirOwnCardAndDocuments() throws Exception {
+		String contract = id(mvc.perform(json(post("/api/documents").session(admin), "{\"type\":\"CONTRACT\"}")));
 		link("ana", celina).andExpect(status().isOk()).andExpect(jsonPath("$.heirId").value(celina));
 		MockHttpSession ana = signIn("ana");
 		mvc.perform(get("/api/session").session(ana)).andExpect(jsonPath("$.heirId").value(celina));
@@ -98,9 +99,12 @@ class OwnHeirTests {
 		mvc.perform(get("/api/documents/" + mariasPassport).session(ana)).andExpect(status().isNotFound());
 		mvc.perform(get("/api/documents/" + mariasPassport + "/picture").session(ana)).andExpect(status().isNotFound());
 		mvc.perform(get("/api/documents/" + mariasPassport + "/thumbnail").session(ana)).andExpect(status().isNotFound());
+		// Documents without an heir are for administrators only
+		mvc.perform(get("/api/documents/" + contract).session(ana)).andExpect(status().isNotFound());
 
 		// The administrator still sees everybody
 		mvc.perform(get("/api/heirs").session(admin)).andExpect(jsonPath("$.length()").value(2));
+		mvc.perform(get("/api/documents/" + contract).session(admin)).andExpect(status().isOk());
 		mvc.perform(get("/api/documents/" + mariasPassport + "/picture").session(admin)).andExpect(status().isOk());
 	}
 

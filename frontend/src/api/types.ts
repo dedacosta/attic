@@ -44,9 +44,10 @@ export type ItemInput = Omit<Item, 'id' | 'pictureUrl' | 'thumbnailUrl'>
 
 export interface HeirDocument {
   id: string
-  heirId: string
-  /** Name of the heir, for display */
-  heir: string
+  /** Null for a document without heir */
+  heirId: string | null
+  /** Name of the heir, for display; null without heir */
+  heir: string | null
   type: string
   validUntil: string | null
   comments: string | null

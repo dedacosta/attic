@@ -100,7 +100,10 @@ class DocumentController {
 		return repository.deletePicture(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
 	}
 
-	/** Users see only the documents of the heir linked to their account */
+	/**
+	 * Users see only the documents of the heir linked to their account; documents without heir
+	 * are for administrators.
+	 */
 	private boolean maySee(DocumentRepository.NamedDocument named) {
 		return account.maySee(named.document().heirId());
 	}
@@ -110,7 +113,7 @@ class DocumentController {
 	}
 
 	private HeirDocument validated(HeirDocument document) {
-		if (!repository.heirExists(document.heirId())) {
+		if (document.heirId() != null && !repository.heirExists(document.heirId())) {
 			throw new IllegalArgumentException("heir does not exist");
 		}
 		return document;

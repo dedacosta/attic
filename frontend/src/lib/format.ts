@@ -1,4 +1,5 @@
 import type { Messages } from '../i18n'
+import type { HeirDocument } from '../api/types'
 
 export function formatEuros(value: number, locale: string): string {
   return new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(value)
@@ -41,6 +42,11 @@ export function shortId(id: string): string {
 
 export function documentTypeLabel(type: string, t: Messages): string {
   return t.documentTypes[type] ?? type
+}
+
+/** Type and heir, e.g. "Passport — Ana", for labels and messages */
+export function documentName(document: HeirDocument, t: Messages): string {
+  return `${documentTypeLabel(document.type, t)} — ${document.heir ?? t.noHeir}`
 }
 
 /** Lower-case and strip accents so that "cafe" matches "Café". */

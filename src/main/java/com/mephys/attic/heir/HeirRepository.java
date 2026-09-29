@@ -66,7 +66,7 @@ class HeirRepository {
 	}
 
 	/**
-	 * Delete the heir; their documents must be deleted first.
+	 * Delete the heir; their documents must be unlinked first.
 	 */
 	boolean deleteById(UUID id) {
 		return jdbc.sql("DELETE FROM heir WHERE id = ?").param(id.toString()).update() > 0;

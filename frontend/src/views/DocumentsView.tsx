@@ -6,7 +6,7 @@ import DocumentDialog from '../components/DocumentDialog'
 import SearchBar from '../components/SearchBar'
 import { PlusIcon } from '../components/icons'
 import { saveDocument } from '../lib/documents'
-import { byName, documentTypeLabel, formatDate, normalize } from '../lib/format'
+import { byName, documentName, documentTypeLabel, formatDate, normalize } from '../lib/format'
 import { validity } from '../lib/validity'
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
@@ -14,10 +14,13 @@ import type { DocumentInput, Heir, HeirDocument, PictureChange } from '../api/ty
 
 type ValidityFilter = 'all' | 'valid' | 'expiring' | 'expired'
 
+/** Heir filter value for documents without heir; heir ids are UUIDs, so it cannot clash */
+const NO_HEIR = 'none'
+
 function matches(document: HeirDocument, words: string[], t: Messages): boolean {
   const text = normalize(
     [
-      document.heir,
+      document.heir ?? t.noHeir,
       documentTypeLabel(document.type, t),
       document.comments ?? '',
       document.id,
@@ -67,21 +70,24 @@ export default function DocumentsView() {
     const words = normalize(query).split(/\s+/).filter(Boolean)
     return (documents ?? []).filter(
       (document) =>
-        (!heirFilter || document.heirId === heirFilter) &&
+        (!heirFilter || (document.heirId ?? NO_HEIR) === heirFilter) &&
         (!typeFilter || document.type === typeFilter) &&
         matchesValidity(document, validityFilter) &&
         matches(document, words, t),
     )
   }, [documents, query, heirFilter, typeFilter, validityFilter, t])
 
-  // Grouped by heir; the server already sorts by heir name, then type
+  // Grouped by heir; the server already sorts by heir name, then type, with documents without heir last
   const groups = useMemo(() => {
     const byHeir = new Map<string, HeirDocument[]>()
     for (const document of visible) {
-      byHeir.set(document.heirId, [...(byHeir.get(document.heirId) ?? []), document])
+      const key = document.heirId ?? NO_HEIR
+      byHeir.set(key, [...(byHeir.get(key) ?? []), document])
     }
     return [...byHeir.values()]
   }, [visible])
+
+  const hasDocumentsWithoutHeir = (documents ?? []).some((document) => document.heirId === null)
 
   const filtered = query !== '' || heirFilter !== '' || typeFilter !== '' || validityFilter !== 'all'
 
@@ -119,7 +125,7 @@ export default function DocumentsView() {
       <main className="content">
         <SearchBar query={query} onQuery={setQuery} placeholder={t.docSearchPlaceholder} label={t.docSearchLabel}>
           {canEdit && <button type="button" className="button button-primary" onClick={() => setEditing('new')}
-            aria-label={t.newDocument} disabled={heirs.length === 0}>
+            aria-label={t.newDocument}>
             <PlusIcon width={18} height={18} /> <span className="button-label">{t.newDocument}</span>
           </button>}
         </SearchBar>
@@ -128,6 +134,7 @@ export default function DocumentsView() {
           <select value={heirFilter} onChange={(e) => setHeirFilter(e.target.value)} aria-label={t.filterByHeir}>
             <option value="">{t.allHeirs}</option>
             {byName(heirs, t.locale).map((heir) => <option key={heir.id} value={heir.id}>{heir.name}</option>)}
+            {(hasDocumentsWithoutHeir || heirFilter === NO_HEIR) && <option value={NO_HEIR}>{t.noHeir}</option>}
           </select>
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} aria-label={t.filterByType}>
             <option value="">{t.allTypes}</option>
@@ -157,14 +164,7 @@ export default function DocumentsView() {
 
         {documents === null && loadError === null && <p className="empty">{t.loading}</p>}
 
-        {documents !== null && documents.length === 0 && heirs.length === 0 && (
-          <div className="empty">
-            <p>{t.noHeirsForDocuments}</p>
-            <a className="button button-primary" href="#/heirs">{t.goToHeirs}</a>
-          </div>
-        )}
-
-        {documents !== null && documents.length === 0 && heirs.length > 0 && (
+        {documents !== null && documents.length === 0 && (
           <div className="empty">
             <p>{t.emptyDocuments}</p>
             {canEdit && <button type="button" className="button button-primary" onClick={() => setEditing('new')}>
@@ -178,9 +178,9 @@ export default function DocumentsView() {
         )}
 
         {groups.map((heirDocuments) => (
-          <section key={heirDocuments[0].heirId} className="group" aria-label={heirDocuments[0].heir}>
+          <section key={heirDocuments[0].heirId ?? NO_HEIR} className="group" aria-label={heirDocuments[0].heir ?? t.noHeir}>
             <h2 className="group-title">
-              {heirDocuments[0].heir} <span className="group-count">{heirDocuments.length}</span>
+              {heirDocuments[0].heir ?? t.noHeir} <span className="group-count">{heirDocuments.length}</span>
             </h2>
             <div className="grid">
               {heirDocuments.map((document) => (
@@ -198,7 +198,7 @@ export default function DocumentsView() {
           document={editing === 'new' ? null : editing}
           types={types}
           heirs={heirs}
-          defaultHeirId={heirFilter || undefined}
+          defaultHeirId={heirFilter && heirFilter !== NO_HEIR ? heirFilter : undefined}
           onSave={save}
           onDelete={() => editing !== 'new' && setDeleting(editing)}
           onClose={closeEditor}
@@ -208,7 +208,7 @@ export default function DocumentsView() {
       {deleting && (
         <ConfirmDialog
           title={t.deleteDocumentTitle}
-          message={t.deleteMessage(`${documentTypeLabel(deleting.type, t)} — ${deleting.heir}`)}
+          message={t.deleteMessage(documentName(deleting, t))}
           confirmLabel={t.delete}
           onConfirm={confirmDelete}
           onCancel={() => setDeleting(null)}

@@ -113,7 +113,7 @@ class HeirControllerTests {
 	}
 
 	@Test
-	void deletingHeirDeletesTheirDocumentsAndPictures() throws Exception {
+	void deletingHeirKeepsTheirDocumentsWithoutHeir() throws Exception {
 		String david = createHeir("David");
 		String ana = createHeir("Ana");
 		String passport = createDocument(david, "PASSPORT");
@@ -125,9 +125,13 @@ class HeirControllerTests {
 
 		mvc.perform(delete("/api/heirs/{id}", david)).andExpect(status().isNoContent());
 
-		mvc.perform(get("/api/documents/{id}", passport)).andExpect(status().isNotFound());
-		mvc.perform(get("/api/documents/{id}", anasCard)).andExpect(status().isOk());
-		assertThat(countPictureFiles()).isEqualTo(picturesBefore - 1);
+		mvc.perform(get("/api/documents/{id}", passport))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.heirId").doesNotExist())
+			.andExpect(jsonPath("$.heir").doesNotExist())
+			.andExpect(jsonPath("$.pictureUrl").exists());
+		mvc.perform(get("/api/documents/{id}", anasCard)).andExpect(jsonPath("$.heirId").value(ana));
+		assertThat(countPictureFiles()).isEqualTo(picturesBefore);
 	}
 
 	@Test
