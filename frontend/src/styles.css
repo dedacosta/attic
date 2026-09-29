@@ -1378,3 +1378,235 @@ fieldset.fields:disabled .checkbox {
   font-size: 0.8rem;
   font-weight: 600;
 }
+
+/* House and land */
+
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.photo-pdf {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.property-page {
+  display: grid;
+  gap: 20px;
+}
+
+.property-back {
+  justify-self: start;
+}
+
+.property-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 20px;
+  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.property-cover {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-small);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  overflow: hidden;
+}
+
+.property-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.property-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.property-name {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+.property-address {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.property-value {
+  display: grid;
+  margin: 0;
+}
+
+.property-value span {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.property-value strong {
+  font-size: 1.3rem;
+}
+
+.property-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.property-section {
+  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.property-section h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.property-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.property-section-header h2 {
+  margin: 0;
+}
+
+.property-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+  margin: 0;
+}
+
+.property-facts div {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.property-facts dt {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.property-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.property-documents {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.property-document {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.property-document:hover {
+  background: var(--surface-muted);
+}
+
+.property-document-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.property-document-text span {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.property-document-notes {
+  overflow-wrap: anywhere;
+}
+
+.property-comments {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.details-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.details-editor-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.details-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.details-move svg {
+  transform: rotate(90deg);
+}
+
+.details-editor > .button {
+  justify-self: start;
+}
+
+@media (max-width: 700px) {
+  .property-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .property-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .details-row {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+  }
+
+  .details-row input:first-child {
+    grid-column: 1 / -1;
+  }
+}

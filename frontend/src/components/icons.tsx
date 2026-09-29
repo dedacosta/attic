@@ -108,3 +108,18 @@ export const ChevronRightIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="m9 18 6-6-6-6" />
   </svg>
 )
+
+export const LandIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="M3 20h18" />
+    <path d="m3 20 6-9 4 5 3-4 5 8" />
+    <circle cx="17" cy="6" r="2" />
+  </svg>
+)
+
+export const MapPinIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z" />
+    <circle cx="12" cy="9.5" r="2.5" />
+  </svg>
+)

@@ -1,6 +1,7 @@
 import type { Messages } from '../i18n'
 import type {
-  DocumentInput, Item, ItemInput, OwnAccount, Heir, HeirDocument, HeirInput, Picture, Role, Session, UserAccount,
+  DocumentInput, Item, ItemInput, OwnAccount, Heir, HeirDocument, HeirInput, Picture, Property, PropertyDocument,
+  PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
 } from './types'
 
 /** A failed request. {@link apiErrorMessage} turns it into text in the user's language. */
@@ -118,6 +119,21 @@ export const api = {
   updateDocument: (id: string, input: DocumentInput) =>
     request<HeirDocument>(`/api/documents/${id}`, json('PUT', input)),
   deleteDocument: (id: string) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
+
+  /** The house, or a 404 ApiError when it is not set up yet */
+  house: () => request<Property>('/api/properties/house'),
+  listLand: () => request<Property[]>('/api/properties?kind=LAND'),
+  getProperty: (id: string) => request<Property>(`/api/properties/${id}`),
+  createProperty: (input: PropertyInput) => request<Property>('/api/properties', json('POST', input)),
+  updateProperty: (id: string, input: PropertyInput) => request<Property>(`/api/properties/${id}`, json('PUT', input)),
+  deleteProperty: (id: string) => request<void>(`/api/properties/${id}`, { method: 'DELETE' }),
+  propertyLabels: () => request<string[]>('/api/property-labels'),
+  propertyDocumentTypes: () => request<string[]>('/api/property-document-types'),
+  createPropertyDocument: (propertyId: string, input: PropertyDocumentInput) =>
+    request<PropertyDocument>(`/api/properties/${propertyId}/documents`, json('POST', input)),
+  updatePropertyDocument: (id: string, input: PropertyDocumentInput) =>
+    request<PropertyDocument>(`/api/property-documents/${id}`, json('PUT', input)),
+  deletePropertyDocument: (id: string) => request<void>(`/api/property-documents/${id}`, { method: 'DELETE' }),
 
   /** Add a photo after the others, e.g. `addPicture('/api/items/<id>', file)` */
   addPicture: (owner: string, file: File) =>

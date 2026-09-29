@@ -80,8 +80,9 @@ export type HeirInput = Omit<Heir, 'id' | 'createdAt' | 'updatedAt'>
 export interface Picture {
   id: string
   url: string
-  /** Null for formats without thumbnail (HEIC) */
+  /** Null for formats without thumbnail (HEIC, PDF) */
   thumbnailUrl: string | null
+  contentType: string
 }
 
 /** A photo in a form: already stored, or chosen and not uploaded yet */
@@ -89,3 +90,40 @@ export type PhotoEntry = { kind: 'stored'; picture: Picture } | { kind: 'new'; k
 
 export const storedPhotos = (pictures: Picture[]): PhotoEntry[] =>
   pictures.map((picture) => ({ kind: 'stored', picture }))
+
+export type PropertyKind = 'HOUSE' | 'LAND'
+
+/** One detail of a property, e.g. "Artigo matricial" → "1234" */
+export interface Fact {
+  label: string
+  value: string
+}
+
+/** An official document of the house or a land parcel; its files are images or PDF */
+export interface PropertyDocument {
+  id: string
+  propertyId: string
+  type: string
+  date: string | null
+  notes: string | null
+  files: Picture[]
+}
+
+export type PropertyDocumentInput = Omit<PropertyDocument, 'id' | 'propertyId' | 'files'>
+
+/** The family house or a land parcel */
+export interface Property {
+  id: string
+  kind: PropertyKind
+  name: string
+  address: string | null
+  /** Null when not estimated */
+  valueEur: number | null
+  comments: string | null
+  facts: Fact[]
+  /** Cover first */
+  pictures: Picture[]
+  documents: PropertyDocument[]
+}
+
+export type PropertyInput = Omit<Property, 'id' | 'pictures' | 'documents'>
