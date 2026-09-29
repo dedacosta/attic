@@ -5,12 +5,12 @@ import DocumentCard from '../components/DocumentCard'
 import DocumentDialog from '../components/DocumentDialog'
 import SearchBar from '../components/SearchBar'
 import { PlusIcon } from '../components/icons'
-import { saveDocument } from '../lib/documents'
+import { saveWithPhotos } from '../lib/photos'
 import { byName, documentName, documentTypeLabel, formatDate, normalize } from '../lib/format'
 import { validity } from '../lib/validity'
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
-import type { DocumentInput, Heir, HeirDocument, PictureChange } from '../api/types'
+import type { DocumentInput, Heir, HeirDocument, PhotoEntry } from '../api/types'
 
 type ValidityFilter = 'all' | 'valid' | 'expiring' | 'expired'
 
@@ -91,8 +91,12 @@ export default function DocumentsView() {
 
   const filtered = query !== '' || heirFilter !== '' || typeFilter !== '' || validityFilter !== 'all'
 
-  async function save(input: DocumentInput, picture: PictureChange) {
-    await saveDocument(editing === 'new' ? null : editing, input, picture, setEditing)
+  async function save(input: DocumentInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) {
+    const existing = editing === 'new' ? null : editing
+    await saveWithPhotos(
+      () => (existing ? api.updateDocument(existing.id, input) : api.createDocument(input)),
+      '/api/documents', photos, setEditing, onPhotos,
+    )
     await reload()
     setEditing(null)
   }

@@ -521,38 +521,6 @@ form > .dialog-actions {
   flex: 1;
 }
 
-.picture-field {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
-.picture-preview {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 120px;
-  height: 120px;
-  border-radius: var(--radius-small);
-  background: var(--surface-muted);
-  color: var(--text-muted);
-  overflow: hidden;
-}
-
-.picture-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.picture-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-
 .fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -642,11 +610,6 @@ form > .dialog-actions {
 
   .fields {
     grid-template-columns: 1fr;
-  }
-
-  .picture-preview {
-    width: 96px;
-    height: 96px;
   }
 }
 
@@ -1399,4 +1362,19 @@ fieldset.fields:disabled .checkbox {
   .photo-add-button {
     height: 96px;
   }
+}
+
+.card-photo-count {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
 }

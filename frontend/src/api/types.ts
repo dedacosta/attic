@@ -36,11 +36,11 @@ export interface Item {
   valueEur: number
   owner: string
   comments: string | null
-  pictureUrl: string | null
-  thumbnailUrl: string | null
+  /** Cover first */
+  pictures: Picture[]
 }
 
-export type ItemInput = Omit<Item, 'id' | 'pictureUrl' | 'thumbnailUrl'>
+export type ItemInput = Omit<Item, 'id' | 'pictures'>
 
 export interface HeirDocument {
   id: string
@@ -51,11 +51,11 @@ export interface HeirDocument {
   type: string
   validUntil: string | null
   comments: string | null
-  pictureUrl: string | null
-  thumbnailUrl: string | null
+  /** Cover first */
+  pictures: Picture[]
 }
 
-export type DocumentInput = Omit<HeirDocument, 'id' | 'heir' | 'pictureUrl' | 'thumbnailUrl'>
+export type DocumentInput = Omit<HeirDocument, 'id' | 'heir' | 'pictures'>
 
 export interface Heir {
   id: string
@@ -75,7 +75,6 @@ export interface Heir {
 
 export type HeirInput = Omit<Heir, 'id' | 'createdAt' | 'updatedAt'>
 
-export type PictureChange = { kind: 'keep' } | { kind: 'replace'; file: File } | { kind: 'remove' }
 
 /** A stored photo of an item or document */
 export interface Picture {

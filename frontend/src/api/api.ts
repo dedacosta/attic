@@ -119,14 +119,6 @@ export const api = {
     request<HeirDocument>(`/api/documents/${id}`, json('PUT', input)),
   deleteDocument: (id: string) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
 
-  /** Upload the picture of an item or document, e.g. `putPicture('/api/items/<id>', file)` */
-  putPicture: (owner: string, file: File) =>
-    request<void>(`${owner}/picture`, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type || 'application/octet-stream' },
-      body: file,
-    }),
-  deletePicture: (owner: string) => request<void>(`${owner}/picture`, { method: 'DELETE' }),
   /** Add a photo after the others, e.g. `addPicture('/api/items/<id>', file)` */
   addPicture: (owner: string, file: File) =>
     request<Picture>(`${owner}/pictures`, {
