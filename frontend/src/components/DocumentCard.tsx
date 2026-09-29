@@ -1,4 +1,4 @@
-import { documentTypeLabel, formatDate } from '../lib/format'
+import { documentName, documentTypeLabel, formatDate } from '../lib/format'
 import { validity } from '../lib/validity'
 import { useI18n } from '../i18n'
 import { usePermissions } from '../lib/permissions'
@@ -19,7 +19,7 @@ export default function DocumentCard({ document, onEdit, onDelete }: Props) {
   const status = validity(document.validUntil)
   return (
     <article className={status === 'expired' ? 'card card-expired' : 'card'}>
-      <button type="button" className="card-main" onClick={onEdit} aria-label={t.editNamed(`${title} — ${document.heir}`)}>
+      <button type="button" className="card-main" onClick={onEdit} aria-label={t.editNamed(documentName(document, t))}>
         <div className="card-image card-image-document">
           {document.thumbnailUrl ? (
             <img src={document.thumbnailUrl} alt="" loading="lazy" />
@@ -42,7 +42,7 @@ export default function DocumentCard({ document, onEdit, onDelete }: Props) {
         </div>
       </button>
       {canEdit && <button type="button" className="icon-button card-delete" onClick={onDelete}
-        aria-label={t.deleteNamed(`${title} — ${document.heir}`)}>
+        aria-label={t.deleteNamed(documentName(document, t))}>
         <TrashIcon width={18} height={18} />
       </button>}
     </article>

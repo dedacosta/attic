@@ -7,7 +7,7 @@ import HeirDialog from '../components/HeirDialog'
 import SearchBar from '../components/SearchBar'
 import { PlusIcon } from '../components/icons'
 import { saveDocument } from '../lib/documents'
-import { documentTypeLabel, formatDate, normalize } from '../lib/format'
+import { documentName, formatDate, normalize } from '../lib/format'
 import { add, compare, formatFraction, formatPercent, ONE, parseFraction, subtract, ZERO } from '../lib/fraction'
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
@@ -214,7 +214,7 @@ export default function HeirsView() {
       {confirmingDocumentDelete && deletingDocument && (
         <ConfirmDialog
           title={t.deleteDocumentTitle}
-          message={t.deleteMessage(`${documentTypeLabel(deletingDocument.type, t)} — ${deletingDocument.heir}`)}
+          message={t.deleteMessage(documentName(deletingDocument, t))}
           confirmLabel={t.delete}
           onConfirm={confirmDocumentDelete}
           onCancel={() => setConfirmingDocumentDelete(false)}

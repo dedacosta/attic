@@ -11,8 +11,9 @@ Tailscale.
   search, filter and export the list as PDF.
 - **Heirs** — date of birth, address, filiation, sex and share of the heritage, kept as a fraction
   exactly as written (`2/6` stays `2/6`).
-- **Documents** — ID cards, passports, licences, certificates, contracts… per heir, with a
-  validity badge (valid, expires soon, expired).
+- **Documents** — ID cards, passports, licences, certificates, contracts or any other kind,
+  grouped by heir or kept without one; with an optional expiry date and a validity badge (valid,
+  expires soon, expired). Deleting an heir keeps their documents, without heir.
 - **Accounts and roles** — *super-administrator*, *administrator* (edits everything, creates
   accounts) and *user* (reads everything, edits only their own heir and password). The first
   account is created on the setup screen.

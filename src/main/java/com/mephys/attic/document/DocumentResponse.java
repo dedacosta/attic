@@ -9,10 +9,11 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Response body for a document, with the name of its heir. {@code pictureUrl} and
- * {@code thumbnailUrl} are {@code null} when the document has no picture or no thumbnail.
+ * Response body for a document, with the name of its heir. {@code heirId} and {@code heir} are
+ * {@code null} for a document without heir; {@code pictureUrl} and {@code thumbnailUrl} when the
+ * document has no picture or no thumbnail.
  */
-record DocumentResponse(UUID id, UUID heirId, String heir, DocumentType type, @Nullable LocalDate validUntil,
+record DocumentResponse(UUID id, @Nullable UUID heirId, @Nullable String heir, DocumentType type, @Nullable LocalDate validUntil,
 		@Nullable String comments, @Nullable String pictureUrl, @Nullable String thumbnailUrl) {
 
 	static DocumentResponse of(NamedDocument named, @Nullable PictureInfo picture) {

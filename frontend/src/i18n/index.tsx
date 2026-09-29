@@ -99,7 +99,6 @@ const en = {
   addFirstDocument: 'Add the first document',
   noDocumentMatches: 'No documents match your search.',
   deleteDocumentTitle: 'Delete document?',
-  errorHeir: 'Please choose an heir.',
   errorType: 'Please choose a type.',
   tabHeirs: 'Heirs',
   heirsSearchPlaceholder: 'Search name, address, filiation…',
@@ -123,7 +122,7 @@ const en = {
   deleteHeirMessage: (name: string, documents: number) =>
     documents === 0
       ? `“${name}” will be deleted permanently.`
-      : `“${name}” and ${documents === 1 ? 'their document' : `their ${documents} documents`} will be deleted permanently.`,
+      : `“${name}” will be deleted permanently. ${documents === 1 ? 'Their document is' : `Their ${documents} documents are`} kept, without heir.`,
   heirDocuments: 'Documents',
   addDocument: 'Add document',
   noHeirDocuments: 'No documents yet.',
@@ -134,8 +133,6 @@ const en = {
   heritageMissing: (rest: string) => `${rest} not yet assigned`,
   heritageOver: 'More than the whole heritage is distributed. Please check the shares.',
   errorHeritageShare: 'The share must be a fraction between 0 and 1, like 1/3.',
-  noHeirsForDocuments: 'Add an heir first, then their documents.',
-  goToHeirs: 'Go to Heirs',
   expiredCount: (count: number) => `${count} expired`,
   expiringCount: (count: number) => `${count} expiring soon`,
   sexes: { FEMALE: 'Female', MALE: 'Male', OTHER: 'Other' } as Record<string, string>,
@@ -317,7 +314,6 @@ const pt: Messages = {
   addFirstDocument: 'Adicionar o primeiro documento',
   noDocumentMatches: 'Nenhum documento corresponde à pesquisa.',
   deleteDocumentTitle: 'Eliminar documento?',
-  errorHeir: 'Escolha um herdeiro.',
   errorType: 'Escolha um tipo.',
   tabHeirs: 'Herdeiros',
   heirsSearchPlaceholder: 'Pesquisar nome, morada, filiação…',
@@ -341,7 +337,7 @@ const pt: Messages = {
   deleteHeirMessage: (name, documents) =>
     documents === 0
       ? `«${name}» será eliminado permanentemente.`
-      : `«${name}» e ${documents === 1 ? 'o seu documento' : `os seus ${documents} documentos`} serão eliminados permanentemente.`,
+      : `«${name}» será eliminado permanentemente. ${documents === 1 ? 'O seu documento é mantido' : `Os seus ${documents} documentos são mantidos`}, sem herdeiro.`,
   heirDocuments: 'Documentos',
   addDocument: 'Adicionar documento',
   noHeirDocuments: 'Ainda não há documentos.',
@@ -352,8 +348,6 @@ const pt: Messages = {
   heritageMissing: (rest) => `falta atribuir ${rest}`,
   heritageOver: 'Foi distribuída mais do que a herança inteira. Verifique as quotas.',
   errorHeritageShare: 'A quota deve ser uma fração entre 0 e 1, como 1/3.',
-  noHeirsForDocuments: 'Adicione primeiro um herdeiro e depois os seus documentos.',
-  goToHeirs: 'Ir para Herdeiros',
   expiredCount: (count) => (count === 1 ? '1 expirado' : `${count} expirados`),
   expiringCount: (count) => (count === 1 ? '1 expira em breve' : `${count} expiram em breve`),
   sexes: { FEMALE: 'Feminino', MALE: 'Masculino', OTHER: 'Outro' },
@@ -534,7 +528,6 @@ const fr: Messages = {
   addFirstDocument: 'Ajouter le premier document',
   noDocumentMatches: 'Aucun document ne correspond à votre recherche.',
   deleteDocumentTitle: 'Supprimer le document\u202f?',
-  errorHeir: 'Veuillez choisir un héritier.',
   errorType: 'Veuillez choisir un type.',
   tabHeirs: 'Héritiers',
   heirsSearchPlaceholder: 'Rechercher un nom, une adresse, une filiation…',
@@ -558,7 +551,7 @@ const fr: Messages = {
   deleteHeirMessage: (name, documents) =>
     documents === 0
       ? `«\u00a0${name}\u00a0» sera supprimé définitivement.`
-      : `«\u00a0${name}\u00a0» et ${documents === 1 ? 'son document' : `ses ${documents} documents`} seront supprimés définitivement.`,
+      : `«\u00a0${name}\u00a0» sera supprimé définitivement. ${documents === 1 ? 'Son document est conservé' : `Ses ${documents} documents sont conservés`}, sans héritier.`,
   heirDocuments: 'Documents',
   addDocument: 'Ajouter un document',
   noHeirDocuments: 'Aucun document pour l’instant.',
@@ -569,8 +562,6 @@ const fr: Messages = {
   heritageMissing: (rest) => `reste ${rest} à attribuer`,
   heritageOver: 'Plus que la totalité de l’héritage est répartie. Vérifiez les parts.',
   errorHeritageShare: 'La part doit être une fraction entre 0 et 1, comme 1/3.',
-  noHeirsForDocuments: 'Ajoutez d’abord un héritier, puis ses documents.',
-  goToHeirs: 'Aller aux héritiers',
   expiredCount: (count) => (count < 2 ? `${count} expiré` : `${count} expirés`),
   expiringCount: (count) => (count < 2 ? `${count} expire bientôt` : `${count} expirent bientôt`),
   sexes: { FEMALE: 'Féminin', MALE: 'Masculin', OTHER: 'Autre' },

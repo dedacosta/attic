@@ -33,9 +33,6 @@ export default function DocumentDialog({ document, types, heirs, defaultHeirId, 
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!heirId) {
-      return setError(t.errorHeir)
-    }
     if (!type) {
       return setError(t.errorType)
     }
@@ -43,7 +40,7 @@ export default function DocumentDialog({ document, types, heirs, defaultHeirId, 
     setError(null)
     try {
       await onSave(
-        { heirId, type, validUntil: validUntil || null, comments: comments.trim() || null },
+        { heirId: heirId || null, type, validUntil: validUntil || null, comments: comments.trim() || null },
         picture,
       )
     } catch (e) {
@@ -72,9 +69,9 @@ export default function DocumentDialog({ document, types, heirs, defaultHeirId, 
 
           <fieldset className="fields" disabled={!canEdit}>
             <label className="field">
-              <span>{t.heir}</span>
-              <select value={heirId} onChange={(e) => setHeirId(e.target.value)} required>
-                <option value="" disabled>—</option>
+              <span>{t.heir} <small>{t.optional}</small></span>
+              <select value={heirId} onChange={(e) => setHeirId(e.target.value)}>
+                <option value="">{t.noHeir}</option>
                 {byName(heirs, t.locale).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </label>

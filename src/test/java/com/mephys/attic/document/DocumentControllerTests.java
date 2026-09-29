@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 
 import com.jayway.jsonpath.JsonPath;
 import com.mephys.attic.picture.TestImages;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,9 +85,36 @@ class DocumentControllerTests {
 	}
 
 	@Test
-	void listsSortedByHeirThenType() throws Exception {
+	void documentWithoutHeir() throws Exception {
+		String david = createHeir("David");
+		String body = mvc.perform(post("/api/documents").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"type\":\"CONTRACT\",\"comments\":\"House insurance\"}"))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.heirId").doesNotExist())
+			.andExpect(jsonPath("$.heir").doesNotExist())
+			.andExpect(jsonPath("$.type").value("CONTRACT"))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		String id = JsonPath.read(body, "$.id");
+		mvc.perform(get("/api/documents/{id}", id)).andExpect(status().isOk()).andExpect(jsonPath("$.heirId").doesNotExist());
+
+		mvc.perform(put("/api/documents/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"heirId\":\"" + david + "\",\"type\":\"CONTRACT\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.heir").value("David"));
+		mvc.perform(put("/api/documents/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"heirId\":null,\"type\":\"OTHER\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.heirId").doesNotExist())
+			.andExpect(jsonPath("$.type").value("OTHER"));
+	}
+
+	@Test
+	void listsSortedByHeirThenTypeWithDocumentsWithoutHeirLast() throws Exception {
 		String zoe = createHeir("Zoe");
 		String ana = createHeir("Ana");
+		createDocument(null, "OTHER");
 		createDocument(zoe, "PASSPORT");
 		createDocument(ana, "PASSPORT");
 		createDocument(ana, "DRIVING_LICENCE");
@@ -94,16 +122,14 @@ class DocumentControllerTests {
 		String body = mvc.perform(get("/api/documents")).andReturn().getResponse().getContentAsString();
 		List<String> heirs = JsonPath.read(body, "$[*].heir");
 		List<String> types = JsonPath.read(body, "$[?(@.heir == 'Ana')].type");
-		assertThat(heirs).isSorted();
+		assertThat(heirs.getLast()).isNull();
+		assertThat(heirs.stream().takeWhile((heir) -> heir != null).toList()).isSorted();
 		assertThat(types).containsExactly("DRIVING_LICENCE", "PASSPORT");
 	}
 
 	@Test
 	void rejectsInvalidDocuments() throws Exception {
 		String david = createHeir("David");
-		mvc.perform(post("/api/documents").contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"PASSPORT\"}"))
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.detail").value("heirId must not be null"));
 		mvc.perform(post("/api/documents").contentType(MediaType.APPLICATION_JSON)
 			.content("{\"heirId\":\"00000000-0000-4000-8000-000000000000\",\"type\":\"PASSPORT\"}"))
 			.andExpect(status().isBadRequest())
@@ -177,9 +203,10 @@ class DocumentControllerTests {
 		return JsonPath.read(body, "$.id");
 	}
 
-	private String createDocument(String heirId, String type) throws Exception {
+	private String createDocument(@Nullable String heirId, String type) throws Exception {
+		String heir = (heirId != null) ? "\"" + heirId + "\"" : "null";
 		String body = mvc.perform(post("/api/documents").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"heirId\":\"" + heirId + "\",\"type\":\"" + type + "\"}"))
+			.content("{\"heirId\":" + heir + ",\"type\":\"" + type + "\"}"))
 			.andExpect(status().isCreated())
 			.andReturn()
 			.getResponse()
