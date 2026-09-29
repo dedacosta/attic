@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * What is known about a stored picture without loading it.
  */
-public record PictureInfo(UUID id, boolean hasThumbnail) {
+public record PictureInfo(UUID id, String contentType, boolean hasThumbnail) {
 
 	/**
 	 * URL of the picture below {@code base} (e.g. {@code /api/items/<id>}). Picture ids are never

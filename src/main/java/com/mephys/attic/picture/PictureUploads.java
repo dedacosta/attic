@@ -37,13 +37,30 @@ public class PictureUploads {
 	/** Picture ids are never reused, so a picture never changes behind its URL */
 	private static final String CACHE_FOREVER = "private, max-age=31536000, immutable";
 
+	/**
+	 * Like {@link #read}, but also accepts PDF, for the files of official documents.
+	 */
+	public Picture readImageOrPdf(String contentType, byte[] data) {
+		if (MediaType.APPLICATION_PDF.equalsTypeAndSubtype(MediaType.parseMediaType(contentType))) {
+			if (data.length > maxSize.toBytes()) {
+				throw new PictureTooLargeException(maxSize);
+			}
+			return new Picture(MediaType.APPLICATION_PDF_VALUE, data);
+		}
+		return read(contentType, data);
+	}
+
 	public static ResponseEntity<byte[]> pictureResponse(Optional<Picture> picture) {
-		return picture
-			.map((p) -> ResponseEntity.ok()
+		return picture.map((p) -> {
+			ResponseEntity.BodyBuilder response = ResponseEntity.ok()
 				.header(HttpHeaders.CACHE_CONTROL, CACHE_FOREVER)
-				.contentType(MediaType.parseMediaType(p.contentType()))
-				.body(p.data()))
-			.orElseGet(() -> ResponseEntity.notFound().build());
+				.contentType(MediaType.parseMediaType(p.contentType()));
+			if (MediaType.APPLICATION_PDF_VALUE.equals(p.contentType())) {
+				// Show PDFs in the browser's viewer rather than downloading them
+				response.header(HttpHeaders.CONTENT_DISPOSITION, "inline");
+			}
+			return response.body(p.data());
+		}).orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
 	public static ResponseEntity<byte[]> thumbnailResponse(Optional<byte[]> thumbnail) {

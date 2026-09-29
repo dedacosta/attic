@@ -1,0 +1,162 @@
+package com.mephys.attic.property;
+
+import com.mephys.attic.picture.PictureInfo;
+import com.mephys.attic.picture.PictureResponse;
+import com.mephys.attic.picture.PictureUploads;
+
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+/**
+ * The family house and the land parcels, with their details and photos. Their official
+ * documents are in {@link PropertyDocumentController}.
+ */
+@RestController
+class PropertyController {
+
+	private final PropertyRepository repository;
+
+	private final PictureUploads uploads;
+
+	PropertyController(PropertyRepository repository, PictureUploads uploads) {
+		this.repository = repository;
+		this.uploads = uploads;
+	}
+
+	@GetMapping("/properties")
+	List<PropertyResponse> list(@RequestParam PropertyKind kind) {
+		Map<UUID, List<PictureInfo>> pictures = repository.listAllPictures();
+		Map<UUID, List<PictureInfo>> files = repository.listAllDocumentFiles();
+		return repository.findAll(kind)
+			.stream()
+			.map((property) -> PropertyResponse.of(property, pictures.getOrDefault(property.id(), List.of()),
+					documents(property.id(), files)))
+			.toList();
+	}
+
+	@GetMapping("/properties/house")
+	ResponseEntity<PropertyResponse> house() {
+		return ResponseEntity.of(repository.findHouse().map(this::toResponse));
+	}
+
+	@GetMapping("/properties/{id}")
+	ResponseEntity<PropertyResponse> get(@PathVariable UUID id) {
+		return ResponseEntity.of(repository.findById(id).map(this::toResponse));
+	}
+
+	@PostMapping("/properties")
+	@Transactional
+	ResponseEntity<PropertyResponse> create(@RequestBody PropertyRequest request) {
+		Property property = request.toProperty(null);
+		if (property.kind() == PropertyKind.HOUSE && repository.findHouse().isPresent()) {
+			throw new HouseAlreadyExistsException();
+		}
+		Property saved;
+		try {
+			saved = repository.save(property);
+		}
+		catch (DataIntegrityViolationException ex) {
+			// Another request created the house in the meantime: the unique index refused this one
+			throw new HouseAlreadyExistsException();
+		}
+		URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").build(saved.id());
+		return ResponseEntity.created(location).body(toResponse(saved));
+	}
+
+	@PutMapping("/properties/{id}")
+	@Transactional
+	ResponseEntity<PropertyResponse> replace(@PathVariable UUID id, @RequestBody PropertyRequest request) {
+		Property existing = repository.findById(id).orElse(null);
+		if (existing == null) {
+			return ResponseEntity.notFound().build();
+		}
+		Property property = request.toProperty(id);
+		if (property.kind() != existing.kind()) {
+			throw new IllegalArgumentException("kind cannot change");
+		}
+		return ResponseEntity.ok(toResponse(repository.save(property)));
+	}
+
+	/**
+	 * Delete the property with its details, photos, official documents and all their files.
+	 */
+	@DeleteMapping("/properties/{id}")
+	@Transactional
+	ResponseEntity<Void> delete(@PathVariable UUID id) {
+		return repository.deleteById(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+	}
+
+	@GetMapping("/property-labels")
+	List<String> labels() {
+		return repository.labels();
+	}
+
+	@PostMapping(path = "/properties/{id}/pictures", consumes = "image/*")
+	ResponseEntity<PictureResponse> addPicture(@PathVariable UUID id,
+			@RequestHeader(HttpHeaders.CONTENT_TYPE) String contentType, @RequestBody byte[] data) {
+		String base = PropertyResponse.base(id);
+		return repository.addPicture(id, uploads.read(contentType, data))
+			.map((info) -> ResponseEntity.created(URI.create(info.url(base))).body(PictureResponse.of(base, info)))
+			.orElseGet(() -> ResponseEntity.notFound().build());
+	}
+
+	@GetMapping("/properties/{id}/pictures/{pictureId}")
+	ResponseEntity<byte[]> getPicture(@PathVariable UUID id, @PathVariable UUID pictureId) {
+		return PictureUploads.pictureResponse(repository.findPicture(id, pictureId));
+	}
+
+	@GetMapping("/properties/{id}/pictures/{pictureId}/thumbnail")
+	ResponseEntity<byte[]> getThumbnail(@PathVariable UUID id, @PathVariable UUID pictureId) {
+		return PictureUploads.thumbnailResponse(repository.findThumbnail(id, pictureId));
+	}
+
+	@DeleteMapping("/properties/{id}/pictures/{pictureId}")
+	@Transactional
+	ResponseEntity<Void> deletePicture(@PathVariable UUID id, @PathVariable UUID pictureId) {
+		return repository.deletePicture(id, pictureId) ? ResponseEntity.noContent().build()
+				: ResponseEntity.notFound().build();
+	}
+
+	/**
+	 * Put the property's photos in this order; the first becomes the cover.
+	 */
+	@PutMapping("/properties/{id}/pictures/order")
+	@Transactional
+	ResponseEntity<Void> reorderPictures(@PathVariable UUID id, @RequestBody List<UUID> pictureIds) {
+		if (repository.findById(id).isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		repository.reorderPictures(id, pictureIds);
+		return ResponseEntity.noContent().build();
+	}
+
+	private PropertyResponse toResponse(Property property) {
+		return PropertyResponse.of(property, repository.listPictures(property.id()),
+				documents(property.id(), repository.listAllDocumentFiles()));
+	}
+
+	private List<PropertyDocumentResponse> documents(UUID propertyId, Map<UUID, List<PictureInfo>> files) {
+		return repository.findDocuments(propertyId)
+			.stream()
+			.map((document) -> PropertyDocumentResponse.of(document, files.getOrDefault(document.id(), List.of())))
+			.toList();
+	}
+
+}
