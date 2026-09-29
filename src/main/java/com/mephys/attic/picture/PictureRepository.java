@@ -2,6 +2,8 @@ package com.mephys.attic.picture;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -10,12 +12,16 @@ import java.util.stream.Collectors;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * Stores one picture per owner row (an inventory item, a document, ...). The picture file
- * lives in {@link PictureStorage}; the picture table holds the file name and a thumbnail.
+ * Stores an ordered list of pictures per owner row (an inventory item, a document, ...). The
+ * first picture (position 0) is the cover. Picture files live in {@link PictureStorage}; the
+ * picture table holds the file name, the position and a thumbnail.
  * <p>
- * The picture table must have the columns {@code id, <owner column>, file_name, content_type,
- * thumbnail}, with the owner column unique and referencing the owner table
- * {@code ON DELETE CASCADE}.
+ * The picture table must have the columns {@code id, <owner column>, position, file_name,
+ * content_type, thumbnail}, with the owner column referencing the owner table
+ * {@code ON DELETE CASCADE}. Positions are kept at 0..n-1 without gaps.
+ * <p>
+ * Changes of several rows ({@link #delete}, {@link #reorder}) must run in a transaction; the
+ * callers' controller methods are {@code @Transactional}.
  */
 public class PictureRepository {
 
@@ -40,22 +46,20 @@ public class PictureRepository {
 	}
 
 	/**
-	 * Store the picture as a new file, replacing any existing one.
-	 * @return {@code false} if the owner does not exist
+	 * Store the picture as a new file, after the owner's other pictures.
+	 * @return the new picture, or empty if the owner does not exist
 	 */
-	public boolean save(UUID ownerId, Picture picture) {
-		Optional<String> previousFile = findFile(ownerId);
+	public Optional<PictureInfo> add(UUID ownerId, Picture picture) {
 		UUID pictureId = UUID.randomUUID();
 		byte[] thumbnail = Thumbnails.create(picture.data()).orElse(null);
 		String fileName = storage.store(pictureId, picture);
-		int saved;
+		int added;
 		try {
-			saved = jdbc.sql("""
-					INSERT INTO %1$s (id, %2$s, file_name, content_type, thumbnail)
-					SELECT :id, id, :fileName, :contentType, :thumbnail FROM %3$s WHERE id = :ownerId
-					ON CONFLICT (%2$s) DO UPDATE SET
-						id = excluded.id, file_name = excluded.file_name, content_type = excluded.content_type,
-						thumbnail = excluded.thumbnail
+			// Positions have no gaps, so the number of pictures is the next position
+			added = jdbc.sql("""
+					INSERT INTO %1$s (id, %2$s, position, file_name, content_type, thumbnail)
+					SELECT :id, o.id, (SELECT count(*) FROM %1$s WHERE %2$s = o.id), :fileName, :contentType, :thumbnail
+					FROM %3$s o WHERE o.id = :ownerId
 					""".formatted(table, ownerColumn, ownerTable))
 				.param("id", pictureId.toString())
 				.param("ownerId", ownerId.toString())
@@ -68,17 +72,43 @@ public class PictureRepository {
 			storage.delete(fileName);
 			throw ex;
 		}
-		if (saved == 0) {
+		if (added == 0) {
 			storage.delete(fileName);
-			return false;
+			return Optional.empty();
 		}
-		previousFile.ifPresent(storage::delete);
-		return true;
+		return Optional.of(new PictureInfo(pictureId, thumbnail != null));
 	}
 
-	public Optional<Picture> find(UUID ownerId) {
-		return jdbc.sql("SELECT file_name, content_type FROM %s WHERE %s = ?".formatted(table, ownerColumn))
+	/**
+	 * The owner's pictures, cover first.
+	 */
+	public List<PictureInfo> list(UUID ownerId) {
+		return jdbc.sql("""
+				SELECT id, thumbnail IS NOT NULL AS has_thumbnail FROM %s WHERE %s = ? ORDER BY position
+				""".formatted(table, ownerColumn))
 			.param(ownerId.toString())
+			.query((rs, rowNum) -> mapInfo(rs))
+			.list();
+	}
+
+	/**
+	 * The pictures of every owner that has any, each list cover first.
+	 */
+	public Map<UUID, List<PictureInfo>> listAll() {
+		return jdbc.sql("""
+				SELECT id, %1$s, thumbnail IS NOT NULL AS has_thumbnail FROM %2$s ORDER BY %1$s, position
+				""".formatted(ownerColumn, table))
+			.query((rs, rowNum) -> Map.entry(UUID.fromString(rs.getString(ownerColumn)), mapInfo(rs)))
+			// list() rather than stream(): a JdbcClient stream keeps its connection until closed
+			.list()
+			.stream()
+			.collect(Collectors.groupingBy(Map.Entry::getKey,
+					Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+	}
+
+	public Optional<Picture> find(UUID ownerId, UUID pictureId) {
+		return jdbc.sql("SELECT file_name, content_type FROM %s WHERE id = ? AND %s = ?".formatted(table, ownerColumn))
+			.params(pictureId.toString(), ownerId.toString())
 			.query((rs, rowNum) -> {
 				String contentType = rs.getString("content_type");
 				return storage.read(rs.getString("file_name")).map((data) -> new Picture(contentType, data));
@@ -88,64 +118,71 @@ public class PictureRepository {
 	}
 
 	/**
-	 * Return the JPEG thumbnail of the owner's picture, if it has one.
+	 * Return the JPEG thumbnail of the picture, if it belongs to the owner and has one.
 	 */
-	public Optional<byte[]> findThumbnail(UUID ownerId) {
+	public Optional<byte[]> findThumbnail(UUID ownerId, UUID pictureId) {
 		return jdbc
-			.sql("SELECT thumbnail FROM %s WHERE %s = ? AND thumbnail IS NOT NULL".formatted(table, ownerColumn))
-			.param(ownerId.toString())
+			.sql("SELECT thumbnail FROM %s WHERE id = ? AND %s = ? AND thumbnail IS NOT NULL".formatted(table,
+					ownerColumn))
+			.params(pictureId.toString(), ownerId.toString())
 			.query((rs, rowNum) -> rs.getBytes("thumbnail"))
 			.optional();
 	}
 
-	public boolean delete(UUID ownerId) {
-		Optional<String> file = findFile(ownerId);
-		boolean deleted = jdbc.sql("DELETE FROM %s WHERE %s = ?".formatted(table, ownerColumn))
-			.param(ownerId.toString())
-			.update() > 0;
-		file.ifPresent(storage::delete);
-		return deleted;
+	/**
+	 * Delete one picture of the owner and its file; the pictures after it move up.
+	 * @return {@code false} if the owner has no such picture
+	 */
+	public boolean delete(UUID ownerId, UUID pictureId) {
+		Optional<String> file = jdbc
+			.sql("SELECT file_name FROM %s WHERE id = ? AND %s = ?".formatted(table, ownerColumn))
+			.params(pictureId.toString(), ownerId.toString())
+			.query(String.class)
+			.optional();
+		if (file.isEmpty()) {
+			return false;
+		}
+		jdbc.sql("DELETE FROM %s WHERE id = ?".formatted(table)).param(pictureId.toString()).update();
+		writeOrder(ownerId, list(ownerId).stream().map(PictureInfo::id).toList());
+		storage.delete(file.get());
+		return true;
 	}
 
 	/**
-	 * Delete the owner row. Its picture row goes with it (cascade) and the file is removed.
+	 * Put the owner's pictures in the given order; the first becomes the cover.
+	 * @throws IllegalArgumentException unless the ids are exactly the owner's pictures, each once
+	 */
+	public void reorder(UUID ownerId, List<UUID> pictureIds) {
+		List<UUID> current = list(ownerId).stream().map(PictureInfo::id).toList();
+		if (pictureIds.size() != current.size() || new HashSet<>(pictureIds).size() != pictureIds.size()
+				|| !new HashSet<>(pictureIds).equals(new HashSet<>(current))) {
+			throw new IllegalArgumentException("the order must list each picture exactly once");
+		}
+		writeOrder(ownerId, pictureIds);
+	}
+
+	/**
+	 * Delete the owner row. Its picture rows go with it (cascade) and the files are removed.
 	 * @return {@code false} if the owner did not exist
 	 */
 	public boolean deleteOwner(UUID ownerId) {
-		Optional<String> file = findFile(ownerId);
+		List<String> files = jdbc.sql("SELECT file_name FROM %s WHERE %s = ?".formatted(table, ownerColumn))
+			.param(ownerId.toString())
+			.query(String.class)
+			.list();
 		boolean deleted = jdbc.sql("DELETE FROM %s WHERE id = ?".formatted(ownerTable))
 			.param(ownerId.toString())
 			.update() > 0;
-		file.ifPresent(storage::delete);
+		files.forEach(storage::delete);
 		return deleted;
 	}
 
-	public Optional<PictureInfo> findInfo(UUID ownerId) {
-		return jdbc
-			.sql("SELECT id, thumbnail IS NOT NULL AS has_thumbnail FROM %s WHERE %s = ?".formatted(table, ownerColumn))
-			.param(ownerId.toString())
-			.query((rs, rowNum) -> mapInfo(rs))
-			.optional();
-	}
-
-	/**
-	 * Return picture information for every owner that has a picture.
-	 */
-	public Map<UUID, PictureInfo> findAllInfo() {
-		return jdbc
-			.sql("SELECT id, %1$s, thumbnail IS NOT NULL AS has_thumbnail FROM %2$s".formatted(ownerColumn, table))
-			.query((rs, rowNum) -> Map.entry(UUID.fromString(rs.getString(ownerColumn)), mapInfo(rs)))
-			// list() rather than stream(): a JdbcClient stream keeps its connection until closed
-			.list()
-			.stream()
-			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-	}
-
-	private Optional<String> findFile(UUID ownerId) {
-		return jdbc.sql("SELECT file_name FROM %s WHERE %s = ?".formatted(table, ownerColumn))
-			.param(ownerId.toString())
-			.query(String.class)
-			.optional();
+	private void writeOrder(UUID ownerId, List<UUID> pictureIds) {
+		for (int position = 0; position < pictureIds.size(); position++) {
+			jdbc.sql("UPDATE %s SET position = ? WHERE id = ? AND %s = ?".formatted(table, ownerColumn))
+				.params(position, pictureIds.get(position).toString(), ownerId.toString())
+				.update();
+		}
 	}
 
 	private static PictureInfo mapInfo(ResultSet rs) throws SQLException {

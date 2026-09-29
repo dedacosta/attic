@@ -7,22 +7,21 @@ import org.jspecify.annotations.Nullable;
 /**
  * What is known about a stored picture without loading it.
  */
-public record PictureInfo(UUID pictureId, boolean hasThumbnail) {
+public record PictureInfo(UUID id, boolean hasThumbnail) {
 
 	/**
-	 * URL of the picture below {@code base} (e.g. {@code /items/<id>}), or {@code null} without
-	 * a picture. It ends in the picture id so that a replaced picture is not served from the
-	 * browser cache.
+	 * URL of the picture below {@code base} (e.g. {@code /api/items/<id>}). Picture ids are never
+	 * reused, so the browser may cache it forever.
 	 */
-	public static @Nullable String pictureUrl(String base, @Nullable PictureInfo info) {
-		return (info != null) ? base + "/picture?v=" + info.pictureId() : null;
+	public String url(String base) {
+		return base + "/pictures/" + id;
 	}
 
 	/**
-	 * URL of the thumbnail below {@code base}, or {@code null} without one.
+	 * URL of the thumbnail below {@code base}, or {@code null} when the format has none.
 	 */
-	public static @Nullable String thumbnailUrl(String base, @Nullable PictureInfo info) {
-		return (info != null && info.hasThumbnail()) ? base + "/thumbnail?v=" + info.pictureId() : null;
+	public @Nullable String thumbnailUrl(String base) {
+		return hasThumbnail ? url(base) + "/thumbnail" : null;
 	}
 
 }

@@ -1,6 +1,7 @@
 package com.mephys.attic.inventory;
 
 import com.mephys.attic.picture.Picture;
+import com.mephys.attic.picture.PictureInfo;
 import com.mephys.attic.picture.TestImages;
 
 import java.math.BigDecimal;
@@ -123,12 +124,12 @@ class InventoryRepositoryTests {
 		InventoryItem item = repository.save(InventoryItem.of("Painting"));
 		byte[] png = { (byte) 0x89, 'P', 'N', 'G', 1, 2, 3 };
 
-		assertThat(repository.savePicture(item.id(), new Picture("image/png", png))).isTrue();
+		PictureInfo info = repository.addPicture(item.id(), new Picture("image/png", png)).orElseThrow();
 
 		String fileName = pictureFileName(item.id());
-		assertThat(fileName).matches("[0-9a-f-]{36}\\.png").doesNotStartWith(item.id().toString());
+		assertThat(fileName).isEqualTo(info.id() + ".png");
 		assertThat(tempDir.resolve("pictures").resolve(fileName)).hasBinaryContent(png);
-		Picture loaded = repository.findPicture(item.id()).orElseThrow();
+		Picture loaded = repository.findPicture(item.id(), info.id()).orElseThrow();
 		assertThat(loaded.contentType()).isEqualTo("image/png");
 		assertThat(loaded.data()).isEqualTo(png);
 	}
@@ -137,50 +138,34 @@ class InventoryRepositoryTests {
 	void storesThumbnailInDatabase() {
 		InventoryItem item = repository.save(InventoryItem.of("Table"));
 
-		repository.savePicture(item.id(), new Picture("image/jpeg", TestImages.jpeg(1200, 800)));
+		PictureInfo info = repository.addPicture(item.id(), new Picture("image/jpeg", TestImages.jpeg(1200, 800)))
+			.orElseThrow();
 
-		assertThat(repository.findThumbnail(item.id())).hasValueSatisfying(
+		assertThat(info.hasThumbnail()).isTrue();
+		assertThat(repository.findThumbnail(item.id(), info.id())).hasValueSatisfying(
 				(thumbnail) -> assertThat(thumbnail).startsWith((byte) 0xFF, (byte) 0xD8));
-		assertThat(repository.findPictureInfo(item.id())).hasValueSatisfying((info) -> {
-			assertThat(info.hasThumbnail()).isTrue();
-			assertThat(pictureFileName(item.id())).startsWith(info.pictureId().toString());
-		});
+		assertThat(repository.listPictures(item.id())).containsExactly(info);
 	}
 
 	@Test
 	void storesPictureWithoutThumbnailWhenUndecodable() {
 		InventoryItem item = repository.save(InventoryItem.of("Poster"));
 
-		repository.savePicture(item.id(), new Picture("image/webp", new byte[] { 1, 2 }));
+		PictureInfo info = repository.addPicture(item.id(), new Picture("image/webp", new byte[] { 1, 2 }))
+			.orElseThrow();
 
-		assertThat(repository.findPicture(item.id())).isPresent();
-		assertThat(repository.findThumbnail(item.id())).isEmpty();
-		assertThat(repository.findPictureInfo(item.id()).orElseThrow().hasThumbnail()).isFalse();
-		assertThat(repository.findAllPictureInfo().get(item.id()).hasThumbnail()).isFalse();
-	}
-
-	@Test
-	void replacingPictureCreatesNewFileAndRemovesOld() {
-		InventoryItem item = repository.save(InventoryItem.of("Photo"));
-		repository.savePicture(item.id(), new Picture("image/png", new byte[] { 1 }));
-		String oldFile = pictureFileName(item.id());
-
-		byte[] jpeg = { (byte) 0xFF, (byte) 0xD8, 9 };
-		repository.savePicture(item.id(), new Picture("image/jpeg", jpeg));
-
-		String newFile = pictureFileName(item.id());
-		assertThat(newFile).isNotEqualTo(oldFile).endsWith(".jpg");
-		assertThat(tempDir.resolve("pictures").resolve(oldFile)).doesNotExist();
-		assertThat(repository.findPicture(item.id()).orElseThrow().data()).isEqualTo(jpeg);
+		assertThat(repository.findPicture(item.id(), info.id())).isPresent();
+		assertThat(repository.findThumbnail(item.id(), info.id())).isEmpty();
+		assertThat(info.hasThumbnail()).isFalse();
+		assertThat(repository.listAllPictures().get(item.id())).containsExactly(info);
 	}
 
 	@Test
 	void pictureRequiresExistingItem() throws Exception {
 		long filesBefore = countPictureFiles();
 
-		assertThat(repository.savePicture(InventoryItem.of("Ghost").id(),
-				new Picture("image/png", new byte[] { 1 })))
-			.isFalse();
+		assertThat(repository.addPicture(InventoryItem.of("Ghost").id(), new Picture("image/png", new byte[] { 1 })))
+			.isEmpty();
 		assertThat(countPictureFiles()).isEqualTo(filesBefore);
 	}
 
@@ -197,32 +182,32 @@ class InventoryRepositoryTests {
 	@Test
 	void deletingItemDeletesPictureFile() {
 		InventoryItem item = repository.save(InventoryItem.of("Mirror"));
-		repository.savePicture(item.id(), new Picture("image/png", new byte[] { 1 }));
+		PictureInfo info = repository.addPicture(item.id(), new Picture("image/png", new byte[] { 1 })).orElseThrow();
 		String file = pictureFileName(item.id());
 
 		repository.deleteById(item.id());
 
-		assertThat(repository.findPicture(item.id())).isEmpty();
+		assertThat(repository.findPicture(item.id(), info.id())).isEmpty();
 		assertThat(tempDir.resolve("pictures").resolve(file)).doesNotExist();
 	}
 
 	@Test
 	void deletesPicture() {
 		InventoryItem item = repository.save(InventoryItem.of("Rug"));
-		repository.savePicture(item.id(), new Picture("image/png", new byte[] { 1 }));
+		PictureInfo info = repository.addPicture(item.id(), new Picture("image/png", new byte[] { 1 })).orElseThrow();
 		String file = pictureFileName(item.id());
 
-		assertThat(repository.deletePicture(item.id())).isTrue();
-		assertThat(repository.findPicture(item.id())).isEmpty();
+		assertThat(repository.deletePicture(item.id(), info.id())).isTrue();
+		assertThat(repository.findPicture(item.id(), info.id())).isEmpty();
 		assertThat(tempDir.resolve("pictures").resolve(file)).doesNotExist();
 		assertThat(repository.findById(item.id())).isPresent();
 	}
 
 	@Test
-	void findAllPictureInfoReleasesConnections() {
+	void listAllPicturesReleasesConnections() {
 		// More calls than the pool has connections: a leaked connection per call would time out
 		for (int i = 0; i < 25; i++) {
-			repository.findAllPictureInfo();
+			repository.listAllPictures();
 		}
 	}
 

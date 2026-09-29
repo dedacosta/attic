@@ -66,32 +66,32 @@ class InventoryRepository {
 		return pictures.deleteOwner(id);
 	}
 
-	/**
-	 * Store the picture of an item, replacing any existing one.
-	 * @return {@code false} if the item does not exist
-	 */
-	boolean savePicture(UUID itemId, Picture picture) {
-		return pictures.save(itemId, picture);
+	Optional<PictureInfo> addPicture(UUID itemId, Picture picture) {
+		return pictures.add(itemId, picture);
 	}
 
-	Optional<Picture> findPicture(UUID itemId) {
-		return pictures.find(itemId);
+	List<PictureInfo> listPictures(UUID itemId) {
+		return pictures.list(itemId);
 	}
 
-	Optional<byte[]> findThumbnail(UUID itemId) {
-		return pictures.findThumbnail(itemId);
+	Map<UUID, List<PictureInfo>> listAllPictures() {
+		return pictures.listAll();
 	}
 
-	boolean deletePicture(UUID itemId) {
-		return pictures.delete(itemId);
+	Optional<Picture> findPicture(UUID itemId, UUID pictureId) {
+		return pictures.find(itemId, pictureId);
 	}
 
-	Optional<PictureInfo> findPictureInfo(UUID itemId) {
-		return pictures.findInfo(itemId);
+	Optional<byte[]> findThumbnail(UUID itemId, UUID pictureId) {
+		return pictures.findThumbnail(itemId, pictureId);
 	}
 
-	Map<UUID, PictureInfo> findAllPictureInfo() {
-		return pictures.findAllInfo();
+	boolean deletePicture(UUID itemId, UUID pictureId) {
+		return pictures.delete(itemId, pictureId);
+	}
+
+	void reorderPictures(UUID itemId, List<UUID> pictureIds) {
+		pictures.reorder(itemId, pictureIds);
 	}
 
 	private InventoryItem map(ResultSet rs, int rowNum) throws SQLException {

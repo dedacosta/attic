@@ -4,7 +4,10 @@ import com.mephys.attic.security.SignedInMockMvc;
 
 import com.mephys.attic.picture.TestImages;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Stream;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
@@ -13,12 +16,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -59,8 +66,7 @@ class InventoryControllerTests {
 			.andExpect(jsonPath("$.valueEur").value(0.0))
 			.andExpect(jsonPath("$.owner").value("Heritage"))
 			.andExpect(jsonPath("$.comments").doesNotExist())
-			.andExpect(jsonPath("$.pictureUrl").doesNotExist())
-			.andExpect(jsonPath("$.thumbnailUrl").doesNotExist());
+			.andExpect(jsonPath("$.pictures").isEmpty());
 	}
 
 	@Test
@@ -106,53 +112,123 @@ class InventoryControllerTests {
 			.content("{\"name\":\"Box\",\"location\":\"MOON\"}")).andExpect(status().isBadRequest());
 	}
 
+	@Autowired
+	private JdbcClient jdbc;
+
 	@Test
-	void pictureLifecycle() throws Exception {
+	void photosKeepTheirOrderAndTheFirstIsTheCover() throws Exception {
 		String id = create("{\"name\":\"Painting\"}");
-		byte[] png = TestImages.png(600, 300);
+		byte[] front = TestImages.png(600, 300);
+		String first = addPhoto(id, front);
+		String second = addPhoto(id, TestImages.jpeg(50, 50));
+		String third = addPhoto(id, TestImages.png(20, 20));
 
-		mvc.perform(get("/api/items/{id}/picture", id)).andExpect(status().isNotFound());
-		mvc.perform(get("/api/items/{id}/thumbnail", id)).andExpect(status().isNotFound());
-		mvc.perform(put("/api/items/{id}/picture", id).contentType(MediaType.IMAGE_PNG).content(png))
-			.andExpect(status().isNoContent());
+		mvc.perform(get("/api/items/{id}", id))
+			.andExpect(jsonPath("$.pictures[*].id").value(contains(first, second, third)))
+			.andExpect(jsonPath("$.pictures[0].url").value("/api/items/" + id + "/pictures/" + first))
+			.andExpect(jsonPath("$.pictures[0].thumbnailUrl").value("/api/items/" + id + "/pictures/" + first + "/thumbnail"));
+		mvc.perform(get("/api/items")).andExpect(jsonPath("$[?(@.id == '" + id + "')].pictures[0].id").value(first));
 
-		mvc.perform(get("/api/items/{id}/picture", id))
+		mvc.perform(get("/api/items/{id}/pictures/{pictureId}", id, first))
 			.andExpect(status().isOk())
 			.andExpect(content().contentType(MediaType.IMAGE_PNG))
-			.andExpect(content().bytes(png));
-		mvc.perform(get("/api/items/{id}/thumbnail", id))
+			.andExpect(content().bytes(front))
+			.andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("immutable")));
+		mvc.perform(get("/api/items/{id}/pictures/{pictureId}/thumbnail", id, first))
 			.andExpect(status().isOk())
-			.andExpect(content().contentType(MediaType.IMAGE_JPEG));
-		mvc.perform(get("/api/items/{id}", id))
-			.andExpect(jsonPath("$.pictureUrl").value(startsWith("/api/items/" + id + "/picture?v=")))
-			.andExpect(jsonPath("$.thumbnailUrl").value(startsWith("/api/items/" + id + "/thumbnail?v=")));
-		String thumbnailUrl = thumbnailUrl(id);
-		mvc.perform(get(thumbnailUrl)).andExpect(status().isOk());
-		mvc.perform(get("/api/items"))
-			.andExpect(jsonPath("$[?(@.id == '" + id + "')].thumbnailUrl").value(thumbnailUrl));
-
-		mvc.perform(put("/api/items/{id}/picture", id).contentType(MediaType.IMAGE_JPEG).content(TestImages.jpeg(50, 50)))
-			.andExpect(status().isNoContent());
-		assertThat(thumbnailUrl(id)).isNotEqualTo(thumbnailUrl);
-
-		mvc.perform(delete("/api/items/{id}/picture", id)).andExpect(status().isNoContent());
-		mvc.perform(get("/api/items/{id}/picture", id)).andExpect(status().isNotFound());
-		mvc.perform(get("/api/items/{id}/thumbnail", id)).andExpect(status().isNotFound());
-		mvc.perform(get("/api/items/{id}", id)).andExpect(jsonPath("$.pictureUrl").doesNotExist());
+			.andExpect(content().contentType(MediaType.IMAGE_JPEG))
+			.andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("immutable")));
 	}
 
 	@Test
-	void rejectsBadPictures() throws Exception {
+	void reorderMakesAnotherPhotoTheCover() throws Exception {
+		String id = create("{\"name\":\"Chair\"}");
+		String first = addPhoto(id, TestImages.png(10, 10));
+		String second = addPhoto(id, TestImages.png(10, 10));
+
+		mvc.perform(put("/api/items/{id}/pictures/order", id).contentType(MediaType.APPLICATION_JSON)
+			.content("[\"" + second + "\",\"" + first + "\"]")).andExpect(status().isNoContent());
+		mvc.perform(get("/api/items/{id}", id)).andExpect(jsonPath("$.pictures[*].id").value(contains(second, first)));
+	}
+
+	@Test
+	void reorderRejectsAListThatIsNotExactlyThePhotos() throws Exception {
+		String id = create("{\"name\":\"Table\"}");
+		String first = addPhoto(id, TestImages.png(10, 10));
+		String second = addPhoto(id, TestImages.png(10, 10));
+		String foreign = addPhoto(create("{\"name\":\"Other\"}"), TestImages.png(10, 10));
+
+		for (String order : new String[] { "[\"" + first + "\"]", "[\"" + first + "\",\"" + first + "\"]",
+				"[\"" + first + "\",\"" + second + "\",\"" + foreign + "\"]", "[\"" + first + "\",\"" + foreign + "\"]" }) {
+			mvc.perform(put("/api/items/{id}/pictures/order", id).contentType(MediaType.APPLICATION_JSON).content(order))
+				.andExpect(status().isBadRequest());
+		}
+		mvc.perform(get("/api/items/{id}", id)).andExpect(jsonPath("$.pictures[*].id").value(contains(first, second)));
+		mvc.perform(put("/api/items/{id}/pictures/order", "00000000-0000-0000-0000-000000000000")
+			.contentType(MediaType.APPLICATION_JSON).content("[]")).andExpect(status().isNotFound());
+	}
+
+	@Test
+	void deletingAPhotoKeepsTheOthersInOrderWithoutGaps() throws Exception {
+		String id = create("{\"name\":\"Lamp\"}");
+		String first = addPhoto(id, TestImages.png(10, 10));
+		String second = addPhoto(id, TestImages.png(10, 10));
+		String third = addPhoto(id, TestImages.png(10, 10));
+		long filesBefore = countPictureFiles();
+
+		mvc.perform(delete("/api/items/{id}/pictures/{pictureId}", id, first)).andExpect(status().isNoContent());
+		String fourth = addPhoto(id, TestImages.png(10, 10));
+
+		mvc.perform(get("/api/items/{id}/pictures/{pictureId}", id, first)).andExpect(status().isNotFound());
+		mvc.perform(get("/api/items/{id}", id))
+			.andExpect(jsonPath("$.pictures[*].id").value(contains(second, third, fourth)));
+		List<Integer> positions = jdbc.sql("SELECT position FROM inventory_picture WHERE item_id = ? ORDER BY position")
+			.param(id)
+			.query(Integer.class)
+			.list();
+		assertThat(positions).containsExactly(0, 1, 2);
+		assertThat(countPictureFiles()).isEqualTo(filesBefore);
+		mvc.perform(delete("/api/items/{id}/pictures/{pictureId}", id, first)).andExpect(status().isNotFound());
+	}
+
+	@Test
+	void photoOfAnotherItemIsNotFound() throws Exception {
+		String mine = create("{\"name\":\"Mine\"}");
+		String other = create("{\"name\":\"Other\"}");
+		String othersPhoto = addPhoto(other, TestImages.png(10, 10));
+
+		mvc.perform(get("/api/items/{id}/pictures/{pictureId}", mine, othersPhoto)).andExpect(status().isNotFound());
+		mvc.perform(get("/api/items/{id}/pictures/{pictureId}/thumbnail", mine, othersPhoto))
+			.andExpect(status().isNotFound());
+		mvc.perform(delete("/api/items/{id}/pictures/{pictureId}", mine, othersPhoto)).andExpect(status().isNotFound());
+		mvc.perform(get("/api/items/{id}/pictures/{pictureId}", other, othersPhoto)).andExpect(status().isOk());
+	}
+
+	@Test
+	void deletingAnItemDeletesAllItsPhotoFiles() throws Exception {
+		String id = create("{\"name\":\"Mirror\"}");
+		addPhoto(id, TestImages.png(10, 10));
+		addPhoto(id, TestImages.png(10, 10));
+		long filesBefore = countPictureFiles();
+
+		mvc.perform(delete("/api/items/{id}", id)).andExpect(status().isNoContent());
+
+		assertThat(countPictureFiles()).isEqualTo(filesBefore - 2);
+	}
+
+	@Test
+	void rejectsBadPhotos() throws Exception {
 		String id = create("{\"name\":\"Vase\"}");
 
-		mvc.perform(put("/api/items/{id}/picture", id).contentType(MediaType.TEXT_PLAIN).content("hi"))
+		mvc.perform(post("/api/items/{id}/pictures", id).contentType(MediaType.TEXT_PLAIN).content("hi"))
 			.andExpect(status().isUnsupportedMediaType());
-		mvc.perform(put("/api/items/{id}/picture", id).contentType("image/svg+xml").content("<svg/>"))
+		mvc.perform(post("/api/items/{id}/pictures", id).contentType("image/svg+xml").content("<svg/>"))
 			.andExpect(status().isBadRequest());
-		mvc.perform(put("/api/items/{id}/picture", id).contentType(MediaType.IMAGE_PNG).content(new byte[100 * 1024 + 1]))
+		mvc.perform(post("/api/items/{id}/pictures", id).contentType(MediaType.IMAGE_PNG).content(new byte[100 * 1024 + 1]))
 			.andExpect(status().isContentTooLarge());
-		mvc.perform(put("/api/items/{id}/picture", "00000000-0000-0000-0000-000000000000").contentType(MediaType.IMAGE_PNG)
+		mvc.perform(post("/api/items/{id}/pictures", "00000000-0000-0000-0000-000000000000").contentType(MediaType.IMAGE_PNG)
 			.content(new byte[] { 1 })).andExpect(status().isNotFound());
+		mvc.perform(get("/api/items/{id}", id)).andExpect(jsonPath("$.pictures").isEmpty());
 	}
 
 	@Test
@@ -163,9 +239,23 @@ class InventoryControllerTests {
 			.andExpect(jsonPath("$.length()").value(Location.values().length));
 	}
 
-	private String thumbnailUrl(String id) throws Exception {
-		String body = mvc.perform(get("/api/items/{id}", id)).andReturn().getResponse().getContentAsString();
-		return JsonPath.read(body, "$.thumbnailUrl");
+	private String addPhoto(String itemId, byte[] image) throws Exception {
+		String body = mvc.perform(post("/api/items/{id}/pictures", itemId).contentType(MediaType.IMAGE_PNG).content(image))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		return JsonPath.read(body, "$.id");
+	}
+
+	private static long countPictureFiles() throws Exception {
+		Path directory = tempDir.resolve("pictures");
+		if (!Files.exists(directory)) {
+			return 0;
+		}
+		try (Stream<Path> files = Files.list(directory)) {
+			return files.count();
+		}
 	}
 
 	private String create(String json) throws Exception {

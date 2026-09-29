@@ -83,28 +83,32 @@ class DocumentRepository {
 				""").param(heirId.toString()).update();
 	}
 
-	boolean savePicture(UUID documentId, Picture picture) {
-		return pictures.save(documentId, picture);
+	Optional<PictureInfo> addPicture(UUID documentId, Picture picture) {
+		return pictures.add(documentId, picture);
 	}
 
-	Optional<Picture> findPicture(UUID documentId) {
-		return pictures.find(documentId);
+	List<PictureInfo> listPictures(UUID documentId) {
+		return pictures.list(documentId);
 	}
 
-	Optional<byte[]> findThumbnail(UUID documentId) {
-		return pictures.findThumbnail(documentId);
+	Map<UUID, List<PictureInfo>> listAllPictures() {
+		return pictures.listAll();
 	}
 
-	boolean deletePicture(UUID documentId) {
-		return pictures.delete(documentId);
+	Optional<Picture> findPicture(UUID documentId, UUID pictureId) {
+		return pictures.find(documentId, pictureId);
 	}
 
-	Optional<PictureInfo> findPictureInfo(UUID documentId) {
-		return pictures.findInfo(documentId);
+	Optional<byte[]> findThumbnail(UUID documentId, UUID pictureId) {
+		return pictures.findThumbnail(documentId, pictureId);
 	}
 
-	Map<UUID, PictureInfo> findAllPictureInfo() {
-		return pictures.findAllInfo();
+	boolean deletePicture(UUID documentId, UUID pictureId) {
+		return pictures.delete(documentId, pictureId);
+	}
+
+	void reorderPictures(UUID documentId, List<UUID> pictureIds) {
+		pictures.reorder(documentId, pictureIds);
 	}
 
 	private NamedDocument mapNamed(ResultSet rs, int rowNum) throws SQLException {

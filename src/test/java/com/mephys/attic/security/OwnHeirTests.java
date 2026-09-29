@@ -62,6 +62,8 @@ class OwnHeirTests {
 
 	private String mariasPassport;
 
+	private String mariasPhoto;
+
 	@BeforeEach
 	void twoHeirsWithDocuments() throws Exception {
 		jdbc.sql("DELETE FROM app_user").update();
@@ -76,8 +78,8 @@ class OwnHeirTests {
 				"{\"heirId\":\"" + celina + "\",\"type\":\"ID_CARD\"}")));
 		mariasPassport = id(mvc.perform(json(post("/api/documents").session(admin),
 				"{\"heirId\":\"" + maria + "\",\"type\":\"PASSPORT\"}")));
-		mvc.perform(put("/api/documents/" + mariasPassport + "/picture").session(admin).with(csrf())
-			.contentType(MediaType.IMAGE_PNG).content(TestImages.png(40, 40))).andExpect(status().isNoContent());
+		mariasPhoto = id(mvc.perform(post("/api/documents/" + mariasPassport + "/pictures").session(admin).with(csrf())
+			.contentType(MediaType.IMAGE_PNG).content(TestImages.png(40, 40))));
 		createUser("ana", Role.USER);
 	}
 
@@ -97,15 +99,22 @@ class OwnHeirTests {
 			.andExpect(jsonPath("$.length()").value(1))
 			.andExpect(jsonPath("$[0].id").value(celinasCard));
 		mvc.perform(get("/api/documents/" + mariasPassport).session(ana)).andExpect(status().isNotFound());
-		mvc.perform(get("/api/documents/" + mariasPassport + "/picture").session(ana)).andExpect(status().isNotFound());
-		mvc.perform(get("/api/documents/" + mariasPassport + "/thumbnail").session(ana)).andExpect(status().isNotFound());
+		mvc.perform(get("/api/documents/" + mariasPassport + "/pictures/" + mariasPhoto).session(ana))
+			.andExpect(status().isNotFound());
+		mvc.perform(get("/api/documents/" + mariasPassport + "/pictures/" + mariasPhoto + "/thumbnail").session(ana))
+			.andExpect(status().isNotFound());
 		// Documents without an heir are for administrators only
 		mvc.perform(get("/api/documents/" + contract).session(ana)).andExpect(status().isNotFound());
+		String contractPhoto = id(mvc.perform(post("/api/documents/" + contract + "/pictures").session(admin).with(csrf())
+			.contentType(MediaType.IMAGE_PNG).content(TestImages.png(10, 10))));
+		mvc.perform(get("/api/documents/" + contract + "/pictures/" + contractPhoto).session(ana))
+			.andExpect(status().isNotFound());
 
 		// The administrator still sees everybody
 		mvc.perform(get("/api/heirs").session(admin)).andExpect(jsonPath("$.length()").value(2));
 		mvc.perform(get("/api/documents/" + contract).session(admin)).andExpect(status().isOk());
-		mvc.perform(get("/api/documents/" + mariasPassport + "/picture").session(admin)).andExpect(status().isOk());
+		mvc.perform(get("/api/documents/" + mariasPassport + "/pictures/" + mariasPhoto).session(admin))
+			.andExpect(status().isOk());
 	}
 
 	@Test
