@@ -106,8 +106,8 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
     { id: 'house', href: '#/house', label: t.tabHouse, Icon: HouseIcon },
     { id: 'land', href: '#/land', label: t.tabLand, Icon: LandIcon },
     { id: 'heirs', href: '#/heirs', label: t.tabHeirs, Icon: HeirsIcon },
-    { id: 'documents', href: '#/documents', label: t.tabDocuments, Icon: IdCardIcon },
     { id: 'inventory', href: '#/', label: t.tabInventory, Icon: BoxIcon },
+    { id: 'documents', href: '#/documents', label: t.tabDocuments, Icon: IdCardIcon },
     { id: 'users', href: '#/users', label: t.users, Icon: KeyIcon },
   ] as const).filter((tab) => allowed(tab.id))
 
