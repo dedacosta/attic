@@ -1,6 +1,6 @@
 import type { Messages } from '../i18n'
 import type {
-  DocumentInput, Item, ItemInput, OwnAccount, Heir, HeirDocument, HeirInput, Role, Session, UserAccount,
+  DocumentInput, Item, ItemInput, OwnAccount, Heir, HeirDocument, HeirInput, Picture, Role, Session, UserAccount,
 } from './types'
 
 /** A failed request. {@link apiErrorMessage} turns it into text in the user's language. */
@@ -127,6 +127,18 @@ export const api = {
       body: file,
     }),
   deletePicture: (owner: string) => request<void>(`${owner}/picture`, { method: 'DELETE' }),
+  /** Add a photo after the others, e.g. `addPicture('/api/items/<id>', file)` */
+  addPicture: (owner: string, file: File) =>
+    request<Picture>(`${owner}/pictures`, {
+      method: 'POST',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }),
+  removePicture: (owner: string, pictureId: string) =>
+    request<void>(`${owner}/pictures/${pictureId}`, { method: 'DELETE' }),
+  /** Put the photos in this order; the first becomes the cover */
+  orderPictures: (owner: string, pictureIds: string[]) =>
+    request<void>(`${owner}/pictures/order`, json('PUT', pictureIds)),
 
   session: () => request<Session>('/api/session'),
   setup: (username: string, password: string) =>

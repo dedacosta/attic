@@ -1310,3 +1310,93 @@ fieldset.fields:disabled .checkbox {
   margin: 0;
   font-size: 0.9rem;
 }
+
+/* Photos of an item or document */
+
+.photos-field {
+  margin-bottom: 18px;
+}
+
+.photos-list {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 4px;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.photo {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 112px;
+}
+
+.photo-open,
+.photo-add-button {
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-small);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.photo-open img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-add-button {
+  align-content: center;
+  gap: 4px;
+  border: 2px dashed var(--border);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.photo-cover {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.photo-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.button-small {
+  padding: 2px 8px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .photo,
+  .photo-open,
+  .photo-add-button {
+    width: 96px;
+  }
+
+  .photo-open,
+  .photo-add-button {
+    height: 96px;
+  }
+}

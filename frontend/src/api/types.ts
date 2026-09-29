@@ -76,3 +76,17 @@ export interface Heir {
 export type HeirInput = Omit<Heir, 'id' | 'createdAt' | 'updatedAt'>
 
 export type PictureChange = { kind: 'keep' } | { kind: 'replace'; file: File } | { kind: 'remove' }
+
+/** A stored photo of an item or document */
+export interface Picture {
+  id: string
+  url: string
+  /** Null for formats without thumbnail (HEIC) */
+  thumbnailUrl: string | null
+}
+
+/** A photo in a form: already stored, or chosen and not uploaded yet */
+export type PhotoEntry = { kind: 'stored'; picture: Picture } | { kind: 'new'; key: string; file: File }
+
+export const storedPhotos = (pictures: Picture[]): PhotoEntry[] =>
+  pictures.map((picture) => ({ kind: 'stored', picture }))
