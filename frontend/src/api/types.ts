@@ -10,6 +10,19 @@ export interface UserAccount {
   phone: string | null
 }
 
+/** An invitation to register that has not been used yet */
+export interface Invitation {
+  id: string
+  role: Role
+  /** The heir the new account will belong to */
+  heirId: string | null
+  createdBy: string
+  createdAt: string
+  expiresAt: string
+  /** Only in the answer to creating the invitation: it is not kept on the server */
+  token: string | null
+}
+
 export interface OwnAccount {
   username: string
   role: Role

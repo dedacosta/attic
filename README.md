@@ -19,7 +19,9 @@ Tailscale.
   photos, and official documents (title deed, land registry, plans…) with image or PDF files.
 - **Accounts and roles** — *super-administrator*, *administrator* (edits everything, creates
   accounts) and *user* (reads everything, edits only their own heir and password). The first
-  account is created on the setup screen.
+  account is created on the setup screen. Administrators either create accounts themselves or
+  hand out an invitation link (one-time, valid for 7 days) with which the person picks their own
+  username and password.
 - **Languages** — Portuguese, French and English, chosen from the browser or switched in the app.
 - Works on phones; *Add to Home Screen* makes it look like an app.
 
