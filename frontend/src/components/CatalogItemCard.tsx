@@ -2,15 +2,15 @@ import { formatDate, formatEuros, locationLabel } from '../lib/format'
 import { useI18n } from '../i18n'
 import { usePermissions } from '../lib/permissions'
 import { ImageIcon, TrashIcon } from './icons'
-import type { Item } from '../api/types'
+import type { CatalogItem } from '../api/types'
 
 interface Props {
-  item: Item
+  item: CatalogItem
   onEdit: () => void
   onDelete: () => void
 }
 
-export default function ItemCard({ item, onEdit, onDelete }: Props) {
+export default function CatalogItemCard({ item, onEdit, onDelete }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
   return (

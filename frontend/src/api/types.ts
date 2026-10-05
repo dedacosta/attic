@@ -39,7 +39,7 @@ export interface Session {
   setupRequired: boolean
 }
 
-export interface Item {
+export interface CatalogItem {
   id: string
   name: string
   quantity: number
@@ -53,7 +53,7 @@ export interface Item {
   pictures: Picture[]
 }
 
-export type ItemInput = Omit<Item, 'id' | 'pictures'>
+export type CatalogItemInput = Omit<CatalogItem, 'id' | 'pictures'>
 
 /** An item of the official inventory; it has the structure of a catalog item but is its own list */
 export interface OfficialInventoryItem {

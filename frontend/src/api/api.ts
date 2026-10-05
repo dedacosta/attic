@@ -1,6 +1,6 @@
 import type { Messages } from '../i18n'
 import type {
-  ContributionYear, DocumentInput, Renovation, RenovationInput, Invitation, Item, ItemInput, OwnAccount, Heir, HeirDocument,
+  ContributionYear, DocumentInput, Renovation, RenovationInput, Invitation, CatalogItem, CatalogItemInput, OwnAccount, Heir, HeirDocument,
   HeirInput, OfficialInventoryItem, OfficialInventoryItemInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
 } from './types'
 
@@ -101,11 +101,11 @@ const json = (method: string, body: unknown): RequestInit => ({
 })
 
 export const api = {
-  listItems: () => request<Item[]>('/api/items'),
+  listCatalog: () => request<CatalogItem[]>('/api/catalog'),
   listLocations: () => request<string[]>('/api/locations'),
-  createItem: (input: ItemInput) => request<Item>('/api/items', json('POST', input)),
-  updateItem: (id: string, input: ItemInput) => request<Item>(`/api/items/${id}`, json('PUT', input)),
-  deleteItem: (id: string) => request<void>(`/api/items/${id}`, { method: 'DELETE' }),
+  createCatalogItem: (input: CatalogItemInput) => request<CatalogItem>('/api/catalog', json('POST', input)),
+  updateCatalogItem: (id: string, input: CatalogItemInput) => request<CatalogItem>(`/api/catalog/${id}`, json('PUT', input)),
+  deleteCatalogItem: (id: string) => request<void>(`/api/catalog/${id}`, { method: 'DELETE' }),
   listOfficialInventory: () => request<OfficialInventoryItem[]>('/api/official-inventory'),
   createOfficialInventoryItem: (input: OfficialInventoryItemInput) =>
     request<OfficialInventoryItem>('/api/official-inventory', json('POST', input)),
@@ -163,7 +163,7 @@ export const api = {
     request<PropertyDocument>(`/api/property-documents/${id}`, json('PUT', input)),
   deletePropertyDocument: (id: string) => request<void>(`/api/property-documents/${id}`, { method: 'DELETE' }),
 
-  /** Add a photo after the others, e.g. `addPicture('/api/items/<id>', file)` */
+  /** Add a photo after the others, e.g. `addPicture('/api/catalog/<id>', file)` */
   addPicture: (owner: string, file: File) =>
     request<Picture>(`${owner}/pictures`, {
       method: 'POST',
