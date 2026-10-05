@@ -315,7 +315,7 @@
     "other": "{count} fotografias"
   },
   "errorPhotoUpload": "Não foi possível enviar «{file}»: {reason}",
-  "editHouse": "Editar casa",
+  "editHouse": "Editar imóvel",
   "newLand": "Novo terreno",
   "editLand": "Editar terreno",
   "landLocation": "Localização",
@@ -374,22 +374,22 @@
   "sourceCode": "Código-fonte",
   "tabInventory": "Inventário",
   "pdfTitleInventory": "Inventário",
-  "tabHeritage": "Herança",
-  "houses": "Casas",
+  "tabHeritage": "Património",
+  "houses": "Imóveis",
   "lands": "Terrenos",
-  "newHouse": "Nova casa",
+  "newHouse": "Novo imóvel",
   "houseCount": {
-    "one": "{count} casa",
-    "other": "{count} casas"
+    "one": "{count} imóvel",
+    "other": "{count} imóveis"
   },
   "filteredHouseCount": {
-    "one": "{shown} de {count} casa",
-    "other": "{shown} de {count} casas"
+    "one": "{shown} de {count} imóvel",
+    "other": "{shown} de {count} imóveis"
   },
-  "emptyHouses": "Ainda não há casas.",
-  "noHouseMatches": "Nenhuma casa corresponde à pesquisa.",
+  "emptyHouses": "Ainda não há imóveis.",
+  "noHouseMatches": "Nenhum imóvel corresponde à pesquisa.",
   "propertySearchPlaceholder": "Pesquisar nome, morada, detalhes…",
-  "propertySearchLabel": "Pesquisar casas e terrenos",
-  "backToHeritage": "Herança",
+  "propertySearchLabel": "Pesquisar imóveis e terrenos",
+  "backToHeritage": "Património",
   "propertyNotFound": "Esta propriedade já não existe."
 }
