@@ -316,7 +316,7 @@
     "other": "{count} photos"
   },
   "errorPhotoUpload": "«\u00a0{file}\u00a0» n’a pas pu être envoyée\u00a0: {reason}",
-  "editHouse": "Modifier la maison",
+  "editHouse": "Modifier l’immeuble",
   "newLand": "Nouveau terrain",
   "editLand": "Modifier le terrain",
   "landLocation": "Emplacement",
@@ -375,22 +375,22 @@
   "sourceCode": "Code source",
   "tabInventory": "Inventaire",
   "pdfTitleInventory": "Inventaire",
-  "tabHeritage": "Héritage",
-  "houses": "Maisons",
+  "tabHeritage": "Patrimoine",
+  "houses": "Immeubles",
   "lands": "Terrains",
-  "newHouse": "Nouvelle maison",
+  "newHouse": "Nouvel immeuble",
   "houseCount": {
-    "one": "{count} maison",
-    "other": "{count} maisons"
+    "one": "{count} immeuble",
+    "other": "{count} immeubles"
   },
   "filteredHouseCount": {
-    "one": "{shown} sur {count} maison",
-    "other": "{shown} sur {count} maisons"
+    "one": "{shown} sur {count} immeuble",
+    "other": "{shown} sur {count} immeubles"
   },
-  "emptyHouses": "Aucune maison pour l’instant.",
-  "noHouseMatches": "Aucune maison ne correspond à la recherche.",
+  "emptyHouses": "Aucun immeuble pour l’instant.",
+  "noHouseMatches": "Aucun immeuble ne correspond à la recherche.",
   "propertySearchPlaceholder": "Rechercher nom, adresse, détails…",
-  "propertySearchLabel": "Rechercher des maisons et des terrains",
-  "backToHeritage": "Héritage",
+  "propertySearchLabel": "Rechercher des immeubles et des terrains",
+  "backToHeritage": "Patrimoine",
   "propertyNotFound": "Cette propriété n’existe plus."
 }
