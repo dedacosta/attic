@@ -3,6 +3,7 @@ import { api, apiErrorMessage } from '../api/api'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DocumentDialog from '../components/DocumentDialog'
 import HeirCard from '../components/HeirCard'
+import HeirDetails from '../components/HeirDetails'
 import HeirDialog from '../components/HeirDialog'
 import SearchBar from '../components/SearchBar'
 import { PlusIcon } from '../components/icons'
@@ -60,7 +61,7 @@ function HeritageSummary({ heirs }: { heirs: Heir[] }) {
 
 export default function HeirsView() {
   const { t } = useI18n()
-  const { canEdit } = usePermissions()
+  const { canEdit, ownHeirId } = usePermissions()
   const [heirs, setHeirs] = useState<Heir[] | null>(null)
   const [documents, setDocuments] = useState<HeirDocument[]>([])
   const [sexes, setSexes] = useState<string[]>([])
@@ -68,6 +69,8 @@ export default function HeirsView() {
   const [loadError, setLoadError] = useState<unknown>(null)
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState<Heir | 'new' | null>(null)
+  // By id, so that it shows the heir as reloaded
+  const [viewingId, setViewingId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<Heir | null>(null)
   const [editingDocument, setEditingDocument] = useState<HeirDocument | 'new' | null>(null)
   const [confirmingDocumentDelete, setConfirmingDocumentDelete] = useState(false)
@@ -107,7 +110,7 @@ export default function HeirsView() {
     return (
       <Fragment key={heir.id}>
         <HeirCard heir={heir} documents={documentsOf(heir.id)} childCount={children.length}
-          onEdit={() => setEditing(heir)} onDelete={() => setDeleting(heir)} />
+          onOpen={() => setViewingId(heir.id)} />
         {children.length > 0 && (
           <section className="heir-children" aria-label={t.childrenOf(heir.name)}>
             <h3>{t.childrenOf(heir.name)}</h3>
@@ -119,6 +122,12 @@ export default function HeirsView() {
   }
 
   const editingHeir = editing !== null && editing !== 'new' ? editing : null
+  const viewing = heirs?.find((heir) => heir.id === viewingId) ?? null
+
+  /** Administrators edit everybody, a user their own card */
+  function mayEdit(heir: Heir): boolean {
+    return canEdit || heir.id === ownHeirId
+  }
 
   async function save(input: HeirInput) {
     const saved = editingHeir ? await api.updateHeir(editingHeir.id, input) : await api.createHeir(input)
@@ -206,6 +215,12 @@ export default function HeirsView() {
           {roots.map(family)}
         </div>
       </main>
+
+      {viewing && (
+        <HeirDetails heir={viewing} heirs={heirs ?? []} documents={documentsOf(viewing.id)}
+          onEdit={mayEdit(viewing) ? () => { setViewingId(null); setEditing(viewing) } : undefined}
+          onClose={() => setViewingId(null)} />
+      )}
 
       {editing !== null && (
         <HeirDialog

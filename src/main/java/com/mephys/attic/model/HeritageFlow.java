@@ -13,9 +13,12 @@ import org.jspecify.annotations.Nullable;
 /**
  * How the heritage flows down the family. The whole heritage is 1. An heir without a parent
  * receives the share entered for them; what the entered shares leave over is divided equally
- * among the heirs without a parent whose share is not entered. An heir who has died passes what they receive on to their children, in equal parts, and
- * so on down the generations; one who has died without children keeps it. The children of a
- * living heir receive nothing.
+ * among the heirs without a parent whose share is not entered. An heir who has died passes what
+ * they receive on to their children, in equal parts, and so on down the generations. The children
+ * of a living heir receive nothing.
+ * <p>
+ * Only heirs who {@linkplain #counts count} take part: one who has died without descendants who
+ * inherit receives nothing, not even a share entered for them, and is left out when dividing.
  */
 public final class HeritageFlow {
 
@@ -37,12 +40,30 @@ public final class HeritageFlow {
 				roots.add(heir);
 			}
 		}
-		HeritageShare unentered = remainder(roots);
+		Map<UUID, Boolean> counting = new HashMap<>();
+		List<Heir> countingRoots = roots.stream().filter((root) -> counts(root, children, counting)).toList();
+		HeritageShare unentered = remainder(countingRoots);
 		Map<UUID, HeritageShare> shares = new HashMap<>();
-		for (Heir root : roots) {
-			flow(root, (root.heritageShare() != null) ? root.heritageShare() : unentered, children, shares);
+		for (Heir root : countingRoots) {
+			flow(root, (root.heritageShare() != null) ? root.heritageShare() : unentered, children, counting, shares);
 		}
 		return shares;
+	}
+
+	/**
+	 * Whether the heir takes part in the heritage: they are alive, or they have died and one of
+	 * their children takes part.
+	 */
+	private static boolean counts(Heir heir, Map<UUID, List<Heir>> children, Map<UUID, Boolean> counting) {
+		Boolean known = counting.get(heir.id());
+		if (known != null) {
+			return known;
+		}
+		boolean result = !heir.deceased() || children.getOrDefault(heir.id(), List.of())
+			.stream()
+			.anyMatch((child) -> counts(child, children, counting));
+		counting.put(heir.id(), result);
+		return result;
 	}
 
 	/**
@@ -79,16 +100,20 @@ public final class HeritageFlow {
 	}
 
 	private static void flow(Heir heir, @Nullable HeritageShare received, Map<UUID, List<Heir>> children,
-			Map<UUID, HeritageShare> shares) {
+			Map<UUID, Boolean> counting, Map<UUID, HeritageShare> shares) {
 		if (received == null) {
 			return;
 		}
 		shares.put(heir.id(), received);
-		List<Heir> heirChildren = children.getOrDefault(heir.id(), List.of());
-		if (heir.deceased() && !heirChildren.isEmpty()) {
-			HeritageShare part = received.split(heirChildren.size());
-			for (Heir child : heirChildren) {
-				flow(child, part, children, shares);
+		if (heir.deceased()) {
+			// Only the children who take part divide the share; a deceased heir who counts has one
+			List<Heir> heirs = children.getOrDefault(heir.id(), List.of())
+				.stream()
+				.filter((child) -> counts(child, children, counting))
+				.toList();
+			HeritageShare part = received.split(heirs.size());
+			for (Heir child : heirs) {
+				flow(child, part, children, counting, shares);
 			}
 		}
 	}
