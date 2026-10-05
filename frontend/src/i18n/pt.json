@@ -64,7 +64,6 @@
   "errorTooLarge": "A fotografia é demasiado grande.",
   "errorUnsupported": "Este tipo de ficheiro não é suportado.",
   "errorRequest": "O pedido falhou ({status}).",
-  "madeWith": "Anthropic Opus 5.5",
   "languageLabel": "Idioma",
   "comments": "Comentários",
   "exportPdfLabel": "Exportar a lista em PDF",

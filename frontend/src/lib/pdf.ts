@@ -73,9 +73,10 @@ export async function exportPdf(items: Item[], totalCount: number, filters: stri
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
       doc.setTextColor(...MUTED)
-      const footer = `© ${copyrightYears(now)} David Da Costa · ${t.madeWith} · v${__APP_VERSION__}`
-      doc.text(pdfText(footer), MARGIN, pageHeight - 8)
-      doc.text(pdfText(t.page(data.pageNumber, TOTAL_PAGES)), pageWidth - MARGIN, pageHeight - 8, { align: 'right' })
+      doc.text(pdfText(`© ${copyrightYears(now)} David Da Costa · v${__APP_VERSION__}`), MARGIN, pageHeight - 10)
+      doc.text(pdfText(t.page(data.pageNumber, TOTAL_PAGES)), pageWidth - MARGIN, pageHeight - 10, { align: 'right' })
+      doc.setFontSize(7)
+      doc.text(pdfText(__BUILT_WITH__), MARGIN, pageHeight - 6)
     },
   })
   doc.putTotalPages(TOTAL_PAGES)

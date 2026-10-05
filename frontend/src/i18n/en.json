@@ -64,7 +64,6 @@
   "errorTooLarge": "The picture is too large.",
   "errorUnsupported": "This file type is not supported.",
   "errorRequest": "Request failed ({status}).",
-  "madeWith": "Anthropic Opus 5.5",
   "languageLabel": "Language",
   "comments": "Comments",
   "exportPdfLabel": "Export the list as PDF",

@@ -656,6 +656,16 @@ form > .dialog-actions {
   font-size: 0.85rem;
 }
 
+.footer p {
+  margin: 0;
+}
+
+.footer-credits {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
 /* Small screens */
 
 @media (max-width: 640px) {
