@@ -20,6 +20,7 @@ const PARAMS = {
   itemCount: ['count'],
   filteredCount: ['shown', 'count'],
   editNamed: ['name'],
+  showNamed: ['name'],
   deleteNamed: ['name'],
   deleteMessage: ['name'],
   errorRequest: ['status'],

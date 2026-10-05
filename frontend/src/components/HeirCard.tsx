@@ -3,8 +3,7 @@ import { formatDate } from '../lib/format'
 import { parseFraction } from '../lib/fraction'
 import { validity } from '../lib/validity'
 import { useI18n } from '../i18n'
-import { usePermissions } from '../lib/permissions'
-import { IdCardIcon, TrashIcon } from './icons'
+import { IdCardIcon } from './icons'
 import type { Heir, HeirDocument } from '../api/types'
 
 interface Props {
@@ -12,8 +11,8 @@ interface Props {
   documents: HeirDocument[]
   /** How many of their children are shown */
   childCount: number
-  onEdit: () => void
-  onDelete: () => void
+  /** Show everything about the heir; editing and deleting are reached from there */
+  onOpen: () => void
 }
 
 function initials(name: string): string {
@@ -21,9 +20,8 @@ function initials(name: string): string {
   return ((words[0]?.[0] ?? '') + (words.length > 1 ? words[words.length - 1][0] : '')).toUpperCase()
 }
 
-export default function HeirCard({ heir, documents, childCount, onEdit, onDelete }: Props) {
+export default function HeirCard({ heir, documents, childCount, onOpen }: Props) {
   const { t } = useI18n()
-  const { canEdit } = usePermissions()
   const share = heir.calculatedShare ? parseFraction(heir.calculatedShare) : null
   // A deceased heir's share went on to their children
   const passedOn = heir.deceased && childCount > 0
@@ -31,7 +29,7 @@ export default function HeirCard({ heir, documents, childCount, onEdit, onDelete
   const expiring = documents.filter((d) => validity(d.validUntil) === 'expiring').length
   return (
     <article className={heir.deceased ? 'card heir-card heir-deceased' : 'card heir-card'}>
-      <button type="button" className="card-main" onClick={onEdit} aria-label={t.editNamed(heir.name)}>
+      <button type="button" className="card-main" onClick={onOpen} aria-label={t.showNamed(heir.name)}>
         <div className="heir-header">
           <span className="avatar" aria-hidden="true">{initials(heir.name)}</span>
           <div>
@@ -55,6 +53,7 @@ export default function HeirCard({ heir, documents, childCount, onEdit, onDelete
             {t.heritageShare}{t.colon} <strong>{share ? heir.calculatedShare : '—'}</strong>
           </p>
           {share && passedOn && <p className="heir-share-note">{t.sharePassedOn}</p>}
+          {!share && heir.deceased && childCount === 0 && <p className="heir-share-note">{t.notInHeritage}</p>}
           <p className="heir-documents">
             <IdCardIcon width={16} height={16} />
             <span>{documents.length === 0 ? t.noHeirDocuments : t.documentCount(documents.length)}</span>
@@ -64,9 +63,6 @@ export default function HeirCard({ heir, documents, childCount, onEdit, onDelete
           {heir.comments && <p className="card-comments">{heir.comments}</p>}
         </div>
       </button>
-      {canEdit && <button type="button" className="icon-button card-delete" onClick={onDelete} aria-label={t.deleteNamed(heir.name)}>
-        <TrashIcon width={18} height={18} />
-      </button>}
     </article>
   )
 }

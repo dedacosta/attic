@@ -123,3 +123,16 @@ export const MapPinIcon = (props: SVGProps<SVGSVGElement>) => (
     <circle cx="12" cy="9.5" r="2.5" />
   </svg>
 )
+
+export const PencilIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="M4 20h4L19 9l-4-4L4 16z" />
+    <path d="m13.5 6.5 4 4" />
+  </svg>
+)
+
+export const DownloadIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+  </svg>
+)

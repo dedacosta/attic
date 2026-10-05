@@ -50,10 +50,51 @@ class HeritageFlowTests {
 	}
 
 	@Test
-	void deceasedHeirWithoutChildrenKeepsTheirShare() {
-		Heir maria = heir("Maria", "1/3", true, null);
+	void deceasedHeirWithoutChildrenIsNotPartOfTheHeritage() {
+		Heir maria = heir("Maria", null, true, null);
+		Heir joao = heir("João", null, false, null);
+		Heir rui = heir("Rui", null, false, null);
 
-		assertThat(HeritageFlow.calculate(List.of(maria)).get(maria.id())).hasToString("1/3");
+		Map<UUID, HeritageShare> shares = HeritageFlow.calculate(List.of(maria, joao, rui));
+
+		assertThat(shares).doesNotContainKey(maria.id());
+		assertThat(shares.get(joao.id())).hasToString("1/2");
+		assertThat(shares.get(rui.id())).hasToString("1/2");
+	}
+
+	@Test
+	void shareEnteredForDeceasedHeirWithoutChildrenIsIgnored() {
+		Heir maria = heir("Maria", "1/2", true, null);
+		Heir joao = heir("João", null, false, null);
+
+		Map<UUID, HeritageShare> shares = HeritageFlow.calculate(List.of(maria, joao));
+
+		assertThat(shares).doesNotContainKey(maria.id());
+		assertThat(shares.get(joao.id())).hasToString("1/1");
+	}
+
+	@Test
+	void deceasedChildWithoutChildrenIsLeftOutWhenDividing() {
+		Heir maria = heir("Maria", "1/2", true, null);
+		Heir ana = heir("Ana", null, false, maria);
+		Heir rui = heir("Rui", null, true, maria);
+
+		Map<UUID, HeritageShare> shares = HeritageFlow.calculate(List.of(maria, ana, rui));
+
+		assertThat(shares.get(ana.id())).hasToString("1/2");
+		assertThat(shares).doesNotContainKey(rui.id());
+	}
+
+	@Test
+	void deceasedHeirWhoseDescendantsAreAllDeceasedDoesNotCount() {
+		Heir maria = heir("Maria", null, true, null);
+		Heir ana = heir("Ana", null, true, maria);
+		Heir joao = heir("João", null, false, null);
+
+		Map<UUID, HeritageShare> shares = HeritageFlow.calculate(List.of(maria, ana, joao));
+
+		assertThat(shares).containsOnlyKeys(joao.id());
+		assertThat(shares.get(joao.id())).hasToString("1/1");
 	}
 
 	@Test
