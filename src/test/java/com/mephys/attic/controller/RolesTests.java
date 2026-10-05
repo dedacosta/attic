@@ -96,7 +96,7 @@ class RolesTests {
 		MockHttpSession user = signIn("ana", PASSWORD);
 		mvc.perform(get("/api/session").session(user)).andExpect(jsonPath("$.role").value("USER"));
 
-		for (String path : new String[] { "/api/items", "/api/heirs", "/api/documents", "/api/locations",
+		for (String path : new String[] { "/api/items", "/api/official-inventory", "/api/heirs", "/api/documents", "/api/locations",
 				"/api/sexes", "/api/document-types", "/api/contributions",
 				"/api/renovations" }) {
 			mvc.perform(get(path).session(user)).andExpect(status().isOk());
