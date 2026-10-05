@@ -64,7 +64,6 @@
   "errorTooLarge": "La photo est trop volumineuse.",
   "errorUnsupported": "Ce type de fichier n’est pas pris en charge.",
   "errorRequest": "La requête a échoué ({status}).",
-  "madeWith": "Anthropic Opus 5.5",
   "languageLabel": "Langue",
   "comments": "Commentaires",
   "exportPdfLabel": "Exporter la liste en PDF",
