@@ -6,7 +6,7 @@ import type { PhotoEntry } from '../api/types'
 
 export const PICTURE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/avif']
 
-const PDF = 'application/pdf'
+export const PDF_TYPE = 'application/pdf'
 
 // HEIC is accepted but not offered: then iPhones convert photos to JPEG, which gets a thumbnail
 const OFFERED_PICTURE_TYPES = PICTURE_TYPES.filter((type) => type !== 'image/heic')
@@ -20,6 +20,8 @@ interface Props {
   readOnly?: boolean
   /** Also accept PDF files, for the pages of official documents */
   allowPdf?: boolean
+  /** Mark the first photo as the cover and let another be chosen; by default unless PDFs are accepted */
+  cover?: boolean
 }
 
 // Keys for photos not uploaded yet. Not crypto.randomUUID(): browsers only offer it on HTTPS
@@ -30,10 +32,11 @@ const newPhotoKey = () => `new-${++newPhotoCount}`
 const keyOf = (entry: PhotoEntry) => (entry.kind === 'stored' ? entry.picture.id : entry.key)
 
 export const isPdf = (entry: PhotoEntry) =>
-  (entry.kind === 'stored' ? entry.picture.contentType : entry.file.type) === PDF
+  (entry.kind === 'stored' ? entry.picture.contentType : entry.file.type) === PDF_TYPE
 
 /** A row of photos with add / remove / make cover, used by the item, document and property forms. */
-export default function PhotosField({ photos, onChange, onError, readOnly = false, allowPdf = false }: Props) {
+export default function PhotosField(props: Props) {
+  const { photos, onChange, onError, readOnly = false, allowPdf = false, cover = !allowPdf } = props
   const { t } = useI18n()
   const [viewing, setViewing] = useState<number | null>(null)
 
@@ -65,7 +68,7 @@ export default function PhotosField({ photos, onChange, onError, readOnly = fals
     if (chosen.length === 0) {
       return
     }
-    if (chosen.some((file) => !PICTURE_TYPES.includes(file.type) && !(allowPdf && file.type === PDF))) {
+    if (chosen.some((file) => !PICTURE_TYPES.includes(file.type) && !(allowPdf && file.type === PDF_TYPE))) {
       onError(allowPdf ? t.errorPictureOrPdfType : t.errorPictureType)
       return
     }
@@ -93,15 +96,15 @@ export default function PhotosField({ photos, onChange, onError, readOnly = fals
                   <span className="photo-pdf"><FileIcon width={32} height={32} /> PDF</span>
                 ) : <ImageIcon width={32} height={32} />}
               </button>
-              {index === 0 && !allowPdf && <span className="photo-cover">{t.cover}</span>}
+              {index === 0 && cover && <span className="photo-cover">{t.cover}</span>}
               {!readOnly && (
                 <div className="photo-actions">
-                  {index > 0 && !allowPdf && (
+                  {index > 0 && cover && (
                     <button type="button" className="button button-small" onClick={() => makeCover(index)}>
                       {t.makeCover}
                     </button>
                   )}
-                  {allowPdf && <span className="spacer" />}
+                  {!cover && <span className="spacer" />}
                   <button type="button" className="icon-button" onClick={() => remove(index)}
                     aria-label={t.removePhoto}>
                     <TrashIcon width={16} height={16} />
@@ -116,7 +119,7 @@ export default function PhotosField({ photos, onChange, onError, readOnly = fals
             <label className="photo-add-button">
               <PlusIcon width={20} height={20} />
               <span>{allowPdf ? t.addFiles : t.addPhotos}</span>
-              <input type="file" accept={[...OFFERED_PICTURE_TYPES, ...(allowPdf ? [PDF] : [])].join(',')} multiple hidden
+              <input type="file" accept={[...OFFERED_PICTURE_TYPES, ...(allowPdf ? [PDF_TYPE] : [])].join(',')} multiple hidden
                 onChange={(e) => { add(e.target.files); e.target.value = '' }} />
             </label>
           </li>

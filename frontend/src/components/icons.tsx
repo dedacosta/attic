@@ -123,3 +123,37 @@ export const MapPinIcon = (props: SVGProps<SVGSVGElement>) => (
     <circle cx="12" cy="9.5" r="2.5" />
   </svg>
 )
+
+export const PencilIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="M4 20h4L19 9l-4-4L4 16z" />
+    <path d="m13.5 6.5 4 4" />
+  </svg>
+)
+
+export const DownloadIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+  </svg>
+)
+
+export const CoinsIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <ellipse cx="9" cy="7" rx="6" ry="3" />
+    <path d="M3 7v5c0 1.7 2.7 3 6 3s6-1.3 6-3V7" />
+    <path d="M9 18c0 1.7 2.7 3 6 3s6-1.3 6-3v-5c0-1.7-2.7-3-6-3" />
+  </svg>
+)
+
+export const ChevronIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+)
+
+export const HammerIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="m14 6 4 4M11.5 8.5 4 16l4 4 7.5-7.5" />
+    <path d="M13 4.5 15.5 2l6.5 6.5-2.5 2.5z" />
+  </svg>
+)

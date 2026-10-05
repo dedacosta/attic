@@ -1,7 +1,7 @@
 package com.mephys.attic.property;
 
-import com.mephys.attic.picture.PictureInfo;
-import com.mephys.attic.picture.PictureResponse;
+import com.mephys.attic.model.PictureInfo;
+import com.mephys.attic.dto.PictureResponse;
 
 import java.math.BigDecimal;
 import java.util.List;

@@ -1,9 +1,9 @@
 package com.mephys.attic.property;
 
-import com.mephys.attic.picture.Picture;
-import com.mephys.attic.picture.PictureInfo;
-import com.mephys.attic.picture.PictureRepository;
-import com.mephys.attic.picture.PictureStorage;
+import com.mephys.attic.model.Picture;
+import com.mephys.attic.model.PictureInfo;
+import com.mephys.attic.repository.PictureRepository;
+import com.mephys.attic.service.PictureStorage;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;

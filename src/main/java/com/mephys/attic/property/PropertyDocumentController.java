@@ -1,7 +1,7 @@
 package com.mephys.attic.property;
 
-import com.mephys.attic.picture.PictureResponse;
-import com.mephys.attic.picture.PictureUploads;
+import com.mephys.attic.dto.PictureResponse;
+import com.mephys.attic.service.PictureUploads;
 
 import java.net.URI;
 import java.util.List;
@@ -79,14 +79,16 @@ class PropertyDocumentController {
 	ResponseEntity<PictureResponse> addFile(@PathVariable UUID id,
 			@RequestHeader(HttpHeaders.CONTENT_TYPE) String contentType, @RequestBody byte[] data) {
 		String base = PropertyDocumentResponse.base(id);
-		return repository.addDocumentFile(id, uploads.readImageOrPdf(contentType, data))
+		return repository.addDocumentFile(id, uploads.readDocumentFile(contentType, data))
 			.map((info) -> ResponseEntity.created(URI.create(info.url(base))).body(PictureResponse.of(base, info)))
 			.orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
 	@GetMapping("/property-documents/{id}/pictures/{fileId}")
 	ResponseEntity<byte[]> getFile(@PathVariable UUID id, @PathVariable UUID fileId) {
-		return PictureUploads.pictureResponse(repository.findDocumentFile(id, fileId));
+		// The name a downloaded file gets, e.g. "TITLE_DEED"
+		String name = repository.findDocument(id).map((document) -> document.type().toString()).orElse("document");
+		return PictureUploads.pictureResponse(repository.findDocumentFile(id, fileId), name);
 	}
 
 	@GetMapping("/property-documents/{id}/pictures/{fileId}/thumbnail")
