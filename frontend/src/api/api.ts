@@ -1,7 +1,7 @@
 import type { Messages } from '../i18n'
 import type {
   ContributionYear, DocumentInput, Renovation, RenovationInput, Invitation, CatalogItem, CatalogItemInput, OwnAccount, Heir, HeirDocument,
-  HeirInput, InventoryItem, InventoryItemInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
+  HeirInput, Heritage, InventoryItem, InventoryItemInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
 } from './types'
 
 /** A failed request. {@link apiErrorMessage} turns it into text in the user's language. */
@@ -148,9 +148,8 @@ export const api = {
   setRenovationPaid: (id: string, heirId: string, paid: boolean) =>
     request<Renovation>(`/api/renovations/${id}/payments/${heirId}`, json('PUT', { paid })),
 
-  /** The house, or a 404 ApiError when it is not set up yet */
-  house: () => request<Property>('/api/properties/house'),
-  listLand: () => request<Property[]>('/api/properties?kind=LAND'),
+  /** The houses and the land parcels, each by name */
+  heritage: () => request<Heritage>('/api/heritage'),
   getProperty: (id: string) => request<Property>(`/api/properties/${id}`),
   createProperty: (input: PropertyInput) => request<Property>('/api/properties', json('POST', input)),
   updateProperty: (id: string, input: PropertyInput) => request<Property>(`/api/properties/${id}`, json('PUT', input)),

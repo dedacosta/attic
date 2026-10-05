@@ -4,7 +4,7 @@ import AccountMenu from './components/AccountMenu'
 import Footer from './components/Footer'
 import LanguageSwitch from './components/LanguageSwitch'
 import SignInScreen from './components/SignInScreen'
-import { BoxIcon, ClipboardIcon, CoinsIcon, HammerIcon, HouseIcon, IdCardIcon, KeyIcon, HeirsIcon, LandIcon } from './components/icons'
+import { BoxIcon, ClipboardIcon, CoinsIcon, HammerIcon, HouseIcon, IdCardIcon, KeyIcon, HeirsIcon } from './components/icons'
 import { useI18n } from './i18n'
 import { PermissionsProvider, usePermissions } from './lib/permissions'
 import ContributionsView from './views/ContributionsView'
@@ -13,19 +13,14 @@ import CatalogView from './views/CatalogView'
 import InventoryView from './views/InventoryView'
 import RenovationsView from './views/RenovationsView'
 import HeirsView from './views/HeirsView'
-import HouseView from './views/HouseView'
-import LandView from './views/LandView'
+import HeritageView from './views/HeritageView'
 import UsersView from './views/UsersView'
 import type { Session } from './api/types'
 
-type View = 'catalog' | 'inventory' | 'heirs' | 'documents' | 'house' | 'land' | 'contributions' | 'renovations' | 'users'
+type View = 'catalog' | 'inventory' | 'heirs' | 'documents' | 'heritage' | 'contributions' | 'renovations' | 'users'
 
 // The view lives in the URL hash (#/documents) so that reloading keeps it
 function viewFromHash(): View {
-  // A land parcel's page is #/land/<id>
-  if (window.location.hash.startsWith('#/land')) {
-    return 'land'
-  }
   switch (window.location.hash) {
     case '#/catalog':
       return 'catalog'
@@ -41,9 +36,9 @@ function viewFromHash(): View {
       return 'renovations'
     case '#/users':
       return 'users'
-    // The house is the start page (#/ or #/house)
+    // The heritage is the start page (#/, #/heritage or #/heritage/<id>)
     default:
-      return 'house'
+      return 'heritage'
   }
 }
 
@@ -120,7 +115,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
   // Tabs this account has: users without a linked heir have no Heirs and Documents tabs, and
   // only administrators have the Users tab. Everybody sees the rest.
   const allowed = (id: View) => (id === 'users' ? isAdmin : id === 'heirs' || id === 'documents' ? seesHeirs : true)
-  const view: View = allowed(hashView) ? hashView : 'house'
+  const view: View = allowed(hashView) ? hashView : 'heritage'
 
   useEffect(() => {
     const onHashChange = () => setView(viewFromHash())
@@ -129,8 +124,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
   }, [])
 
   const tabs = ([
-    { id: 'house', href: '#/', label: t.tabHouse, Icon: HouseIcon },
-    { id: 'land', href: '#/land', label: t.tabLand, Icon: LandIcon },
+    { id: 'heritage', href: '#/', label: t.tabHeritage, Icon: HouseIcon },
     { id: 'heirs', href: '#/heirs', label: t.tabHeirs, Icon: HeirsIcon },
     { id: 'catalog', href: '#/catalog', label: t.tabCatalog, Icon: BoxIcon },
     { id: 'inventory', href: '#/inventory', label: t.tabInventory, Icon: ClipboardIcon },
@@ -164,8 +158,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
       {view === 'inventory' && <InventoryView />}
       {view === 'heirs' && <HeirsView />}
       {view === 'documents' && <DocumentsView />}
-      {view === 'house' && <HouseView />}
-      {view === 'land' && <LandView />}
+      {view === 'heritage' && <HeritageView />}
       {view === 'contributions' && <ContributionsView />}
       {view === 'renovations' && <RenovationsView />}
       {view === 'users' && <UsersView currentUser={username} />}

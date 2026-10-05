@@ -1874,6 +1874,15 @@ fieldset.fields:disabled .checkbox {
   margin: 0;
 }
 
+/* The Houses and Land lists of the Heritage tab: heading and count left, button right */
+.heritage-section .property-section-header {
+  flex-wrap: wrap;
+}
+
+.heritage-section .property-section-header .count {
+  margin-right: auto;
+}
+
 .property-facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

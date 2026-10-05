@@ -315,16 +315,10 @@
     "other": "{count} fotografias"
   },
   "errorPhotoUpload": "Não foi possível enviar «{file}»: {reason}",
-  "tabHouse": "Casa",
-  "tabLand": "Terrenos",
-  "houseNotSetUp": "A casa ainda não foi registada.",
-  "setUpHouse": "Registar a casa",
   "editHouse": "Editar casa",
   "newLand": "Novo terreno",
   "editLand": "Editar terreno",
   "landLocation": "Localização",
-  "landSearchPlaceholder": "Pesquisar nome, localização, detalhes…",
-  "landSearchLabel": "Pesquisar terrenos",
   "landCount": {
     "one": "{count} terreno",
     "other": "{count} terrenos"
@@ -335,10 +329,7 @@
   },
   "totalValue": "Total {value}",
   "emptyLand": "Ainda não há terrenos.",
-  "addFirstLand": "Adicionar o primeiro terreno",
   "noLandMatches": "Nenhum terreno corresponde à pesquisa.",
-  "backToLand": "Todos os terrenos",
-  "landNotFound": "Este terreno já não existe.",
   "estimatedValue": "Valor estimado",
   "notEstimated": "Sem estimativa",
   "openInMaps": "Abrir no mapa",
@@ -360,7 +351,7 @@
     "other": "{count} ficheiros"
   },
   "errorPictureOrPdfType": "Escolha uma fotografia (JPEG, PNG, GIF, WebP, HEIC, AVIF) ou um PDF.",
-  "deletePropertyTitle": "Eliminar terreno?",
+  "deletePropertyTitle": "Eliminar propriedade?",
   "deletePropertyMessage": "«{name}», as suas fotografias e documentos serão eliminados permanentemente.",
   "suggestedLabels": [
     "Área (m²)",
@@ -382,5 +373,23 @@
   },
   "sourceCode": "Código-fonte",
   "tabInventory": "Inventário",
-  "pdfTitleInventory": "Inventário"
+  "pdfTitleInventory": "Inventário",
+  "tabHeritage": "Herança",
+  "houses": "Casas",
+  "lands": "Terrenos",
+  "newHouse": "Nova casa",
+  "houseCount": {
+    "one": "{count} casa",
+    "other": "{count} casas"
+  },
+  "filteredHouseCount": {
+    "one": "{shown} de {count} casa",
+    "other": "{shown} de {count} casas"
+  },
+  "emptyHouses": "Ainda não há casas.",
+  "noHouseMatches": "Nenhuma casa corresponde à pesquisa.",
+  "propertySearchPlaceholder": "Pesquisar nome, morada, detalhes…",
+  "propertySearchLabel": "Pesquisar casas e terrenos",
+  "backToHeritage": "Herança",
+  "propertyNotFound": "Esta propriedade já não existe."
 }

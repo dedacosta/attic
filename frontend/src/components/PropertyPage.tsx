@@ -14,14 +14,14 @@ interface Props {
   property: Property
   /** Reload after an edit, a new document, ... */
   onChanged: () => void
-  /** Offered for land only: the house is not deleted from its page */
+  /** Called after the property was deleted; without it the page has no delete button */
   onDeleted?: () => void
 }
 
 export const mapsUrl = (address: string) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
 
-/** The page of the house or a land parcel: photos, main facts, details, official documents, comments. */
+/** The page of a house or a land parcel: photos, main facts, details, official documents, comments. */
 export default function PropertyPage({ property, onChanged, onDeleted }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()

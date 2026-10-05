@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
- * The family house and the land parcels, with their details and photos. Their official
+ * The heritage: its houses and land parcels, with their details and photos. Their official
  * documents are in {@link PropertyDocumentController}.
  */
 @RestController

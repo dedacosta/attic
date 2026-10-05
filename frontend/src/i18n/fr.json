@@ -316,16 +316,10 @@
     "other": "{count} photos"
   },
   "errorPhotoUpload": "«\u00a0{file}\u00a0» n’a pas pu être envoyée\u00a0: {reason}",
-  "tabHouse": "Maison",
-  "tabLand": "Terrains",
-  "houseNotSetUp": "La maison n’est pas encore enregistrée.",
-  "setUpHouse": "Enregistrer la maison",
   "editHouse": "Modifier la maison",
   "newLand": "Nouveau terrain",
   "editLand": "Modifier le terrain",
   "landLocation": "Emplacement",
-  "landSearchPlaceholder": "Rechercher nom, emplacement, détails…",
-  "landSearchLabel": "Rechercher des terrains",
   "landCount": {
     "one": "{count} terrain",
     "other": "{count} terrains"
@@ -336,10 +330,7 @@
   },
   "totalValue": "Total {value}",
   "emptyLand": "Aucun terrain pour l’instant.",
-  "addFirstLand": "Ajouter le premier terrain",
   "noLandMatches": "Aucun terrain ne correspond à la recherche.",
-  "backToLand": "Tous les terrains",
-  "landNotFound": "Ce terrain n’existe plus.",
   "estimatedValue": "Valeur estimée",
   "notEstimated": "Non estimée",
   "openInMaps": "Ouvrir dans la carte",
@@ -361,7 +352,7 @@
     "other": "{count} fichiers"
   },
   "errorPictureOrPdfType": "Veuillez choisir une photo (JPEG, PNG, GIF, WebP, HEIC, AVIF) ou un PDF.",
-  "deletePropertyTitle": "Supprimer le terrain ?",
+  "deletePropertyTitle": "Supprimer la propriété ?",
   "deletePropertyMessage": "«\u00a0{name}\u00a0», ses photos et ses documents seront supprimés définitivement.",
   "suggestedLabels": [
     "Surface (m²)",
@@ -383,5 +374,23 @@
   },
   "sourceCode": "Code source",
   "tabInventory": "Inventaire",
-  "pdfTitleInventory": "Inventaire"
+  "pdfTitleInventory": "Inventaire",
+  "tabHeritage": "Héritage",
+  "houses": "Maisons",
+  "lands": "Terrains",
+  "newHouse": "Nouvelle maison",
+  "houseCount": {
+    "one": "{count} maison",
+    "other": "{count} maisons"
+  },
+  "filteredHouseCount": {
+    "one": "{shown} sur {count} maison",
+    "other": "{shown} sur {count} maisons"
+  },
+  "emptyHouses": "Aucune maison pour l’instant.",
+  "noHouseMatches": "Aucune maison ne correspond à la recherche.",
+  "propertySearchPlaceholder": "Rechercher nom, adresse, détails…",
+  "propertySearchLabel": "Rechercher des maisons et des terrains",
+  "backToHeritage": "Héritage",
+  "propertyNotFound": "Cette propriété n’existe plus."
 }

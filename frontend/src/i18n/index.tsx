@@ -60,6 +60,8 @@ const PARAMS = {
   photoCount: ['count'],
   errorPhotoUpload: ['file', 'reason'],
   landCount: ['count'],
+  houseCount: ['count'],
+  filteredHouseCount: ['shown', 'count'],
   filteredLandCount: ['shown', 'count'],
   totalValue: ['value'],
   fileCount: ['count'],

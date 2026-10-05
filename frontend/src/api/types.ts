@@ -172,7 +172,7 @@ export interface Fact {
   value: string
 }
 
-/** An official document of the house or a land parcel; its files are images or PDF */
+/** An official document of a house or a land parcel; its files are images or PDF */
 export interface PropertyDocument {
   id: string
   propertyId: string
@@ -184,11 +184,11 @@ export interface PropertyDocument {
 
 export type PropertyDocumentInput = Omit<PropertyDocument, 'id' | 'propertyId' | 'files'>
 
-/** The family house or a land parcel */
-export interface Property {
+/** What a house and a land parcel have in common */
+interface PropertyBase {
   id: string
-  kind: PropertyKind
   name: string
+  /** For land: its location, in free text */
   address: string | null
   /** Null when not estimated */
   valueEur: number | null
@@ -199,4 +199,21 @@ export interface Property {
   documents: PropertyDocument[]
 }
 
-export type PropertyInput = Omit<Property, 'id' | 'pictures' | 'documents'>
+export interface House extends PropertyBase {
+  kind: 'HOUSE'
+}
+
+export interface Land extends PropertyBase {
+  kind: 'LAND'
+}
+
+/** A property of the heritage: a house or a land parcel */
+export type Property = House | Land
+
+/** The real estate of the heritage, each list by name */
+export interface Heritage {
+  houses: House[]
+  lands: Land[]
+}
+
+export type PropertyInput = Omit<PropertyBase, 'id' | 'pictures' | 'documents'> & { kind: PropertyKind }

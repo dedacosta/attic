@@ -309,16 +309,10 @@
     "other": "{count} photos"
   },
   "errorPhotoUpload": "“{file}” could not be uploaded: {reason}",
-  "tabHouse": "House",
-  "tabLand": "Land",
-  "houseNotSetUp": "The house is not set up yet.",
-  "setUpHouse": "Set up the house",
   "editHouse": "Edit house",
   "newLand": "New land",
   "editLand": "Edit land",
   "landLocation": "Location",
-  "landSearchPlaceholder": "Search name, location, details…",
-  "landSearchLabel": "Search land",
   "landCount": {
     "one": "{count} parcel",
     "other": "{count} parcels"
@@ -329,10 +323,7 @@
   },
   "totalValue": "Total {value}",
   "emptyLand": "No land yet.",
-  "addFirstLand": "Add the first land",
   "noLandMatches": "No land matches your search.",
-  "backToLand": "All land",
-  "landNotFound": "This land no longer exists.",
   "estimatedValue": "Estimated value",
   "notEstimated": "Not estimated",
   "openInMaps": "Open in maps",
@@ -354,7 +345,7 @@
     "other": "{count} files"
   },
   "errorPictureOrPdfType": "Please choose a picture (JPEG, PNG, GIF, WebP, HEIC, AVIF) or a PDF.",
-  "deletePropertyTitle": "Delete land?",
+  "deletePropertyTitle": "Delete property?",
   "deletePropertyMessage": "“{name}”, its photos and documents will be deleted permanently.",
   "suggestedLabels": [
     "Area (m²)",
@@ -376,5 +367,23 @@
   },
   "sourceCode": "Source code",
   "tabInventory": "Inventory",
-  "pdfTitleInventory": "Inventory"
+  "pdfTitleInventory": "Inventory",
+  "tabHeritage": "Heritage",
+  "houses": "Houses",
+  "lands": "Land",
+  "newHouse": "New house",
+  "houseCount": {
+    "one": "{count} house",
+    "other": "{count} houses"
+  },
+  "filteredHouseCount": {
+    "one": "{shown} of {count} house",
+    "other": "{shown} of {count} houses"
+  },
+  "emptyHouses": "No houses yet.",
+  "noHouseMatches": "No house matches your search.",
+  "propertySearchPlaceholder": "Search name, address, details…",
+  "propertySearchLabel": "Search houses and land",
+  "backToHeritage": "Heritage",
+  "propertyNotFound": "This property no longer exists."
 }
