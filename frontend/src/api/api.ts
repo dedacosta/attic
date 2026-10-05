@@ -1,7 +1,7 @@
 import type { Messages } from '../i18n'
 import type {
   ContributionYear, DocumentInput, Renovation, RenovationInput, Invitation, CatalogItem, CatalogItemInput, OwnAccount, Heir, HeirDocument,
-  HeirInput, OfficialInventoryItem, OfficialInventoryItemInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
+  HeirInput, InventoryItem, InventoryItemInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
 } from './types'
 
 /** A failed request. {@link apiErrorMessage} turns it into text in the user's language. */
@@ -106,13 +106,13 @@ export const api = {
   createCatalogItem: (input: CatalogItemInput) => request<CatalogItem>('/api/catalog', json('POST', input)),
   updateCatalogItem: (id: string, input: CatalogItemInput) => request<CatalogItem>(`/api/catalog/${id}`, json('PUT', input)),
   deleteCatalogItem: (id: string) => request<void>(`/api/catalog/${id}`, { method: 'DELETE' }),
-  listOfficialInventory: () => request<OfficialInventoryItem[]>('/api/official-inventory'),
-  createOfficialInventoryItem: (input: OfficialInventoryItemInput) =>
-    request<OfficialInventoryItem>('/api/official-inventory', json('POST', input)),
-  updateOfficialInventoryItem: (id: string, input: OfficialInventoryItemInput) =>
-    request<OfficialInventoryItem>(`/api/official-inventory/${id}`, json('PUT', input)),
-  deleteOfficialInventoryItem: (id: string) =>
-    request<void>(`/api/official-inventory/${id}`, { method: 'DELETE' }),
+  listInventory: () => request<InventoryItem[]>('/api/inventory'),
+  createInventoryItem: (input: InventoryItemInput) =>
+    request<InventoryItem>('/api/inventory', json('POST', input)),
+  updateInventoryItem: (id: string, input: InventoryItemInput) =>
+    request<InventoryItem>(`/api/inventory/${id}`, json('PUT', input)),
+  deleteInventoryItem: (id: string) =>
+    request<void>(`/api/inventory/${id}`, { method: 'DELETE' }),
 
   listHeirs: () => request<Heir[]>('/api/heirs'),
   listSexes: () => request<string[]>('/api/sexes'),

@@ -45,6 +45,7 @@ class CatalogMigrationTests {
 		Flyway.configure().dataSource(url, null, null).target("20").load().migrate();
 		try (Connection connection = DriverManager.getConnection(url);
 				Statement statement = connection.createStatement()) {
+			// At version 20 the catalog is still called the inventory
 			statement.execute("INSERT INTO inventory_item (id, name, quantity) VALUES ('" + ITEM + "', 'Sofa', 2)");
 			statement.execute("INSERT INTO inventory_picture (id, item_id, position, file_name, content_type) VALUES ('"
 					+ PICTURE + "', '" + ITEM + "', 0, '" + PICTURE + ".png', 'image/png')");
@@ -81,10 +82,10 @@ class CatalogMigrationTests {
 	}
 
 	@Test
-	void theOldTablesAreGone() {
-		assertThat(jdbc.sql("SELECT count(*) FROM sqlite_master WHERE name LIKE 'inventory\\_%' ESCAPE '\\'")
-			.query(Integer.class)
-			.single()).isZero();
+	void theInventoryStartsEmpty() {
+		// inventory_item is the new list now; what it held before is in the catalog
+		assertThat(jdbc.sql("SELECT count(*) FROM inventory_item").query(Integer.class).single()).isZero();
+		assertThat(jdbc.sql("SELECT count(*) FROM inventory_picture").query(Integer.class).single()).isZero();
 	}
 
 }

@@ -55,8 +55,8 @@ export interface CatalogItem {
 
 export type CatalogItemInput = Omit<CatalogItem, 'id' | 'pictures'>
 
-/** An item of the official inventory; it has the structure of a catalog item but is its own list */
-export interface OfficialInventoryItem {
+/** An item of the inventory; it has the structure of a catalog item but is its own list */
+export interface InventoryItem {
   id: string
   name: string
   quantity: number
@@ -70,7 +70,7 @@ export interface OfficialInventoryItem {
   pictures: Picture[]
 }
 
-export type OfficialInventoryItemInput = Omit<OfficialInventoryItem, 'id' | 'pictures'>
+export type InventoryItemInput = Omit<InventoryItem, 'id' | 'pictures'>
 
 export interface HeirDocument {
   id: string

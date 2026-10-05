@@ -1,11 +1,11 @@
 package com.mephys.attic.controller;
 
-import com.mephys.attic.dto.OfficialInventoryItemRequest;
-import com.mephys.attic.dto.OfficialInventoryItemResponse;
+import com.mephys.attic.dto.InventoryItemRequest;
+import com.mephys.attic.dto.InventoryItemResponse;
 import com.mephys.attic.dto.PictureResponse;
-import com.mephys.attic.model.OfficialInventoryItem;
+import com.mephys.attic.model.InventoryItem;
 import com.mephys.attic.model.PictureInfo;
-import com.mephys.attic.repository.OfficialInventoryRepository;
+import com.mephys.attic.repository.InventoryRepository;
 import com.mephys.attic.service.PictureUploads;
 
 import java.net.URI;
@@ -28,41 +28,41 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
-@RequestMapping("/official-inventory")
-class OfficialInventoryController {
+@RequestMapping("/inventory")
+class InventoryController {
 
-	private final OfficialInventoryRepository repository;
+	private final InventoryRepository repository;
 
 	private final PictureUploads uploads;
 
-	OfficialInventoryController(OfficialInventoryRepository repository, PictureUploads uploads) {
+	InventoryController(InventoryRepository repository, PictureUploads uploads) {
 		this.repository = repository;
 		this.uploads = uploads;
 	}
 
 	@GetMapping
-	List<OfficialInventoryItemResponse> list() {
+	List<InventoryItemResponse> list() {
 		Map<UUID, List<PictureInfo>> pictures = repository.listAllPictures();
 		return repository.findAll()
 			.stream()
-			.map((item) -> OfficialInventoryItemResponse.of(item, pictures.getOrDefault(item.id(), List.of())))
+			.map((item) -> InventoryItemResponse.of(item, pictures.getOrDefault(item.id(), List.of())))
 			.toList();
 	}
 
 	@GetMapping("/{id}")
-	ResponseEntity<OfficialInventoryItemResponse> get(@PathVariable UUID id) {
+	ResponseEntity<InventoryItemResponse> get(@PathVariable UUID id) {
 		return ResponseEntity.of(repository.findById(id).map(this::toResponse));
 	}
 
 	@PostMapping
-	ResponseEntity<OfficialInventoryItemResponse> create(@RequestBody OfficialInventoryItemRequest request) {
-		OfficialInventoryItem item = repository.save(request.toItem(null));
+	ResponseEntity<InventoryItemResponse> create(@RequestBody InventoryItemRequest request) {
+		InventoryItem item = repository.save(request.toItem(null));
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").build(item.id());
-		return ResponseEntity.created(location).body(OfficialInventoryItemResponse.of(item, List.of()));
+		return ResponseEntity.created(location).body(InventoryItemResponse.of(item, List.of()));
 	}
 
 	@PutMapping("/{id}")
-	ResponseEntity<OfficialInventoryItemResponse> replace(@PathVariable UUID id, @RequestBody OfficialInventoryItemRequest request) {
+	ResponseEntity<InventoryItemResponse> replace(@PathVariable UUID id, @RequestBody InventoryItemRequest request) {
 		if (repository.findById(id).isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
@@ -77,7 +77,7 @@ class OfficialInventoryController {
 	@PostMapping(path = "/{id}/pictures", consumes = "image/*")
 	ResponseEntity<PictureResponse> addPicture(@PathVariable UUID id,
 			@RequestHeader(HttpHeaders.CONTENT_TYPE) String contentType, @RequestBody byte[] data) {
-		String base = OfficialInventoryItemResponse.base(id);
+		String base = InventoryItemResponse.base(id);
 		return repository.addPicture(id, uploads.read(contentType, data))
 			.map((info) -> ResponseEntity.created(URI.create(info.url(base))).body(PictureResponse.of(base, info)))
 			.orElseGet(() -> ResponseEntity.notFound().build());
@@ -113,8 +113,8 @@ class OfficialInventoryController {
 		return ResponseEntity.noContent().build();
 	}
 
-	private OfficialInventoryItemResponse toResponse(OfficialInventoryItem item) {
-		return OfficialInventoryItemResponse.of(item, repository.listPictures(item.id()));
+	private InventoryItemResponse toResponse(InventoryItem item) {
+		return InventoryItemResponse.of(item, repository.listPictures(item.id()));
 	}
 
 }

@@ -7,13 +7,13 @@ import { CloseIcon, TrashIcon } from './icons'
 import PhotosField from './PhotosField'
 import { PhotoUploadError } from '../lib/photos'
 import { useModal } from '../lib/useModal'
-import { storedPhotos, type OfficialInventoryItem, type OfficialInventoryItemInput, type PhotoEntry } from '../api/types'
+import { storedPhotos, type InventoryItem, type InventoryItemInput, type PhotoEntry } from '../api/types'
 
 
 interface Props {
-  item: OfficialInventoryItem | null
+  item: InventoryItem | null
   locations: string[]
-  onSave: (input: OfficialInventoryItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) => Promise<void>
+  onSave: (input: InventoryItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) => Promise<void>
   onDelete: () => void
   onClose: () => void
 }
@@ -29,7 +29,7 @@ interface FormState {
   comments: string
 }
 
-function initialState(item: OfficialInventoryItem | null, locale: string): FormState {
+function initialState(item: InventoryItem | null, locale: string): FormState {
   return {
     name: item?.name ?? '',
     quantity: String(item?.quantity ?? 1),
@@ -42,7 +42,7 @@ function initialState(item: OfficialInventoryItem | null, locale: string): FormS
   }
 }
 
-export default function OfficialInventoryItemDialog({ item, locations, onSave, onDelete, onClose }: Props) {
+export default function InventoryItemDialog({ item, locations, onSave, onDelete, onClose }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
   const ref = useModal()
@@ -91,11 +91,11 @@ export default function OfficialInventoryItemDialog({ item, locations, onSave, o
   }
 
   return (
-    <dialog ref={ref} className="dialog" aria-labelledby="official-inventory-item-dialog-title"
+    <dialog ref={ref} className="dialog" aria-labelledby="inventory-item-dialog-title"
       onCancel={(e) => { e.preventDefault(); if (!saving) onClose() }}>
       <form onSubmit={submit} noValidate>
         <header className="dialog-header">
-          <h2 id="official-inventory-item-dialog-title">
+          <h2 id="inventory-item-dialog-title">
             {!canEdit ? t.viewItem : item ? t.editItem : t.newItemTitle}
             {item && <code className="short-id">{shortId(item.id)}</code>}
           </h2>
