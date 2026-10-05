@@ -54,10 +54,10 @@ class SecurityTests {
 
 	@Test
 	void apiNeedsSignIn() throws Exception {
-		for (String path : new String[] { "/api/items", "/api/official-inventory", "/api/heirs", "/api/documents", "/api/locations" }) {
+		for (String path : new String[] { "/api/catalog", "/api/official-inventory", "/api/heirs", "/api/documents", "/api/locations" }) {
 			mvc.perform(get(path)).andExpect(status().isUnauthorized());
 		}
-		mvc.perform(post("/api/items").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"X\"}"))
+		mvc.perform(post("/api/catalog").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"X\"}"))
 			.andExpect(status().isUnauthorized());
 	}
 
@@ -102,13 +102,13 @@ class SecurityTests {
 			.andReturn();
 		MockHttpSession session = (MockHttpSession) login.getRequest().getSession();
 
-		mvc.perform(get("/api/items").session(session)).andExpect(status().isOk());
+		mvc.perform(get("/api/catalog").session(session)).andExpect(status().isOk());
 		mvc.perform(get("/api/session").session(session))
 			.andExpect(jsonPath("$.authenticated").value(true))
 			.andExpect(jsonPath("$.username").value("david"));
 
 		mvc.perform(post("/api/logout").session(session).with(csrf())).andExpect(status().isNoContent());
-		mvc.perform(get("/api/items").session(session)).andExpect(status().isUnauthorized());
+		mvc.perform(get("/api/catalog").session(session)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
@@ -131,7 +131,7 @@ class SecurityTests {
 		assertThat(rememberMe.getMaxAge()).isEqualTo((int) SecurityConfiguration.REMEMBER_ME_VALIDITY.toSeconds());
 
 		// A new visit, without the old session: the cookie alone signs in
-		mvc.perform(get("/api/items").cookie(rememberMe)).andExpect(status().isOk());
+		mvc.perform(get("/api/catalog").cookie(rememberMe)).andExpect(status().isOk());
 	}
 
 	@Test

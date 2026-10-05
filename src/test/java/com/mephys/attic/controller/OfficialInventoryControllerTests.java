@@ -251,9 +251,9 @@ class OfficialInventoryControllerTests {
 		String photo = addPhoto(official, TestImages.png(20, 20));
 
 		// Not in the other list, and its photo is not served there
-		mvc.perform(get("/api/items")).andExpect(jsonPath("$[?(@.id == '" + official + "')]").doesNotExist());
-		mvc.perform(get("/api/items/{id}", official)).andExpect(status().isNotFound());
-		mvc.perform(get("/api/items/{id}/pictures/{pictureId}", official, photo)).andExpect(status().isNotFound());
+		mvc.perform(get("/api/catalog")).andExpect(jsonPath("$[?(@.id == '" + official + "')]").doesNotExist());
+		mvc.perform(get("/api/catalog/{id}", official)).andExpect(status().isNotFound());
+		mvc.perform(get("/api/catalog/{id}/pictures/{pictureId}", official, photo)).andExpect(status().isNotFound());
 		mvc.perform(get("/api/official-inventory/{id}/pictures/{pictureId}", official, photo))
 			.andExpect(status().isOk());
 	}

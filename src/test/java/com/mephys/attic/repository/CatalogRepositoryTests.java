@@ -1,6 +1,6 @@
 package com.mephys.attic.repository;
 
-import com.mephys.attic.model.InventoryItem;
+import com.mephys.attic.model.CatalogItem;
 import com.mephys.attic.model.Location;
 import com.mephys.attic.model.Picture;
 import com.mephys.attic.model.PictureInfo;
@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 @SpringBootTest(properties = "spring.datasource.hikari.connection-timeout=1000")
-class InventoryRepositoryTests {
+class CatalogRepositoryTests {
 
 	@TempDir
 	static Path tempDir;
@@ -36,14 +36,14 @@ class InventoryRepositoryTests {
 	}
 
 	@Autowired
-	private InventoryRepository repository;
+	private CatalogRepository repository;
 
 	@Autowired
 	private JdbcClient jdbc;
 
 	@Test
 	void newItemHasDefaults() {
-		InventoryItem item = InventoryItem.of("Lamp");
+		CatalogItem item = CatalogItem.of("Lamp");
 
 		assertThat(item.id()).isNotNull();
 		assertThat(item.quantity()).isEqualTo(1);
@@ -57,14 +57,14 @@ class InventoryRepositoryTests {
 
 	@Test
 	void blankCommentsBecomeNull() {
-		assertThat(new InventoryItem(null, "Box", 1, null, null, true, null, null, "  \n ").comments()).isNull();
-		assertThat(new InventoryItem(null, "Box", 1, null, null, true, null, null, " Fragile ").comments())
+		assertThat(new CatalogItem(null, "Box", 1, null, null, true, null, null, "  \n ").comments()).isNull();
+		assertThat(new CatalogItem(null, "Box", 1, null, null, true, null, null, " Fragile ").comments())
 			.isEqualTo("Fragile");
 	}
 
 	@Test
 	void savesAndLoadsAllFields() {
-		InventoryItem item = new InventoryItem(null, "Grandfather clock", 2, LocalDate.of(1985, 5, 17), Location.ATTIC,
+		CatalogItem item = new CatalogItem(null, "Grandfather clock", 2, LocalDate.of(1985, 5, 17), Location.ATTIC,
 				false, new BigDecimal("1234.5"), "David", "Inherited from grandmother.\nNeeds a new key.");
 
 		repository.save(item);
@@ -75,8 +75,8 @@ class InventoryRepositoryTests {
 
 	@Test
 	void saveUpdatesExistingItem() {
-		InventoryItem item = repository.save(InventoryItem.of("Chair"));
-		InventoryItem updated = new InventoryItem(item.id(), "Chair", 4, null, Location.KITCHEN, true, null, null,
+		CatalogItem item = repository.save(CatalogItem.of("Chair"));
+		CatalogItem updated = new CatalogItem(item.id(), "Chair", 4, null, Location.KITCHEN, true, null, null,
 				"Wobbly leg");
 
 		repository.save(updated);
@@ -86,19 +86,19 @@ class InventoryRepositoryTests {
 
 	@Test
 	void recordsWhenItemsAreAddedAndChanged() throws Exception {
-		InventoryItem item = repository.save(InventoryItem.of("Lamp"));
+		CatalogItem item = repository.save(CatalogItem.of("Lamp"));
 		String created = timestamp(item, "created_at");
 		assertThat(created).matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z");
 		assertThat(timestamp(item, "updated_at")).isEqualTo(created);
 
 		Thread.sleep(5);
-		repository.save(new InventoryItem(item.id(), "Desk lamp", 1, null, null, true, null, null, null));
+		repository.save(new CatalogItem(item.id(), "Desk lamp", 1, null, null, true, null, null, null));
 		assertThat(timestamp(item, "created_at")).isEqualTo(created);
 		assertThat(timestamp(item, "updated_at")).isGreaterThan(created);
 	}
 
-	private String timestamp(InventoryItem item, String column) {
-		return jdbc.sql("SELECT " + column + " FROM inventory_item WHERE id = ?")
+	private String timestamp(CatalogItem item, String column) {
+		return jdbc.sql("SELECT " + column + " FROM catalog_item WHERE id = ?")
 			.param(item.id().toString())
 			.query(String.class)
 			.single();
@@ -106,7 +106,7 @@ class InventoryRepositoryTests {
 
 	@Test
 	void deletesItem() {
-		InventoryItem item = repository.save(InventoryItem.of("Vase"));
+		CatalogItem item = repository.save(CatalogItem.of("Vase"));
 
 		assertThat(repository.deleteById(item.id())).isTrue();
 		assertThat(repository.findById(item.id())).isEmpty();
@@ -114,16 +114,16 @@ class InventoryRepositoryTests {
 
 	@Test
 	void rejectsInvalidValues() {
-		assertThatIllegalArgumentException().isThrownBy(() -> InventoryItem.of(" "));
+		assertThatIllegalArgumentException().isThrownBy(() -> CatalogItem.of(" "));
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new InventoryItem(null, "Box", -1, null, null, true, null, null, null));
+			.isThrownBy(() -> new CatalogItem(null, "Box", -1, null, null, true, null, null, null));
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new InventoryItem(null, "Box", 1, null, null, true, new BigDecimal("-1"), null, null));
+			.isThrownBy(() -> new CatalogItem(null, "Box", 1, null, null, true, new BigDecimal("-1"), null, null));
 	}
 
 	@Test
 	void savesPictureAsFileNamedByPictureId() throws Exception {
-		InventoryItem item = repository.save(InventoryItem.of("Painting"));
+		CatalogItem item = repository.save(CatalogItem.of("Painting"));
 		byte[] png = { (byte) 0x89, 'P', 'N', 'G', 1, 2, 3 };
 
 		PictureInfo info = repository.addPicture(item.id(), new Picture("image/png", png)).orElseThrow();
@@ -138,7 +138,7 @@ class InventoryRepositoryTests {
 
 	@Test
 	void storesThumbnailInDatabase() {
-		InventoryItem item = repository.save(InventoryItem.of("Table"));
+		CatalogItem item = repository.save(CatalogItem.of("Table"));
 
 		PictureInfo info = repository.addPicture(item.id(), new Picture("image/jpeg", TestImages.jpeg(1200, 800)))
 			.orElseThrow();
@@ -151,7 +151,7 @@ class InventoryRepositoryTests {
 
 	@Test
 	void storesPictureWithoutThumbnailWhenUndecodable() {
-		InventoryItem item = repository.save(InventoryItem.of("Poster"));
+		CatalogItem item = repository.save(CatalogItem.of("Poster"));
 
 		PictureInfo info = repository.addPicture(item.id(), new Picture("image/webp", new byte[] { 1, 2 }))
 			.orElseThrow();
@@ -166,7 +166,7 @@ class InventoryRepositoryTests {
 	void pictureRequiresExistingItem() throws Exception {
 		long filesBefore = countPictureFiles();
 
-		assertThat(repository.addPicture(InventoryItem.of("Ghost").id(), new Picture("image/png", new byte[] { 1 })))
+		assertThat(repository.addPicture(CatalogItem.of("Ghost").id(), new Picture("image/png", new byte[] { 1 })))
 			.isEmpty();
 		assertThat(countPictureFiles()).isEqualTo(filesBefore);
 	}
@@ -183,7 +183,7 @@ class InventoryRepositoryTests {
 
 	@Test
 	void deletingItemDeletesPictureFile() {
-		InventoryItem item = repository.save(InventoryItem.of("Mirror"));
+		CatalogItem item = repository.save(CatalogItem.of("Mirror"));
 		PictureInfo info = repository.addPicture(item.id(), new Picture("image/png", new byte[] { 1 })).orElseThrow();
 		String file = pictureFileName(item.id());
 
@@ -195,7 +195,7 @@ class InventoryRepositoryTests {
 
 	@Test
 	void deletesPicture() {
-		InventoryItem item = repository.save(InventoryItem.of("Rug"));
+		CatalogItem item = repository.save(CatalogItem.of("Rug"));
 		PictureInfo info = repository.addPicture(item.id(), new Picture("image/png", new byte[] { 1 })).orElseThrow();
 		String file = pictureFileName(item.id());
 
@@ -221,7 +221,7 @@ class InventoryRepositoryTests {
 	}
 
 	private String pictureFileName(UUID itemId) {
-		return jdbc.sql("SELECT file_name FROM inventory_picture WHERE item_id = ?")
+		return jdbc.sql("SELECT file_name FROM catalog_picture WHERE item_id = ?")
 			.param(itemId.toString())
 			.query(String.class)
 			.single();
