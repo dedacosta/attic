@@ -54,7 +54,7 @@ class SecurityTests {
 
 	@Test
 	void apiNeedsSignIn() throws Exception {
-		for (String path : new String[] { "/api/items", "/api/heirs", "/api/documents", "/api/locations" }) {
+		for (String path : new String[] { "/api/items", "/api/official-inventory", "/api/heirs", "/api/documents", "/api/locations" }) {
 			mvc.perform(get(path)).andExpect(status().isUnauthorized());
 		}
 		mvc.perform(post("/api/items").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"X\"}"))
