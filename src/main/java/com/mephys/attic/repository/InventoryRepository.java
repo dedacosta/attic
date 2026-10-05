@@ -1,6 +1,6 @@
 package com.mephys.attic.repository;
 
-import com.mephys.attic.model.OfficialInventoryItem;
+import com.mephys.attic.model.InventoryItem;
 import com.mephys.attic.model.Location;
 import com.mephys.attic.model.Picture;
 import com.mephys.attic.model.PictureInfo;
@@ -19,20 +19,20 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class OfficialInventoryRepository {
+public class InventoryRepository {
 
 	private final JdbcClient jdbc;
 
 	private final PictureRepository pictures;
 
-	public OfficialInventoryRepository(JdbcClient jdbc, PictureStorage storage) {
+	public InventoryRepository(JdbcClient jdbc, PictureStorage storage) {
 		this.jdbc = jdbc;
-		this.pictures = new PictureRepository(jdbc, storage, "official_inventory_picture", "item_id", "official_inventory_item");
+		this.pictures = new PictureRepository(jdbc, storage, "inventory_picture", "item_id", "inventory_item");
 	}
 
-	public OfficialInventoryItem save(OfficialInventoryItem item) {
+	public InventoryItem save(InventoryItem item) {
 		jdbc.sql("""
-				INSERT INTO official_inventory_item (id, name, quantity, date, location, existent, value_cents, owner, comments,
+				INSERT INTO inventory_item (id, name, quantity, date, location, existent, value_cents, owner, comments,
 					created_at, updated_at)
 				VALUES (:id, :name, :quantity, :date, :location, :existent, :valueCents, :owner, :comments,
 					strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
@@ -55,12 +55,12 @@ public class OfficialInventoryRepository {
 		return item;
 	}
 
-	public Optional<OfficialInventoryItem> findById(UUID id) {
-		return jdbc.sql("SELECT * FROM official_inventory_item WHERE id = ?").param(id.toString()).query(this::map).optional();
+	public Optional<InventoryItem> findById(UUID id) {
+		return jdbc.sql("SELECT * FROM inventory_item WHERE id = ?").param(id.toString()).query(this::map).optional();
 	}
 
-	public List<OfficialInventoryItem> findAll() {
-		return jdbc.sql("SELECT * FROM official_inventory_item ORDER BY name").query(this::map).list();
+	public List<InventoryItem> findAll() {
+		return jdbc.sql("SELECT * FROM inventory_item ORDER BY name").query(this::map).list();
 	}
 
 	public boolean deleteById(UUID id) {
@@ -95,10 +95,10 @@ public class OfficialInventoryRepository {
 		pictures.reorder(itemId, pictureIds);
 	}
 
-	private OfficialInventoryItem map(ResultSet rs, int rowNum) throws SQLException {
+	private InventoryItem map(ResultSet rs, int rowNum) throws SQLException {
 		String date = rs.getString("date");
 		String location = rs.getString("location");
-		return new OfficialInventoryItem(UUID.fromString(rs.getString("id")), rs.getString("name"), rs.getInt("quantity"),
+		return new InventoryItem(UUID.fromString(rs.getString("id")), rs.getString("name"), rs.getInt("quantity"),
 				(date != null) ? LocalDate.parse(date) : null, (location != null) ? Location.valueOf(location) : null,
 				rs.getBoolean("existent"), BigDecimal.valueOf(rs.getLong("value_cents"), 2), rs.getString("owner"),
 				rs.getString("comments"));

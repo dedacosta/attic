@@ -147,3 +147,11 @@ The `Inventory*` classes are renamed to `Catalog*`, and `CatalogController` serv
 The installed service uses the real database. Installing the new jar applies V20 and V21 in
 order on the next start, with nothing to do by hand. Bookmarks to `#/inventory` open the House
 tab afterwards.
+
+## Later change
+
+Later on 2026-10-05 the Official Inventory was renamed to **Inventory**, the name that became
+free when the old Inventory became the Catalog: tab "Inventory", `#/inventory`,
+`/api/inventory`, tables `inventory_item` and `inventory_picture`, classes `Inventory*`.
+Migration `V22__rename_official_inventory_to_inventory.sql` renames the tables and keeps their
+rows. The names in the sections above are those of before this change.

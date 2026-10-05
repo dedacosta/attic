@@ -1,6 +1,6 @@
 package com.mephys.attic.repository;
 
-import com.mephys.attic.model.CatalogItem;
+import com.mephys.attic.model.InventoryItem;
 import com.mephys.attic.model.PictureInfo;
 
 import java.nio.file.Path;
@@ -22,10 +22,10 @@ import org.springframework.test.context.DynamicPropertySource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The items and photos of the inventory are still there when it has become the catalog.
+ * The items and photos of the official inventory are still there when it has become the inventory.
  */
 @SpringBootTest
-class CatalogMigrationTests {
+class InventoryMigrationTests {
 
 	private static final UUID ITEM = UUID.fromString("11111111-1111-4111-8111-111111111111");
 
@@ -40,27 +40,27 @@ class CatalogMigrationTests {
 	}
 
 	@BeforeAll
-	static void createVersion20Database() throws Exception {
+	static void createVersion21Database() throws Exception {
 		String url = "jdbc:sqlite:" + tempDir.resolve("attic.db") + "?foreign_keys=true";
-		Flyway.configure().dataSource(url, null, null).target("20").load().migrate();
+		Flyway.configure().dataSource(url, null, null).target("21").load().migrate();
 		try (Connection connection = DriverManager.getConnection(url);
 				Statement statement = connection.createStatement()) {
-			// At version 20 the catalog is still called the inventory
-			statement.execute("INSERT INTO inventory_item (id, name, quantity) VALUES ('" + ITEM + "', 'Sofa', 2)");
-			statement.execute("INSERT INTO inventory_picture (id, item_id, position, file_name, content_type) VALUES ('"
+			// At version 21 the inventory is still called the official inventory
+			statement.execute("INSERT INTO official_inventory_item (id, name, quantity) VALUES ('" + ITEM + "', 'Sofa', 2)");
+			statement.execute("INSERT INTO official_inventory_picture (id, item_id, position, file_name, content_type) VALUES ('"
 					+ PICTURE + "', '" + ITEM + "', 0, '" + PICTURE + ".png', 'image/png')");
 		}
 	}
 
 	@Autowired
-	private CatalogRepository repository;
+	private InventoryRepository repository;
 
 	@Autowired
 	private JdbcClient jdbc;
 
 	@Test
 	void itemsAndPhotosAreKept() {
-		CatalogItem sofa = repository.findById(ITEM).orElseThrow();
+		InventoryItem sofa = repository.findById(ITEM).orElseThrow();
 		assertThat(sofa.name()).isEqualTo("Sofa");
 		assertThat(sofa.quantity()).isEqualTo(2);
 		assertThat(repository.listPictures(ITEM)).extracting(PictureInfo::id).containsExactly(PICTURE);
@@ -68,24 +68,23 @@ class CatalogMigrationTests {
 
 	@Test
 	void deletingAnItemStillDeletesItsPhotoRows() {
-		UUID id = repository.save(CatalogItem.of("Chair")).id();
-		jdbc.sql("INSERT INTO catalog_picture (id, item_id, position, file_name, content_type) VALUES (?, ?, 0, 'x.png', 'image/png')")
+		UUID id = repository.save(InventoryItem.of("Chair")).id();
+		jdbc.sql("INSERT INTO inventory_picture (id, item_id, position, file_name, content_type) VALUES (?, ?, 0, 'x.png', 'image/png')")
 			.params(UUID.randomUUID().toString(), id.toString())
 			.update();
 
 		repository.deleteById(id);
 
 		// The foreign key followed the renamed table, so the cascade still works
-		assertThat(jdbc.sql("SELECT count(*) FROM catalog_picture WHERE item_id = ?").param(id.toString())
+		assertThat(jdbc.sql("SELECT count(*) FROM inventory_picture WHERE item_id = ?").param(id.toString())
 			.query(Integer.class)
 			.single()).isZero();
 	}
 
 	@Test
-	void theInventoryStartsEmpty() {
-		// inventory_item is the new list now; what it held before is in the catalog
-		assertThat(jdbc.sql("SELECT count(*) FROM inventory_item").query(Integer.class).single()).isZero();
-		assertThat(jdbc.sql("SELECT count(*) FROM inventory_picture").query(Integer.class).single()).isZero();
+	void theOfficialInventoryTablesAreGone() {
+		assertThat(jdbc.sql("SELECT count(*) FROM sqlite_master WHERE name LIKE 'official%'").query(Integer.class).single())
+			.isZero();
 	}
 
 }

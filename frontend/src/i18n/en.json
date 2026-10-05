@@ -205,7 +205,7 @@
   "signingIn": "Signing in…",
   "errorLogin": "Wrong username or password.",
   "setupTitle": "Welcome to Attic",
-  "setupIntro": "Create your account. It will be the only way to open your catalog, official inventory, heirs and documents.",
+  "setupIntro": "Create your account. It will be the only way to open your catalog, inventory, heirs and documents.",
   "repeatPassword": "Repeat password",
   "createAccount": "Create account",
   "errorPasswordShort": "The password must have at least {length} characters.",
@@ -234,7 +234,7 @@
   "resetPassword": "Reset password",
   "newPasswordFor": "New password for {username}",
   "deleteUserTitle": "Delete account?",
-  "deleteUserMessage": "“{username}” will no longer be able to sign in. The catalog, official inventory, heirs and documents stay.",
+  "deleteUserMessage": "“{username}” will no longer be able to sign in. The catalog, inventory, heirs and documents stay.",
   "you": "you",
   "addedUser": "Account “{username}” created.",
   "passwordReset": "Password of “{username}” changed.",
@@ -375,6 +375,6 @@
     "OTHER": "Other"
   },
   "sourceCode": "Source code",
-  "tabOfficialInventory": "Official inventory",
-  "pdfTitleOfficialInventory": "Official inventory"
+  "tabInventory": "Inventory",
+  "pdfTitleInventory": "Inventory"
 }

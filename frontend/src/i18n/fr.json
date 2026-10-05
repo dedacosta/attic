@@ -212,7 +212,7 @@
   "signingIn": "Connexion…",
   "errorLogin": "Nom d’utilisateur ou mot de passe incorrect.",
   "setupTitle": "Bienvenue dans Attic",
-  "setupIntro": "Créez votre compte. Ce sera le seul moyen d’ouvrir votre catalogue, votre inventaire officiel, vos héritiers et vos documents.",
+  "setupIntro": "Créez votre compte. Ce sera le seul moyen d’ouvrir votre catalogue, votre inventaire, vos héritiers et vos documents.",
   "repeatPassword": "Répéter le mot de passe",
   "createAccount": "Créer le compte",
   "errorPasswordShort": "Le mot de passe doit contenir au moins {length} caractères.",
@@ -241,7 +241,7 @@
   "resetPassword": "Réinitialiser le mot de passe",
   "newPasswordFor": "Nouveau mot de passe de {username}",
   "deleteUserTitle": "Supprimer le compte ?",
-  "deleteUserMessage": "«\u00a0{username}\u00a0» ne pourra plus se connecter. Le catalogue, l’inventaire officiel, les héritiers et les documents restent.",
+  "deleteUserMessage": "«\u00a0{username}\u00a0» ne pourra plus se connecter. Le catalogue, l’inventaire, les héritiers et les documents restent.",
   "you": "vous",
   "addedUser": "Compte «\u00a0{username}\u00a0» créé.",
   "passwordReset": "Mot de passe de «\u00a0{username}\u00a0» modifié.",
@@ -382,6 +382,6 @@
     "OTHER": "Autre"
   },
   "sourceCode": "Code source",
-  "tabOfficialInventory": "Inventaire officiel",
-  "pdfTitleOfficialInventory": "Inventaire officiel"
+  "tabInventory": "Inventaire",
+  "pdfTitleInventory": "Inventaire"
 }
