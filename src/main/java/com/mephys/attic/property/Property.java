@@ -8,16 +8,25 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The family house or a land parcel of the heritage. {@code valueEur} is {@code null} when not
- * estimated; {@code facts} are its details in order, without blank lines.
+ * A property of the heritage: a {@link House} or a {@link Land}. {@code valueEur} is
+ * {@code null} when not estimated; {@code facts} are its details in order, without blank lines.
  */
-record Property(UUID id, PropertyKind kind, String name, @Nullable String address, @Nullable BigDecimal valueEur,
-		@Nullable String comments, List<PropertyFact> facts) {
+abstract sealed class Property permits House, Land {
 
-	Property {
-		if (kind == null) {
-			throw new IllegalArgumentException("kind must not be null");
-		}
+	private final UUID id;
+
+	private final String name;
+
+	private final @Nullable String address;
+
+	private final @Nullable BigDecimal valueEur;
+
+	private final @Nullable String comments;
+
+	private final List<PropertyFact> facts;
+
+	protected Property(@Nullable UUID id, String name, @Nullable String address, @Nullable BigDecimal valueEur,
+			@Nullable String comments, @Nullable List<PropertyFact> facts) {
 		if (name == null || name.isBlank()) {
 			throw new IllegalArgumentException("name must not be blank");
 		}
@@ -27,11 +36,53 @@ record Property(UUID id, PropertyKind kind, String name, @Nullable String addres
 				throw new IllegalArgumentException("valueEur must not be negative");
 			}
 		}
-		id = (id != null) ? id : UUID.randomUUID();
-		name = name.strip();
-		address = blankToNull(address);
-		comments = blankToNull(comments);
-		facts = (facts != null) ? facts.stream().filter((fact) -> !fact.isBlank()).toList() : List.of();
+		this.id = (id != null) ? id : UUID.randomUUID();
+		this.name = name.strip();
+		this.address = blankToNull(address);
+		this.valueEur = valueEur;
+		this.comments = blankToNull(comments);
+		this.facts = (facts != null) ? facts.stream().filter((fact) -> !fact.isBlank()).toList() : List.of();
+	}
+
+	/**
+	 * The house or the land with these values, as {@code kind} says.
+	 */
+	static Property of(@Nullable UUID id, PropertyKind kind, String name, @Nullable String address,
+			@Nullable BigDecimal valueEur, @Nullable String comments, @Nullable List<PropertyFact> facts) {
+		if (kind == null) {
+			throw new IllegalArgumentException("kind must not be null");
+		}
+		return switch (kind) {
+			case HOUSE -> new House(id, name, address, valueEur, comments, facts);
+			case LAND -> new Land(id, name, address, valueEur, comments, facts);
+		};
+	}
+
+	/** Which of the subclasses this is, as stored and sent */
+	abstract PropertyKind kind();
+
+	UUID id() {
+		return id;
+	}
+
+	String name() {
+		return name;
+	}
+
+	@Nullable String address() {
+		return address;
+	}
+
+	@Nullable BigDecimal valueEur() {
+		return valueEur;
+	}
+
+	@Nullable String comments() {
+		return comments;
+	}
+
+	List<PropertyFact> facts() {
+		return facts;
 	}
 
 	private static @Nullable String blankToNull(@Nullable String text) {

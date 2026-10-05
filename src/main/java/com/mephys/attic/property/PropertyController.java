@@ -8,6 +8,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 
@@ -39,6 +40,18 @@ class PropertyController {
 	PropertyController(PropertyRepository repository, PictureUploads uploads) {
 		this.repository = repository;
 		this.uploads = uploads;
+	}
+
+	/** The houses and the land parcels of the heritage, each by name */
+	@GetMapping("/heritage")
+	HeritageResponse heritage() {
+		Map<UUID, List<PictureInfo>> pictures = repository.listAllPictures();
+		Map<UUID, List<PictureInfo>> files = repository.listAllDocumentFiles();
+		Heritage heritage = Heritage.of(repository.findAll(null));
+		Function<Property, PropertyResponse> response = (property) -> PropertyResponse.of(property,
+				pictures.getOrDefault(property.id(), List.of()), documents(property.id(), files));
+		return new HeritageResponse(heritage.houses().stream().map(response).toList(),
+				heritage.lands().stream().map(response).toList());
 	}
 
 	/** All properties by name, or those of one kind */

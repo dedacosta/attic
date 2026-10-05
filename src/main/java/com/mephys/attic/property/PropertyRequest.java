@@ -13,7 +13,7 @@ record PropertyRequest(@Nullable PropertyKind kind, String name, @Nullable Strin
 		@Nullable BigDecimal valueEur, @Nullable String comments, @Nullable List<PropertyFact> facts) {
 
 	Property toProperty(@Nullable UUID id) {
-		return new Property(id, kind, name, address, valueEur, comments, facts);
+		return Property.of(id, kind, name, address, valueEur, comments, facts);
 	}
 
 }

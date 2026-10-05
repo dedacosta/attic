@@ -62,7 +62,7 @@ class PropertyAccessTests {
 			.andExpect(status().isCreated());
 		MockHttpSession user = signIn("ana");
 
-		for (String path : new String[] { "/api/properties", "/api/properties?kind=LAND", "/api/properties/" + house,
+		for (String path : new String[] { "/api/heritage", "/api/properties", "/api/properties?kind=LAND", "/api/properties/" + house,
 				"/api/properties/" + house + "/pictures/" + photo, "/api/property-documents/" + document,
 				"/api/property-documents/" + document + "/pictures/" + file, "/api/property-labels",
 				"/api/property-document-types" }) {
