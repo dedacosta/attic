@@ -81,17 +81,10 @@ class PropertyRepository {
 			.optional();
 	}
 
-	Optional<Property> findHouse() {
-		return jdbc.sql("SELECT id FROM property WHERE kind = 'HOUSE'")
-			.query((rs, rowNum) -> UUID.fromString(rs.getString("id")))
-			.optional()
-			.flatMap(this::findById);
-	}
-
 	/**
-	 * All properties of a kind, by name.
+	 * All properties by name, or those of one kind.
 	 */
-	List<Property> findAll(PropertyKind kind) {
+	List<Property> findAll(@Nullable PropertyKind kind) {
 		Map<UUID, List<PropertyFact>> facts = jdbc
 			.sql("SELECT property_id, label, value FROM property_fact ORDER BY property_id, position")
 			.query((rs, rowNum) -> Map.entry(UUID.fromString(rs.getString("property_id")),
@@ -100,8 +93,10 @@ class PropertyRepository {
 			.stream()
 			.collect(Collectors.groupingBy(Map.Entry::getKey,
 					Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
-		return jdbc.sql("SELECT * FROM property WHERE kind = ?")
-			.param(kind.name())
+		JdbcClient.StatementSpec properties = (kind != null)
+				? jdbc.sql("SELECT * FROM property WHERE kind = ?").param(kind.name())
+				: jdbc.sql("SELECT * FROM property");
+		return properties
 			.query((rs, rowNum) -> map(rs, facts.getOrDefault(UUID.fromString(rs.getString("id")), List.of())))
 			.list()
 			.stream()

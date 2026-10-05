@@ -1,6 +1,5 @@
 package com.mephys.attic.controller;
 
-import com.mephys.attic.property.HouseAlreadyExistsException;
 import com.mephys.attic.service.PictureTooLargeException;
 
 import org.springframework.http.HttpStatus;
@@ -22,11 +21,6 @@ class ApiExceptionHandler {
 	@ExceptionHandler(PictureTooLargeException.class)
 	ProblemDetail pictureTooLarge(PictureTooLargeException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE, ex.getMessage());
-	}
-
-	@ExceptionHandler(HouseAlreadyExistsException.class)
-	ProblemDetail houseAlreadyExists(HouseAlreadyExistsException ex) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
 	}
 
 }

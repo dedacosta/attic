@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.DataAccessException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -25,7 +24,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -62,14 +60,12 @@ class PropertyControllerTests {
 
 	@Test
 	void houseLifecycle() throws Exception {
-		mvc.perform(get("/api/properties/house")).andExpect(status().isNotFound());
-
 		String id = create("""
 				{"kind":"HOUSE","name":"Casa de Viseu","address":"Rua Direita 1, Viseu","valueEur":250000,
 				 "comments":"Roof redone in 2019","facts":[{"label":"Área (m²)","value":"180"}]}
 				""");
 
-		mvc.perform(get("/api/properties/house"))
+		mvc.perform(get("/api/properties/{id}", id))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.id").value(id))
 			.andExpect(jsonPath("$.kind").value("HOUSE"))
@@ -93,26 +89,46 @@ class PropertyControllerTests {
 			.andExpect(jsonPath("$.facts[0].label").value("Divisões"));
 
 		mvc.perform(delete("/api/properties/{id}", id)).andExpect(status().isNoContent());
-		mvc.perform(get("/api/properties/house")).andExpect(status().isNotFound());
 		mvc.perform(get("/api/properties/{id}", id)).andExpect(status().isNotFound());
 		mvc.perform(delete("/api/properties/{id}", id)).andExpect(status().isNotFound());
 	}
 
 	@Test
-	void onlyOneHouse() throws Exception {
-		create("{\"kind\":\"HOUSE\",\"name\":\"Casa\"}");
+	void thereCanBeSeveralHouses() throws Exception {
+		String first = create("{\"kind\":\"HOUSE\",\"name\":\"Casa de Viseu\"}");
+		String second = create("{\"kind\":\"HOUSE\",\"name\":\"Casa da praia\"}");
 
-		mvc.perform(post("/api/properties").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"kind\":\"HOUSE\",\"name\":\"Outra casa\"}")).andExpect(status().isConflict());
+		String body = mvc.perform(get("/api/properties").param("kind", "HOUSE"))
+			.andExpect(status().isOk())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		List<String> ids = JsonPath.read(body, "$[*].id");
+		List<String> kinds = JsonPath.read(body, "$[*].kind");
+		assertThat(ids).containsExactlyInAnyOrder(first, second);
+		assertThat(kinds).containsOnly("HOUSE");
 	}
 
 	@Test
-	void databaseRefusesASecondHouseEvenWithoutTheCheck() throws Exception {
+	void theListWithoutKindHasHousesAndLandByName() throws Exception {
+		create("{\"kind\":\"LAND\",\"name\":\"Vinha\"}");
+		create("{\"kind\":\"HOUSE\",\"name\":\"Casa\"}");
+		create("{\"kind\":\"LAND\",\"name\":\"Olival\"}");
+
+		String body = mvc.perform(get("/api/properties"))
+			.andExpect(status().isOk())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		List<String> names = JsonPath.read(body, "$[*].name");
+		assertThat(names).containsSubsequence("Casa", "Olival", "Vinha");
+	}
+
+	@Test
+	void theSingleHouseAddressIsGone() throws Exception {
 		create("{\"kind\":\"HOUSE\",\"name\":\"Casa\"}");
 
-		assertThatExceptionOfType(DataAccessException.class).isThrownBy(() -> jdbc
-			.sql("INSERT INTO property (id, kind, name) VALUES ('11111111-1111-4111-8111-111111111111', 'HOUSE', 'Outra')")
-			.update());
+		mvc.perform(get("/api/properties/house")).andExpect(status().is4xxClientError());
 	}
 
 	@Test
