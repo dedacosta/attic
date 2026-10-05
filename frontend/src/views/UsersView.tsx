@@ -9,7 +9,7 @@ import { useModal } from '../lib/useModal'
 import { useI18n, type Messages } from '../i18n'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { PlusIcon, TrashIcon } from '../components/icons'
-import type { Heir, Role, UserAccount } from '../api/types'
+import type { Heir, Invitation, Role, UserAccount } from '../api/types'
 import type { Contact } from '../api/api'
 
 const ROLES: Role[] = ['SUPER_ADMIN', 'ADMIN', 'USER']
@@ -51,6 +51,7 @@ export default function UsersView({ currentUser }: { currentUser: string }) {
   const { t } = useI18n()
   const { isSuperAdmin } = usePermissions()
   const [users, setUsers] = useState<UserAccount[]>([])
+  const [invitations, setInvitations] = useState<Invitation[]>([])
   const [heirs, setHeirs] = useState<Heir[]>([])
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null)
   const [resetting, setResetting] = useState<string | null>(null)
@@ -59,8 +60,10 @@ export default function UsersView({ currentUser }: { currentUser: string }) {
 
   const reload = useCallback(async () => {
     try {
-      const [loadedUsers, loadedHeirs] = await Promise.all([api.listUsers(), api.listHeirs()])
+      const [loadedUsers, loadedHeirs, loadedInvitations] = await Promise.all([api.listUsers(), api.listHeirs(),
+        api.listInvitations()])
       setUsers(loadedUsers)
+      setInvitations(loadedInvitations)
       setHeirs(byName(loadedHeirs, t.locale))
     } catch (e) {
       setMessage({ text: accountError(e, t), error: true })
@@ -155,6 +158,15 @@ export default function UsersView({ currentUser }: { currentUser: string }) {
         <NewUserForm onCreate={(username, password, role, heirId, contact) =>
           run(() => api.createUser(username, password, role, heirId, contact), t.addedUser(username))} roleLabel={roleLabel}
           roles={isSuperAdmin ? ROLES : ['USER']} heirOptions={heirOptions} />
+
+        <InvitationsPanel invitations={invitations} heirs={heirs} roleLabel={roleLabel}
+          roles={isSuperAdmin ? ROLES : ['USER']} heirOptions={heirOptions}
+          onCreate={async (role, heirId) => {
+            const created: { invitation: Invitation | null } = { invitation: null }
+            await run(async () => { created.invitation = await api.createInvitation(role, heirId) })
+            return created.invitation
+          }}
+          onRevoke={(id) => run(() => api.deleteInvitation(id), t.invitationRevoked)} />
       </section>
 
       {editingContact && (
@@ -269,6 +281,119 @@ function NewUserForm(props: {
         </div>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
+    </form>
+  )
+}
+
+/** The link that opens the registration screen with an invitation's token */
+function invitationLink(token: string): string {
+  return `${window.location.origin}${window.location.pathname}#/register/${encodeURIComponent(token)}`
+}
+
+/**
+ * Invitations: links with which somebody creates their own account, with the role and heir chosen
+ * here. The link can only be shown right after creating it, as the server keeps no copy of the token.
+ */
+function InvitationsPanel(props: {
+  invitations: Invitation[]
+  heirs: Heir[]
+  /** Resolves to the new invitation, or null if it could not be created */
+  onCreate: (role: Role, heirId: string | null) => Promise<Invitation | null>
+  onRevoke: (id: string) => Promise<unknown>
+  roleLabel: (role: Role) => string
+  /** Roles this administrator may give */
+  roles: Role[]
+  heirOptions: ReactNode
+}) {
+  const { t } = useI18n()
+  const { isSuperAdmin } = usePermissions()
+  const [role, setRole] = useState<Role>('USER')
+  const [heirId, setHeirId] = useState('')
+  const [link, setLink] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const heirName = (id: string | null) => props.heirs.find((heir) => heir.id === id)?.name
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    const invitation = await props.onCreate(role, heirId || null)
+    if (invitation?.token) {
+      setLink(invitationLink(invitation.token))
+      setCopied(false)
+      setRole('USER')
+      setHeirId('')
+    }
+  }
+
+  async function copy() {
+    if (link && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(link)
+        setCopied(true)
+      } catch {
+        // Not allowed here: the link can still be selected and copied by hand
+      }
+    }
+  }
+
+  return (
+    <form className="new-user" onSubmit={submit} noValidate>
+      <h3>{t.inviteUser}</h3>
+      <p className="hint">{t.inviteIntro}</p>
+      <div className="fields">
+        <label className="field">
+          <span>{t.role}</span>
+          <select value={role} onChange={(e) => setRole(e.target.value as Role)} disabled={props.roles.length === 1}>
+            {props.roles.map((r) => <option key={r} value={r}>{props.roleLabel(r)}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span>{t.accountHeir} <small>{t.optional}</small></span>
+          <select value={heirId} onChange={(e) => setHeirId(e.target.value)}>
+            {props.heirOptions}
+          </select>
+        </label>
+        <div className="field field-end field-wide">
+          <button type="submit" className="button button-primary">
+            <PlusIcon width={18} height={18} /> {t.createInvitation}
+          </button>
+        </div>
+      </div>
+
+      {link && (
+        <>
+          <div className="invitation-link">
+            <input value={link} readOnly aria-label={t.invitationLink} onFocus={(e) => e.target.select()} />
+            {navigator.clipboard && (
+              <button type="button" className="button" onClick={copy}>{copied ? t.copied : t.copy}</button>
+            )}
+          </div>
+          <p className="hint">{t.invitationLinkHint}</p>
+        </>
+      )}
+
+      {props.invitations.length > 0 && (
+        <ul className="user-list invitation-list" aria-label={t.pendingInvitations}>
+          {props.invitations.map((invitation) => (
+            <li key={invitation.id} className="user-row">
+              <div className="user-name">
+                <strong>{props.roleLabel(invitation.role)}</strong>
+                {invitation.heirId && <span className="tag">{heirName(invitation.heirId) ?? t.accountHeir}</span>}
+                <small>
+                  {t.invitationCreated(invitation.createdBy, formatDateTime(invitation.createdAt, t.locale))}
+                  {' · '}
+                  {t.invitationExpires(formatDateTime(invitation.expiresAt, t.locale))}
+                </small>
+              </div>
+              {(isSuperAdmin || invitation.role === 'USER') && (
+                <button type="button" className="icon-button" onClick={() => props.onRevoke(invitation.id)}
+                  aria-label={t.revokeInvitation}>
+                  <TrashIcon width={18} height={18} />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </form>
   )
 }

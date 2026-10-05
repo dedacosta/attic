@@ -1035,6 +1035,11 @@ a.button {
   margin-top: 4px;
 }
 
+.sign-in-switch {
+  align-self: center;
+  font-size: 0.92rem;
+}
+
 /* Account menu */
 
 .account-menu {
@@ -1209,6 +1214,34 @@ fieldset.fields:disabled .checkbox {
 
 .field-end {
   justify-content: flex-end;
+}
+
+.new-user .hint {
+  margin: -4px 0 12px;
+}
+
+.invitation-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.invitation-link input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.invitation-list {
+  margin-top: 12px;
 }
 
 .form-success {

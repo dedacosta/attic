@@ -23,8 +23,8 @@ import org.springframework.security.web.authentication.logout.HttpStatusReturnin
 import org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter;
 
 /**
- * Everything below {@code /api} needs a signed-in user, except the session status and the
- * one-time setup. Users may only read, apart from their own password and their own heir card
+ * Everything below {@code /api} needs a signed-in user, except the session status, the
+ * one-time setup and registering with an invitation. Users may only read, apart from their own password and their own heir card
  * (checked by the heir endpoints); changing data and managing accounts is for administrators.
  * Which heirs and documents a user may read is decided by {@link CurrentAccount}. The web page itself is public: it
  * shows the sign-in screen.
@@ -44,11 +44,11 @@ class SecurityConfiguration {
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http, UserDetailsService users, UserRepository repository) {
 		String rememberMeKey = repository.setting("remember_me_key", SecurityConfiguration::randomKey);
-		http.authorizeHttpRequests((requests) -> requests.requestMatchers("/api/session", "/api/setup")
+		http.authorizeHttpRequests((requests) -> requests.requestMatchers("/api/session", "/api/setup", "/api/register")
 			.permitAll()
 			.requestMatchers("/api/account/**")
 			.authenticated()
-			.requestMatchers("/api/users/**")
+			.requestMatchers("/api/users/**", "/api/invitations/**")
 			.hasRole(Role.ADMIN.name())
 			.requestMatchers(HttpMethod.PUT, "/api/heirs/*")
 			.authenticated()

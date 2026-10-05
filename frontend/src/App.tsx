@@ -29,10 +29,19 @@ function viewFromHash(): View {
   }
 }
 
+const REGISTER_PREFIX = '#/register/'
+
+/** The token of an invitation link (#/register/<token>); in the hash, it never reaches the server's logs */
+function invitationFromHash(): string | null {
+  const hash = window.location.hash
+  return hash.startsWith(REGISTER_PREFIX) ? decodeURIComponent(hash.slice(REGISTER_PREFIX.length)) || null : null
+}
+
 export default function App() {
   const { t } = useI18n()
   const [session, setSession] = useState<Session | null>(null)
   const [sessionError, setSessionError] = useState<unknown>(null)
+  const [invitation, setInvitation] = useState(invitationFromHash)
 
   const refreshSession = useCallback(async () => {
     try {
@@ -66,7 +75,15 @@ export default function App() {
   }
 
   if (!session.authenticated || session.setupRequired) {
-    return <SignInScreen setup={session.setupRequired} onSignedIn={refreshSession} />
+    return <SignInScreen setup={session.setupRequired} invitation={session.setupRequired ? null : invitation}
+      onSignedIn={() => {
+        if (invitation !== null) {
+          // The token is used up: leave the invitation link
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+          setInvitation(null)
+        }
+        refreshSession()
+      }} />
   }
 
   return (

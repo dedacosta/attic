@@ -49,7 +49,7 @@ class UserController {
 	synchronized ResponseEntity<UserResponse> create(@RequestBody NewUser request, Principal principal) {
 		Role role = role(request.role());
 		if (role != Role.USER) {
-			requireSuperAdmin(principal);
+			requireSuperAdmin(users, principal);
 		}
 		String username = AccountController.validUsername(request.username());
 		if (users.find(username).isPresent()) {
@@ -59,7 +59,7 @@ class UserController {
 		users.create(username, passwordEncoder.encode(AccountController.validPassword(request.password())), role);
 		users.updateContact(username, contact);
 		if (request.heirId() != null) {
-			users.updateHeir(username, validHeir(request.heirId(), username));
+			users.updateHeir(username, validHeir(users, request.heirId(), username));
 		}
 		return ResponseEntity.created(URI.create("/api/users/" + username))
 			.body(UserResponse.of(users.find(username).orElseThrow()));
@@ -69,7 +69,7 @@ class UserController {
 	@Transactional
 	synchronized ResponseEntity<UserResponse> changeRole(@PathVariable String username, @RequestBody RoleChange change,
 			Principal principal) {
-		requireSuperAdmin(principal);
+		requireSuperAdmin(users, principal);
 		UserRepository.StoredUser user = users.find(username).orElse(null);
 		if (user == null) {
 			return ResponseEntity.notFound().build();
@@ -94,9 +94,9 @@ class UserController {
 			return ResponseEntity.notFound().build();
 		}
 		if (user.role() != Role.USER) {
-			requireSuperAdmin(principal);
+			requireSuperAdmin(users, principal);
 		}
-		users.updateHeir(user.username(), (link.heirId() != null) ? validHeir(link.heirId(), user.username()) : null);
+		users.updateHeir(user.username(), (link.heirId() != null) ? validHeir(users, link.heirId(), user.username()) : null);
 		return ResponseEntity.ok(UserResponse.of(users.find(username).orElseThrow()));
 	}
 
@@ -112,7 +112,7 @@ class UserController {
 			return ResponseEntity.notFound().build();
 		}
 		if (user.role() != Role.USER) {
-			requireSuperAdmin(principal);
+			requireSuperAdmin(users, principal);
 		}
 		users.updateContact(user.username(), contact);
 		return ResponseEntity.ok(UserResponse.of(users.find(username).orElseThrow()));
@@ -126,7 +126,7 @@ class UserController {
 			return ResponseEntity.notFound().build();
 		}
 		if (user.role() != Role.USER) {
-			requireSuperAdmin(principal);
+			requireSuperAdmin(users, principal);
 		}
 		users.updatePassword(user.username(),
 				passwordEncoder.encode(AccountController.validPassword(reset.password())));
@@ -136,7 +136,7 @@ class UserController {
 	@DeleteMapping("/users/{username}")
 	@Transactional
 	synchronized ResponseEntity<Void> delete(@PathVariable String username, Principal principal) {
-		requireSuperAdmin(principal);
+		requireSuperAdmin(users, principal);
 		UserRepository.StoredUser user = users.find(username).orElse(null);
 		if (user == null) {
 			return ResponseEntity.notFound().build();
@@ -151,14 +151,17 @@ class UserController {
 		return ResponseEntity.noContent().build();
 	}
 
-	private void requireSuperAdmin(Principal principal) {
+	static void requireSuperAdmin(UserRepository users, Principal principal) {
 		boolean superAdmin = users.find(principal.getName()).map((user) -> user.role() == Role.SUPER_ADMIN).orElse(false);
 		if (!superAdmin) {
 			throw new AccessDeniedException("only a super-administrator may do this");
 		}
 	}
 
-	private UUID validHeir(UUID heirId, String username) {
+	/**
+	 * The heir, if it exists and no account other than {@code username} (if any) is linked to it.
+	 */
+	static UUID validHeir(UserRepository users, UUID heirId, @Nullable String username) {
 		if (!users.heirExists(heirId)) {
 			throw new IllegalArgumentException("heir does not exist");
 		}
@@ -170,7 +173,7 @@ class UserController {
 		return heirId;
 	}
 
-	private static Role role(@Nullable Role role) {
+	static Role role(@Nullable Role role) {
 		if (role == null) {
 			throw new IllegalArgumentException("role must not be null");
 		}

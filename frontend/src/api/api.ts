@@ -1,6 +1,6 @@
 import type { Messages } from '../i18n'
 import type {
-  DocumentInput, Item, ItemInput, OwnAccount, Heir, HeirDocument, HeirInput, Role, Session, UserAccount,
+  DocumentInput, Invitation, Item, ItemInput, OwnAccount, Heir, HeirDocument, HeirInput, Role, Session, UserAccount,
 } from './types'
 
 /** A failed request. {@link apiErrorMessage} turns it into text in the user's language. */
@@ -131,6 +131,9 @@ export const api = {
   session: () => request<Session>('/api/session'),
   setup: (username: string, password: string) =>
     request<void>('/api/setup', json('POST', { username, password })),
+  /** Create an account with the token of an invitation */
+  register: (token: string, username: string, password: string) =>
+    request<void>('/api/register', json('POST', { token, username, password })),
   /** Resolves to false for a wrong username or password */
   signIn: async (username: string, password: string, remember: boolean): Promise<boolean> => {
     const form = new URLSearchParams({ username, password })
@@ -152,6 +155,10 @@ export const api = {
     request<UserAccount>('/api/users', json('POST', { username, password, role, heirId, ...contact })),
   changeContact: (username: string, contact: Contact) =>
     request<UserAccount>(`/api/users/${encodeURIComponent(username)}/contact`, json('PUT', contact)),
+  listInvitations: () => request<Invitation[]>('/api/invitations'),
+  createInvitation: (role: Role, heirId: string | null) =>
+    request<Invitation>('/api/invitations', json('POST', { role, heirId })),
+  deleteInvitation: (id: string) => request<void>(`/api/invitations/${id}`, { method: 'DELETE' }),
   myAccount: () => request<OwnAccount>('/api/account'),
   changeMyContact: (contact: Contact) => request<OwnAccount>('/api/account/contact', json('PUT', contact)),
   linkHeir: (username: string, heirId: string | null) =>
