@@ -380,5 +380,7 @@
     "HOUSING_LICENCE": "Licença de habitação",
     "OTHER": "Outro"
   },
-  "sourceCode": "Código-fonte"
+  "sourceCode": "Código-fonte",
+  "tabOfficialInventory": "Inventário oficial",
+  "pdfTitleOfficialInventory": "Inventário oficial"
 }

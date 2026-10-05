@@ -72,7 +72,7 @@ export default function InventoryView() {
       presence !== 'all' && (presence === 'present' ? t.present : t.missing),
     ].filter((f): f is string => Boolean(f))
     const { exportPdf } = await import('../lib/pdf')
-    await exportPdf(visible, items?.length ?? 0, filters, t)
+    await exportPdf(visible, items?.length ?? 0, filters, t, t.pdfTitle, 'attic-inventory')
   }
 
   async function save(input: ItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) {

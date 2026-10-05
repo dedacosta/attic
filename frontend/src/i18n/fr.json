@@ -381,5 +381,7 @@
     "HOUSING_LICENCE": "Permis d’habiter",
     "OTHER": "Autre"
   },
-  "sourceCode": "Code source"
+  "sourceCode": "Code source",
+  "tabOfficialInventory": "Inventaire officiel",
+  "pdfTitleOfficialInventory": "Inventaire officiel"
 }

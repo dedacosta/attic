@@ -1,7 +1,7 @@
 import type { Messages } from '../i18n'
 import type {
   ContributionYear, DocumentInput, Renovation, RenovationInput, Invitation, Item, ItemInput, OwnAccount, Heir, HeirDocument,
-  HeirInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
+  HeirInput, OfficialInventoryItem, OfficialInventoryItemInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
 } from './types'
 
 /** A failed request. {@link apiErrorMessage} turns it into text in the user's language. */
@@ -106,6 +106,13 @@ export const api = {
   createItem: (input: ItemInput) => request<Item>('/api/items', json('POST', input)),
   updateItem: (id: string, input: ItemInput) => request<Item>(`/api/items/${id}`, json('PUT', input)),
   deleteItem: (id: string) => request<void>(`/api/items/${id}`, { method: 'DELETE' }),
+  listOfficialInventory: () => request<OfficialInventoryItem[]>('/api/official-inventory'),
+  createOfficialInventoryItem: (input: OfficialInventoryItemInput) =>
+    request<OfficialInventoryItem>('/api/official-inventory', json('POST', input)),
+  updateOfficialInventoryItem: (id: string, input: OfficialInventoryItemInput) =>
+    request<OfficialInventoryItem>(`/api/official-inventory/${id}`, json('PUT', input)),
+  deleteOfficialInventoryItem: (id: string) =>
+    request<void>(`/api/official-inventory/${id}`, { method: 'DELETE' }),
 
   listHeirs: () => request<Heir[]>('/api/heirs'),
   listSexes: () => request<string[]>('/api/sexes'),

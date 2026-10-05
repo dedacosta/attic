@@ -55,6 +55,23 @@ export interface Item {
 
 export type ItemInput = Omit<Item, 'id' | 'pictures'>
 
+/** An item of the official inventory; it has the structure of a catalog item but is its own list */
+export interface OfficialInventoryItem {
+  id: string
+  name: string
+  quantity: number
+  date: string | null
+  location: string | null
+  existent: boolean
+  valueEur: number
+  owner: string
+  comments: string | null
+  /** Cover first */
+  pictures: Picture[]
+}
+
+export type OfficialInventoryItemInput = Omit<OfficialInventoryItem, 'id' | 'pictures'>
+
 export interface HeirDocument {
   id: string
   /** Null for a document without heir */
