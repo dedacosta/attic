@@ -1,8 +1,8 @@
 package com.mephys.attic.property;
 
-import com.mephys.attic.picture.PictureInfo;
-import com.mephys.attic.picture.PictureResponse;
-import com.mephys.attic.picture.PictureUploads;
+import com.mephys.attic.model.PictureInfo;
+import com.mephys.attic.dto.PictureResponse;
+import com.mephys.attic.service.PictureUploads;
 
 import java.net.URI;
 import java.util.List;

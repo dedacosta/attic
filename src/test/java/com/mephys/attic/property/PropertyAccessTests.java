@@ -1,6 +1,6 @@
 package com.mephys.attic.property;
 
-import com.mephys.attic.picture.TestImages;
+import com.mephys.attic.support.TestImages;
 
 import java.nio.file.Path;
 
