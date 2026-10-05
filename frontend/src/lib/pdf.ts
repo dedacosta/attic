@@ -49,12 +49,14 @@ const generatedOn = (now: Date, t: Messages) =>
 
 /**
  * Download the given items as a PDF table, one line per item. Comments are left out.
+ * `fileName` is without date and extension, e.g. "attic-inventory".
  */
-export async function exportPdf(items: Item[], totalCount: number, filters: string[], t: Messages) {
+export async function exportPdf(items: Item[], totalCount: number, filters: string[], t: Messages, title: string,
+  fileName: string) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
   const count = items.length === totalCount ? t.itemCount(totalCount) : t.filteredCount(items.length, totalCount)
-  drawTitle(doc, t.pdfTitle, [generatedOn(now, t), count, ...filters].join('  ·  '))
+  drawTitle(doc, title, [generatedOn(now, t), count, ...filters].join('  ·  '))
 
   autoTable(doc, {
     startY: 31,
@@ -95,7 +97,7 @@ export async function exportPdf(items: Item[], totalCount: number, filters: stri
     didDrawPage: (data) => drawFooter(doc, data.pageNumber, now, t),
   })
   doc.putTotalPages(TOTAL_PAGES)
-  doc.save(`attic-inventory-${isoDay(now)}.pdf`)
+  doc.save(`${fileName}-${isoDay(now)}.pdf`)
 }
 
 /** Years of the annual contribution on one page */

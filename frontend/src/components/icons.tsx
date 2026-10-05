@@ -54,6 +54,13 @@ export const FileIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+export const ClipboardIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <rect x="5" y="4" width="14" height="17" rx="2" />
+    <path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3" />
+  </svg>
+)
+
 export const BoxIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...base} {...props}>
     <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z" />

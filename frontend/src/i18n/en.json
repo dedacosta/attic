@@ -374,5 +374,7 @@
     "HOUSING_LICENCE": "Housing licence",
     "OTHER": "Other"
   },
-  "sourceCode": "Source code"
+  "sourceCode": "Source code",
+  "tabOfficialInventory": "Official inventory",
+  "pdfTitleOfficialInventory": "Official inventory"
 }

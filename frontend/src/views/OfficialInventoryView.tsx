@@ -2,18 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, apiErrorMessage } from '../api/api'
 import { saveWithPhotos } from '../lib/photos'
 import ConfirmDialog from '../components/ConfirmDialog'
-import ItemCard from '../components/ItemCard'
-import ItemDialog from '../components/ItemDialog'
+import OfficialInventoryItemCard from '../components/OfficialInventoryItemCard'
+import OfficialInventoryItemDialog from '../components/OfficialInventoryItemDialog'
 import SearchBar from '../components/SearchBar'
 import { formatDate, locationLabel, normalize } from '../lib/format'
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
 import { FileIcon, PlusIcon } from '../components/icons'
-import type { Item, ItemInput, PhotoEntry } from '../api/types'
+import type { OfficialInventoryItem, OfficialInventoryItemInput, PhotoEntry } from '../api/types'
 
 type Presence = 'all' | 'present' | 'missing'
 
-function matches(item: Item, words: string[], t: Messages): boolean {
+function matches(item: OfficialInventoryItem, words: string[], t: Messages): boolean {
   const text = normalize(
     [
       item.name,
@@ -27,21 +27,21 @@ function matches(item: Item, words: string[], t: Messages): boolean {
   return words.every((word) => text.includes(word))
 }
 
-export default function InventoryView() {
+export default function OfficialInventoryView() {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
-  const [items, setItems] = useState<Item[] | null>(null)
+  const [items, setItems] = useState<OfficialInventoryItem[] | null>(null)
   const [locations, setLocations] = useState<string[]>([])
   const [loadError, setLoadError] = useState<unknown>(null)
   const [query, setQuery] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
   const [presence, setPresence] = useState<Presence>('all')
-  const [editing, setEditing] = useState<Item | 'new' | null>(null)
-  const [deleting, setDeleting] = useState<Item | null>(null)
+  const [editing, setEditing] = useState<OfficialInventoryItem | 'new' | null>(null)
+  const [deleting, setDeleting] = useState<OfficialInventoryItem | null>(null)
 
   const reload = useCallback(async () => {
     try {
-      setItems(await api.listItems())
+      setItems(await api.listOfficialInventory())
       setLoadError(null)
     } catch (e) {
       setLoadError(e)
@@ -72,15 +72,15 @@ export default function InventoryView() {
       presence !== 'all' && (presence === 'present' ? t.present : t.missing),
     ].filter((f): f is string => Boolean(f))
     const { exportPdf } = await import('../lib/pdf')
-    await exportPdf(visible, items?.length ?? 0, filters, t, t.pdfTitle, 'attic-inventory')
+    await exportPdf(visible, items?.length ?? 0, filters, t, t.pdfTitleOfficialInventory, 'attic-official-inventory')
   }
 
-  async function save(input: ItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) {
+  async function save(input: OfficialInventoryItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) {
     const existing = editing === 'new' || editing === null ? null : editing
     // From the first save on the item exists: a retry after a failed upload updates it
     await saveWithPhotos(
-      () => (existing ? api.updateItem(existing.id, input) : api.createItem(input)),
-      '/api/items', photos, setEditing, onPhotos,
+      () => (existing ? api.updateOfficialInventoryItem(existing.id, input) : api.createOfficialInventoryItem(input)),
+      '/api/official-inventory', photos, setEditing, onPhotos,
     )
     await reload()
     setEditing(null)
@@ -95,7 +95,7 @@ export default function InventoryView() {
     if (!deleting) {
       return
     }
-    await api.deleteItem(deleting.id)
+    await api.deleteOfficialInventoryItem(deleting.id)
     // Refresh before closing so the deleted card is gone when the dialog disappears
     await reload()
     setDeleting(null)
@@ -162,14 +162,14 @@ export default function InventoryView() {
 
         <div className="grid">
           {visible.map((item) => (
-            <ItemCard key={item.id} item={item} onEdit={() => setEditing(item)} onDelete={() => setDeleting(item)} />
+            <OfficialInventoryItemCard key={item.id} item={item} onEdit={() => setEditing(item)} onDelete={() => setDeleting(item)} />
           ))}
         </div>
       </main>
 
       {editing !== null && (
-        <ItemDialog
-          key="item-dialog"
+        <OfficialInventoryItemDialog
+          key="official-inventory-item-dialog"
           item={editing === 'new' ? null : editing}
           locations={locations}
           onSave={save}
