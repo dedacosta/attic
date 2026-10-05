@@ -1,6 +1,11 @@
-package com.mephys.attic.property;
+package com.mephys.attic.controller;
 
 import com.mephys.attic.dto.PictureResponse;
+import com.mephys.attic.dto.PropertyDocumentRequest;
+import com.mephys.attic.dto.PropertyDocumentResponse;
+import com.mephys.attic.model.PropertyDocument;
+import com.mephys.attic.model.PropertyDocumentType;
+import com.mephys.attic.repository.PropertyRepository;
 import com.mephys.attic.service.PictureUploads;
 
 import java.net.URI;

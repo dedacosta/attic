@@ -1,8 +1,12 @@
-package com.mephys.attic.property;
+package com.mephys.attic.repository;
 
 import com.mephys.attic.model.Picture;
 import com.mephys.attic.model.PictureInfo;
-import com.mephys.attic.repository.PictureRepository;
+import com.mephys.attic.model.Property;
+import com.mephys.attic.model.PropertyDocument;
+import com.mephys.attic.model.PropertyDocumentType;
+import com.mephys.attic.model.PropertyFact;
+import com.mephys.attic.model.PropertyKind;
 import com.mephys.attic.service.PictureStorage;
 
 import java.math.BigDecimal;
@@ -24,7 +28,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 @Repository
-class PropertyRepository {
+public class PropertyRepository {
 
 	/** Sorts "Área" next to "Arca" rather than after "Zona" */
 	private static final Collator COLLATOR = Collator.getInstance(Locale.ROOT);
@@ -35,7 +39,7 @@ class PropertyRepository {
 
 	private final PictureRepository documentFiles;
 
-	PropertyRepository(JdbcClient jdbc, PictureStorage storage) {
+	public PropertyRepository(JdbcClient jdbc, PictureStorage storage) {
 		this.jdbc = jdbc;
 		this.pictures = new PictureRepository(jdbc, storage, "property_picture", "property_id", "property");
 		this.documentFiles = new PictureRepository(jdbc, storage, "property_document_file", "document_id",
@@ -46,7 +50,7 @@ class PropertyRepository {
 	 * Insert or update the property and replace its facts. The kind of an existing property is
 	 * never changed.
 	 */
-	Property save(Property property) {
+	public Property save(Property property) {
 		jdbc.sql("""
 				INSERT INTO property (id, kind, name, address, value_cents, comments, created_at, updated_at)
 				VALUES (:id, :kind, :name, :address, :valueCents, :comments,
@@ -73,7 +77,7 @@ class PropertyRepository {
 		return findById(property.id()).orElseThrow();
 	}
 
-	Optional<Property> findById(UUID id) {
+	public Optional<Property> findById(UUID id) {
 		List<PropertyFact> facts = factsOf(id);
 		return jdbc.sql("SELECT * FROM property WHERE id = ?")
 			.param(id.toString())
@@ -84,7 +88,7 @@ class PropertyRepository {
 	/**
 	 * All properties by name, or those of one kind.
 	 */
-	List<Property> findAll(@Nullable PropertyKind kind) {
+	public List<Property> findAll(@Nullable PropertyKind kind) {
 		Map<UUID, List<PropertyFact>> facts = jdbc
 			.sql("SELECT property_id, label, value FROM property_fact ORDER BY property_id, position")
 			.query((rs, rowNum) -> Map.entry(UUID.fromString(rs.getString("property_id")),
@@ -107,7 +111,7 @@ class PropertyRepository {
 	/**
 	 * Labels used on any property, each once, sorted.
 	 */
-	List<String> labels() {
+	public List<String> labels() {
 		return jdbc.sql("SELECT DISTINCT label FROM property_fact WHERE label <> ''")
 			.query(String.class)
 			.list()
@@ -120,44 +124,44 @@ class PropertyRepository {
 	 * Delete the property with its facts, photos, documents and all their files.
 	 * @return {@code false} if the property did not exist
 	 */
-	boolean deleteById(UUID id) {
+	public boolean deleteById(UUID id) {
 		findDocuments(id).forEach((document) -> documentFiles.deleteOwner(document.id()));
 		return pictures.deleteOwner(id);
 	}
 
 	// Photos
 
-	Optional<PictureInfo> addPicture(UUID propertyId, Picture picture) {
+	public Optional<PictureInfo> addPicture(UUID propertyId, Picture picture) {
 		return pictures.add(propertyId, picture);
 	}
 
-	List<PictureInfo> listPictures(UUID propertyId) {
+	public List<PictureInfo> listPictures(UUID propertyId) {
 		return pictures.list(propertyId);
 	}
 
-	Map<UUID, List<PictureInfo>> listAllPictures() {
+	public Map<UUID, List<PictureInfo>> listAllPictures() {
 		return pictures.listAll();
 	}
 
-	Optional<Picture> findPicture(UUID propertyId, UUID pictureId) {
+	public Optional<Picture> findPicture(UUID propertyId, UUID pictureId) {
 		return pictures.find(propertyId, pictureId);
 	}
 
-	Optional<byte[]> findThumbnail(UUID propertyId, UUID pictureId) {
+	public Optional<byte[]> findThumbnail(UUID propertyId, UUID pictureId) {
 		return pictures.findThumbnail(propertyId, pictureId);
 	}
 
-	boolean deletePicture(UUID propertyId, UUID pictureId) {
+	public boolean deletePicture(UUID propertyId, UUID pictureId) {
 		return pictures.delete(propertyId, pictureId);
 	}
 
-	void reorderPictures(UUID propertyId, List<UUID> pictureIds) {
+	public void reorderPictures(UUID propertyId, List<UUID> pictureIds) {
 		pictures.reorder(propertyId, pictureIds);
 	}
 
 	// Official documents
 
-	PropertyDocument saveDocument(PropertyDocument document) {
+	public PropertyDocument saveDocument(PropertyDocument document) {
 		jdbc.sql("""
 				INSERT INTO property_document (id, property_id, type, date, notes, created_at, updated_at)
 				VALUES (:id, :propertyId, :type, :date, :notes,
@@ -174,7 +178,7 @@ class PropertyRepository {
 		return document;
 	}
 
-	Optional<PropertyDocument> findDocument(UUID id) {
+	public Optional<PropertyDocument> findDocument(UUID id) {
 		return jdbc.sql("SELECT * FROM property_document WHERE id = ?")
 			.param(id.toString())
 			.query(this::mapDocument)
@@ -184,42 +188,42 @@ class PropertyRepository {
 	/**
 	 * The documents of a property, newest first; documents without date last.
 	 */
-	List<PropertyDocument> findDocuments(UUID propertyId) {
+	public List<PropertyDocument> findDocuments(UUID propertyId) {
 		return jdbc.sql("""
 				SELECT * FROM property_document WHERE property_id = ?
 				ORDER BY date IS NULL, date DESC, type, created_at
 				""").param(propertyId.toString()).query(this::mapDocument).list();
 	}
 
-	boolean deleteDocument(UUID id) {
+	public boolean deleteDocument(UUID id) {
 		return documentFiles.deleteOwner(id);
 	}
 
-	Optional<PictureInfo> addDocumentFile(UUID documentId, Picture file) {
+	public Optional<PictureInfo> addDocumentFile(UUID documentId, Picture file) {
 		return documentFiles.add(documentId, file);
 	}
 
-	List<PictureInfo> listDocumentFiles(UUID documentId) {
+	public List<PictureInfo> listDocumentFiles(UUID documentId) {
 		return documentFiles.list(documentId);
 	}
 
-	Map<UUID, List<PictureInfo>> listAllDocumentFiles() {
+	public Map<UUID, List<PictureInfo>> listAllDocumentFiles() {
 		return documentFiles.listAll();
 	}
 
-	Optional<Picture> findDocumentFile(UUID documentId, UUID fileId) {
+	public Optional<Picture> findDocumentFile(UUID documentId, UUID fileId) {
 		return documentFiles.find(documentId, fileId);
 	}
 
-	Optional<byte[]> findDocumentFileThumbnail(UUID documentId, UUID fileId) {
+	public Optional<byte[]> findDocumentFileThumbnail(UUID documentId, UUID fileId) {
 		return documentFiles.findThumbnail(documentId, fileId);
 	}
 
-	boolean deleteDocumentFile(UUID documentId, UUID fileId) {
+	public boolean deleteDocumentFile(UUID documentId, UUID fileId) {
 		return documentFiles.delete(documentId, fileId);
 	}
 
-	void reorderDocumentFiles(UUID documentId, List<UUID> fileIds) {
+	public void reorderDocumentFiles(UUID documentId, List<UUID> fileIds) {
 		documentFiles.reorder(documentId, fileIds);
 	}
 

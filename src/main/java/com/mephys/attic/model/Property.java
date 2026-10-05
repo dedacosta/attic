@@ -1,4 +1,4 @@
-package com.mephys.attic.property;
+package com.mephys.attic.model;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
  * A property of the estate: a {@link Building} or a {@link Land}. {@code valueEur} is
  * {@code null} when not estimated; {@code facts} are its details in order, without blank lines.
  */
-abstract sealed class Property permits Building, Land {
+public abstract sealed class Property permits Building, Land {
 
 	private final UUID id;
 
@@ -47,7 +47,7 @@ abstract sealed class Property permits Building, Land {
 	/**
 	 * The building or the land with these values, as {@code kind} says.
 	 */
-	static Property of(@Nullable UUID id, PropertyKind kind, String name, @Nullable String address,
+	public static Property of(@Nullable UUID id, PropertyKind kind, String name, @Nullable String address,
 			@Nullable BigDecimal valueEur, @Nullable String comments, @Nullable List<PropertyFact> facts) {
 		if (kind == null) {
 			throw new IllegalArgumentException("kind must not be null");
@@ -59,29 +59,29 @@ abstract sealed class Property permits Building, Land {
 	}
 
 	/** Which of the subclasses this is, as stored and sent */
-	abstract PropertyKind kind();
+	public abstract PropertyKind kind();
 
-	UUID id() {
+	public UUID id() {
 		return id;
 	}
 
-	String name() {
+	public String name() {
 		return name;
 	}
 
-	@Nullable String address() {
+	public @Nullable String address() {
 		return address;
 	}
 
-	@Nullable BigDecimal valueEur() {
+	public @Nullable BigDecimal valueEur() {
 		return valueEur;
 	}
 
-	@Nullable String comments() {
+	public @Nullable String comments() {
 		return comments;
 	}
 
-	List<PropertyFact> facts() {
+	public List<PropertyFact> facts() {
 		return facts;
 	}
 

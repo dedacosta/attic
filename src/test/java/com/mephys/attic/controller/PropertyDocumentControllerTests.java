@@ -1,7 +1,7 @@
-package com.mephys.attic.property;
+package com.mephys.attic.controller;
 
+import com.mephys.attic.model.PropertyDocumentType;
 import com.mephys.attic.support.TestImages;
-import com.mephys.attic.controller.SignedInMockMvc;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
