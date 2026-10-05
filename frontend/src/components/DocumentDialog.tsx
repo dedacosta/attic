@@ -68,7 +68,8 @@ export default function DocumentDialog({ document, types, heirs, defaultHeirId, 
 
         <div className="dialog-content">
           <PictureField readOnly={!canEdit} current={document?.thumbnailUrl ?? document?.pictureUrl ?? null}
-            fullUrl={document?.pictureUrl ?? null} change={picture} onChange={setPicture} onError={setError} />
+            fullUrl={document?.pictureUrl ?? null} currentType={document?.pictureType ?? null} acceptPdf
+            change={picture} onChange={setPicture} onError={setError} />
 
           <fieldset className="fields" disabled={!canEdit}>
             <label className="field">

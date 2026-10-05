@@ -106,6 +106,13 @@ class InventoryControllerTests {
 	}
 
 	@Test
+	void itemPictureCannotBeAPdf() throws Exception {
+		String id = create("{\"name\":\"Painting\"}");
+		mvc.perform(put("/api/items/{id}/picture", id).contentType(MediaType.APPLICATION_PDF).content("%PDF-1.7"))
+			.andExpect(status().isUnsupportedMediaType());
+	}
+
+	@Test
 	void pictureLifecycle() throws Exception {
 		String id = create("{\"name\":\"Painting\"}");
 		byte[] png = TestImages.png(600, 300);

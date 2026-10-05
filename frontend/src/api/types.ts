@@ -65,9 +65,11 @@ export interface HeirDocument {
   comments: string | null
   pictureUrl: string | null
   thumbnailUrl: string | null
+  /** Content type of the picture: an image, or application/pdf for a PDF */
+  pictureType: string | null
 }
 
-export type DocumentInput = Omit<HeirDocument, 'id' | 'heir' | 'pictureUrl' | 'thumbnailUrl'>
+export type DocumentInput = Omit<HeirDocument, 'id' | 'heir' | 'pictureUrl' | 'thumbnailUrl' | 'pictureType'>
 
 export interface Heir {
   id: string

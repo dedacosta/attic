@@ -5,9 +5,10 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * What is known about a stored picture without loading it.
+ * What is known about a stored picture without loading it. {@code contentType} tells a PDF
+ * from a picture.
  */
-public record PictureInfo(UUID pictureId, boolean hasThumbnail) {
+public record PictureInfo(UUID pictureId, boolean hasThumbnail, String contentType) {
 
 	/**
 	 * URL of the picture below {@code base} (e.g. {@code /items/<id>}), or {@code null} without

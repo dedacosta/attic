@@ -13,16 +13,18 @@ import org.jspecify.annotations.Nullable;
 /**
  * Response body for a document, with the name of its heir. {@code pictureUrl} and
  * {@code thumbnailUrl} are {@code null} when the document has no picture or no thumbnail.
+ * {@code pictureType} is the content type of the picture, {@code application/pdf} for a PDF.
  */
 public record DocumentResponse(UUID id, UUID heirId, String heir, DocumentType type, @Nullable LocalDate validUntil,
-		@Nullable String comments, @Nullable String pictureUrl, @Nullable String thumbnailUrl) {
+		@Nullable String comments, @Nullable String pictureUrl, @Nullable String thumbnailUrl,
+		@Nullable String pictureType) {
 
 	public static DocumentResponse of(NamedDocument named, @Nullable PictureInfo picture) {
 		HeirDocument document = named.document();
 		String base = "/api/documents/" + document.id();
 		return new DocumentResponse(document.id(), document.heirId(), named.heirName(), document.type(),
 				document.validUntil(), document.comments(), PictureInfo.pictureUrl(base, picture),
-				PictureInfo.thumbnailUrl(base, picture));
+				PictureInfo.thumbnailUrl(base, picture), (picture != null) ? picture.contentType() : null);
 	}
 
 }

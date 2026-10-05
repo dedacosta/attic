@@ -74,7 +74,7 @@ class InventoryController {
 
 	@GetMapping("/{id}/picture")
 	ResponseEntity<byte[]> getPicture(@PathVariable UUID id) {
-		return PictureUploads.pictureResponse(repository.findPicture(id));
+		return PictureUploads.pictureResponse(repository.findPicture(id), "picture");
 	}
 
 	@PutMapping(path = "/{id}/picture", consumes = "image/*")

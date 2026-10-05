@@ -127,7 +127,8 @@ public class PictureRepository {
 
 	public Optional<PictureInfo> findInfo(UUID ownerId) {
 		return jdbc
-			.sql("SELECT id, thumbnail IS NOT NULL AS has_thumbnail FROM %s WHERE %s = ?".formatted(table, ownerColumn))
+			.sql("SELECT id, thumbnail IS NOT NULL AS has_thumbnail, content_type FROM %s WHERE %s = ?"
+				.formatted(table, ownerColumn))
 			.param(ownerId.toString())
 			.query((rs, rowNum) -> mapInfo(rs))
 			.optional();
@@ -138,7 +139,8 @@ public class PictureRepository {
 	 */
 	public Map<UUID, PictureInfo> findAllInfo() {
 		return jdbc
-			.sql("SELECT id, %1$s, thumbnail IS NOT NULL AS has_thumbnail FROM %2$s".formatted(ownerColumn, table))
+			.sql("SELECT id, %1$s, thumbnail IS NOT NULL AS has_thumbnail, content_type FROM %2$s"
+				.formatted(ownerColumn, table))
 			.query((rs, rowNum) -> Map.entry(UUID.fromString(rs.getString(ownerColumn)), mapInfo(rs)))
 			// list() rather than stream(): a JdbcClient stream keeps its connection until closed
 			.list()
@@ -154,7 +156,8 @@ public class PictureRepository {
 	}
 
 	private static PictureInfo mapInfo(ResultSet rs) throws SQLException {
-		return new PictureInfo(UUID.fromString(rs.getString("id")), rs.getBoolean("has_thumbnail"));
+		return new PictureInfo(UUID.fromString(rs.getString("id")), rs.getBoolean("has_thumbnail"),
+				rs.getString("content_type"));
 	}
 
 }

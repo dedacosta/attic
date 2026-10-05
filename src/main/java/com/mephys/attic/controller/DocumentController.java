@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -85,13 +86,16 @@ class DocumentController {
 
 	@GetMapping("/documents/{id}/picture")
 	ResponseEntity<byte[]> getPicture(@PathVariable UUID id) {
-		return PictureUploads.pictureResponse(maySee(id) ? repository.findPicture(id) : Optional.empty());
+		Optional<DocumentRepository.NamedDocument> document = repository.findById(id).filter(this::maySee);
+		return PictureUploads.pictureResponse(document.flatMap((named) -> repository.findPicture(id)),
+				document.map(this::fileName).orElse("document"));
 	}
 
-	@PutMapping(path = "/documents/{id}/picture", consumes = "image/*")
+	/** A picture, or a PDF such as a scanned contract */
+	@PutMapping(path = "/documents/{id}/picture", consumes = { "image/*", MediaType.APPLICATION_PDF_VALUE })
 	ResponseEntity<Void> putPicture(@PathVariable UUID id, @RequestHeader(HttpHeaders.CONTENT_TYPE) String contentType,
 			@RequestBody byte[] data) {
-		boolean saved = repository.savePicture(id, uploads.read(contentType, data));
+		boolean saved = repository.savePicture(id, uploads.readDocumentFile(contentType, data));
 		return saved ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
 	}
 
@@ -108,6 +112,11 @@ class DocumentController {
 	/** Users see only the documents of the heir linked to their account */
 	private boolean maySee(DocumentRepository.NamedDocument named) {
 		return account.maySee(named.document().heirId());
+	}
+
+	/** e.g. "Ana Costa - PASSPORT", the name a downloaded file gets */
+	private String fileName(DocumentRepository.NamedDocument named) {
+		return named.heirName() + " - " + named.document().type();
 	}
 
 	private boolean maySee(UUID documentId) {
