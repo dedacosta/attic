@@ -628,6 +628,11 @@ form > .dialog-actions {
   margin: 0;
 }
 
+.footer a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
 .footer-credits {
   margin-top: 4px;
   font-size: 0.75rem;
