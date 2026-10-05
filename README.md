@@ -7,7 +7,8 @@ Tailscale.
 
 ## Features
 
-- **Inventory** — items with quantity, date, room, value in euros, owner, comments and photos (the first is the cover);
+- **Catalog** — items with quantity, date, room, value in euros, owner, comments and photos (the first is the cover);
+- **Official inventory** — a second, separate list of items with the same structure;
   search, filter and export the list as PDF.
 - **Heirs** — date of birth, address, filiation, sex and share of the heritage, kept as a fraction
   exactly as written (`2/6` stays `2/6`).

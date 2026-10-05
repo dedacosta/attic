@@ -9,7 +9,7 @@ import { useI18n } from './i18n'
 import { PermissionsProvider, usePermissions } from './lib/permissions'
 import ContributionsView from './views/ContributionsView'
 import DocumentsView from './views/DocumentsView'
-import InventoryView from './views/InventoryView'
+import CatalogView from './views/CatalogView'
 import OfficialInventoryView from './views/OfficialInventoryView'
 import RenovationsView from './views/RenovationsView'
 import HeirsView from './views/HeirsView'
@@ -18,7 +18,7 @@ import LandView from './views/LandView'
 import UsersView from './views/UsersView'
 import type { Session } from './api/types'
 
-type View = 'inventory' | 'official-inventory' | 'heirs' | 'documents' | 'house' | 'land' | 'contributions' | 'renovations' | 'users'
+type View = 'catalog' | 'official-inventory' | 'heirs' | 'documents' | 'house' | 'land' | 'contributions' | 'renovations' | 'users'
 
 // The view lives in the URL hash (#/documents) so that reloading keeps it
 function viewFromHash(): View {
@@ -27,8 +27,8 @@ function viewFromHash(): View {
     return 'land'
   }
   switch (window.location.hash) {
-    case '#/inventory':
-      return 'inventory'
+    case '#/catalog':
+      return 'catalog'
     case '#/official-inventory':
       return 'official-inventory'
     case '#/heirs':
@@ -132,7 +132,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
     { id: 'house', href: '#/', label: t.tabHouse, Icon: HouseIcon },
     { id: 'land', href: '#/land', label: t.tabLand, Icon: LandIcon },
     { id: 'heirs', href: '#/heirs', label: t.tabHeirs, Icon: HeirsIcon },
-    { id: 'inventory', href: '#/inventory', label: t.tabInventory, Icon: BoxIcon },
+    { id: 'catalog', href: '#/catalog', label: t.tabCatalog, Icon: BoxIcon },
     { id: 'official-inventory', href: '#/official-inventory', label: t.tabOfficialInventory, Icon: ClipboardIcon },
     { id: 'documents', href: '#/documents', label: t.tabDocuments, Icon: IdCardIcon },
     { id: 'contributions', href: '#/contributions', label: t.tabContributions, Icon: CoinsIcon },
@@ -160,7 +160,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
         </div>
       </header>
 
-      {view === 'inventory' && <InventoryView />}
+      {view === 'catalog' && <CatalogView />}
       {view === 'official-inventory' && <OfficialInventoryView />}
       {view === 'heirs' && <HeirsView />}
       {view === 'documents' && <DocumentsView />}

@@ -7,13 +7,13 @@ import { CloseIcon, TrashIcon } from './icons'
 import PhotosField from './PhotosField'
 import { PhotoUploadError } from '../lib/photos'
 import { useModal } from '../lib/useModal'
-import { storedPhotos, type Item, type ItemInput, type PhotoEntry } from '../api/types'
+import { storedPhotos, type CatalogItem, type CatalogItemInput, type PhotoEntry } from '../api/types'
 
 
 interface Props {
-  item: Item | null
+  item: CatalogItem | null
   locations: string[]
-  onSave: (input: ItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) => Promise<void>
+  onSave: (input: CatalogItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) => Promise<void>
   onDelete: () => void
   onClose: () => void
 }
@@ -29,7 +29,7 @@ interface FormState {
   comments: string
 }
 
-function initialState(item: Item | null, locale: string): FormState {
+function initialState(item: CatalogItem | null, locale: string): FormState {
   return {
     name: item?.name ?? '',
     quantity: String(item?.quantity ?? 1),
@@ -42,7 +42,7 @@ function initialState(item: Item | null, locale: string): FormState {
   }
 }
 
-export default function ItemDialog({ item, locations, onSave, onDelete, onClose }: Props) {
+export default function CatalogItemDialog({ item, locations, onSave, onDelete, onClose }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
   const ref = useModal()
@@ -91,11 +91,11 @@ export default function ItemDialog({ item, locations, onSave, onDelete, onClose 
   }
 
   return (
-    <dialog ref={ref} className="dialog" aria-labelledby="item-dialog-title"
+    <dialog ref={ref} className="dialog" aria-labelledby="catalog-item-dialog-title"
       onCancel={(e) => { e.preventDefault(); if (!saving) onClose() }}>
       <form onSubmit={submit} noValidate>
         <header className="dialog-header">
-          <h2 id="item-dialog-title">
+          <h2 id="catalog-item-dialog-title">
             {!canEdit ? t.viewItem : item ? t.editItem : t.newItemTitle}
             {item && <code className="short-id">{shortId(item.id)}</code>}
           </h2>

@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf'
 import { autoTable } from 'jspdf-autotable'
 import { copyrightYears, formatDate, formatEuros, locationLabel, shortId } from './format'
 import type { Messages } from '../i18n'
-import type { ContributionYear, Item } from '../api/types'
+import type { ContributionYear, CatalogItem } from '../api/types'
 
 const ACCENT: [number, number, number] = [181, 101, 29]
 const MUTED: [number, number, number] = [115, 106, 96]
@@ -49,9 +49,9 @@ const generatedOn = (now: Date, t: Messages) =>
 
 /**
  * Download the given items as a PDF table, one line per item. Comments are left out.
- * `fileName` is without date and extension, e.g. "attic-inventory".
+ * `fileName` is without date and extension, e.g. "attic-catalog".
  */
-export async function exportPdf(items: Item[], totalCount: number, filters: string[], t: Messages, title: string,
+export async function exportPdf(items: CatalogItem[], totalCount: number, filters: string[], t: Messages, title: string,
   fileName: string) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
