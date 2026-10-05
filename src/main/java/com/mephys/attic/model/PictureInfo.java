@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
 public record PictureInfo(UUID id, String contentType, boolean hasThumbnail) {
 
 	/**
-	 * URL of the picture below {@code base} (e.g. {@code /api/items/<id>}). Picture ids are never
+	 * URL of the picture below {@code base} (e.g. {@code /api/catalog/<id>}). Picture ids are never
 	 * reused, so the browser may cache it forever.
 	 */
 	public String url(String base) {

@@ -7,7 +7,7 @@ import java.util.UUID;
 
 import org.jspecify.annotations.Nullable;
 
-public record InventoryItem(UUID id, String name, int quantity, @Nullable LocalDate date, @Nullable Location location,
+public record CatalogItem(UUID id, String name, int quantity, @Nullable LocalDate date, @Nullable Location location,
 		boolean existent, BigDecimal valueEur, String owner, @Nullable String comments) {
 
 	public static final int DEFAULT_QUANTITY = 1;
@@ -16,7 +16,7 @@ public record InventoryItem(UUID id, String name, int quantity, @Nullable LocalD
 
 	public static final String DEFAULT_OWNER = "Heritage";
 
-	public InventoryItem {
+	public CatalogItem {
 		if (name == null || name.isBlank()) {
 			throw new IllegalArgumentException("name must not be blank");
 		}
@@ -35,8 +35,8 @@ public record InventoryItem(UUID id, String name, int quantity, @Nullable LocalD
 	/**
 	 * Create a new item with a random id and all defaults applied.
 	 */
-	public static InventoryItem of(String name) {
-		return new InventoryItem(null, name, DEFAULT_QUANTITY, null, null, true, null, null, null);
+	public static CatalogItem of(String name) {
+		return new CatalogItem(null, name, DEFAULT_QUANTITY, null, null, true, null, null, null);
 	}
 
 }

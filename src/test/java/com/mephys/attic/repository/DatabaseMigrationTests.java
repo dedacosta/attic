@@ -1,6 +1,6 @@
 package com.mephys.attic.repository;
 
-import com.mephys.attic.model.InventoryItem;
+import com.mephys.attic.model.CatalogItem;
 
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -57,23 +57,23 @@ class DatabaseMigrationTests {
 	}
 
 	@Autowired
-	private InventoryRepository repository;
+	private CatalogRepository repository;
 
 	@Autowired
 	private JdbcClient jdbc;
 
 	@Test
 	void keepsExistingDataAndAddsComments() {
-		InventoryItem sofa = repository.findById(EXISTING_ID).orElseThrow();
+		CatalogItem sofa = repository.findById(EXISTING_ID).orElseThrow();
 		assertThat(sofa.name()).isEqualTo("Sofa");
 		assertThat(sofa.comments()).isNull();
 
-		repository.save(new InventoryItem(sofa.id(), sofa.name(), sofa.quantity(), sofa.date(), sofa.location(),
+		repository.save(new CatalogItem(sofa.id(), sofa.name(), sofa.quantity(), sofa.date(), sofa.location(),
 				sofa.existent(), sofa.valueEur(), sofa.owner(), "Blue velvet"));
 		assertThat(repository.findById(EXISTING_ID).orElseThrow().comments()).isEqualTo("Blue velvet");
 
 		assertThat(jdbc.sql("SELECT max(CAST(version AS INTEGER)) FROM flyway_schema_history").query(String.class).single())
-			.isEqualTo("20");
+			.isEqualTo("21");
 	}
 
 }

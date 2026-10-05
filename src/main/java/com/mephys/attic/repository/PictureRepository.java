@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * Stores an ordered list of pictures per owner row (an inventory item, a document, ...). The
+ * Stores an ordered list of pictures per owner row (a catalog item, a document, ...). The
  * first picture (position 0) is the cover. Picture files live in {@link PictureStorage}; the
  * picture table holds the file name, the position and a thumbnail.
  * <p>

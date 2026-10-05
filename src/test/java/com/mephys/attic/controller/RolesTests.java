@@ -72,7 +72,7 @@ class RolesTests {
 		mvc.perform(json(put("/api/users/ana/password").session(rui), "{\"password\":\"reset by rui\"}"))
 			.andExpect(status().isNoContent());
 		// Editing data is still allowed
-		mvc.perform(json(post("/api/items").session(rui), "{\"name\":\"Lamp\"}")).andExpect(status().isCreated());
+		mvc.perform(json(post("/api/catalog").session(rui), "{\"name\":\"Lamp\"}")).andExpect(status().isCreated());
 
 		mvc.perform(json(post("/api/users").session(rui), newUser("mallory", Role.ADMIN))).andExpect(status().isForbidden());
 		mvc.perform(json(post("/api/users").session(rui), newUser("mallory", Role.SUPER_ADMIN)))
@@ -96,12 +96,12 @@ class RolesTests {
 		MockHttpSession user = signIn("ana", PASSWORD);
 		mvc.perform(get("/api/session").session(user)).andExpect(jsonPath("$.role").value("USER"));
 
-		for (String path : new String[] { "/api/items", "/api/official-inventory", "/api/heirs", "/api/documents", "/api/locations",
+		for (String path : new String[] { "/api/catalog", "/api/official-inventory", "/api/heirs", "/api/documents", "/api/locations",
 				"/api/sexes", "/api/document-types", "/api/contributions",
 				"/api/renovations" }) {
 			mvc.perform(get(path).session(user)).andExpect(status().isOk());
 		}
-		mvc.perform(json(post("/api/items").session(user), "{\"name\":\"Lamp\"}")).andExpect(status().isForbidden());
+		mvc.perform(json(post("/api/catalog").session(user), "{\"name\":\"Lamp\"}")).andExpect(status().isForbidden());
 		mvc.perform(json(post("/api/heirs").session(user), "{\"name\":\"Rui\"}")).andExpect(status().isForbidden());
 		mvc.perform(json(post("/api/documents").session(user), "{}")).andExpect(status().isForbidden());
 		mvc.perform(json(post("/api/contributions").session(user), "{\"year\":2026}")).andExpect(status().isForbidden());
@@ -110,19 +110,19 @@ class RolesTests {
 
 		// Changes to existing data are refused too, whatever the item
 		String item = "00000000-0000-4000-8000-000000000000";
-		mvc.perform(json(put("/api/items/" + item).session(user), "{\"name\":\"X\"}")).andExpect(status().isForbidden());
-		mvc.perform(delete("/api/items/" + item).session(user).with(csrf())).andExpect(status().isForbidden());
-		mvc.perform(post("/api/items/" + item + "/pictures").session(user).with(csrf())
+		mvc.perform(json(put("/api/catalog/" + item).session(user), "{\"name\":\"X\"}")).andExpect(status().isForbidden());
+		mvc.perform(delete("/api/catalog/" + item).session(user).with(csrf())).andExpect(status().isForbidden());
+		mvc.perform(post("/api/catalog/" + item + "/pictures").session(user).with(csrf())
 			.contentType(MediaType.IMAGE_PNG).content(new byte[] { 1 })).andExpect(status().isForbidden());
 		String photo = "00000000-0000-4000-8000-000000000001";
-		mvc.perform(delete("/api/items/" + item + "/pictures/" + photo).session(user).with(csrf()))
+		mvc.perform(delete("/api/catalog/" + item + "/pictures/" + photo).session(user).with(csrf()))
 			.andExpect(status().isForbidden());
-		mvc.perform(json(put("/api/items/" + item + "/pictures/order").session(user), "[]"))
+		mvc.perform(json(put("/api/catalog/" + item + "/pictures/order").session(user), "[]"))
 			.andExpect(status().isForbidden());
 		mvc.perform(delete("/api/heirs/" + item).session(user).with(csrf())).andExpect(status().isForbidden());
 
 		// The administrator can
-		mvc.perform(json(post("/api/items").session(admin), "{\"name\":\"Lamp\"}")).andExpect(status().isCreated());
+		mvc.perform(json(post("/api/catalog").session(admin), "{\"name\":\"Lamp\"}")).andExpect(status().isCreated());
 	}
 
 	@Test
@@ -182,24 +182,24 @@ class RolesTests {
 	void deletedAccountIsSignedOutAtOnce() throws Exception {
 		createUser("ana", Role.USER);
 		MockHttpSession user = signIn("ana", PASSWORD);
-		mvc.perform(get("/api/items").session(user)).andExpect(status().isOk());
+		mvc.perform(get("/api/catalog").session(user)).andExpect(status().isOk());
 
 		mvc.perform(delete("/api/users/ana").session(admin).with(csrf())).andExpect(status().isNoContent());
 
-		mvc.perform(get("/api/items").session(user)).andExpect(status().isUnauthorized());
+		mvc.perform(get("/api/catalog").session(user)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
 	void demotedAdministratorLosesRightsAtOnce() throws Exception {
 		createUser("ana", Role.ADMIN);
 		MockHttpSession ana = signIn("ana", PASSWORD);
-		mvc.perform(json(post("/api/items").session(ana), "{\"name\":\"Lamp\"}")).andExpect(status().isCreated());
+		mvc.perform(json(post("/api/catalog").session(ana), "{\"name\":\"Lamp\"}")).andExpect(status().isCreated());
 
 		mvc.perform(json(put("/api/users/ana/role").session(admin), "{\"role\":\"USER\"}")).andExpect(status().isOk());
 
-		mvc.perform(json(post("/api/items").session(ana), "{\"name\":\"Lamp\"}")).andExpect(status().isUnauthorized());
+		mvc.perform(json(post("/api/catalog").session(ana), "{\"name\":\"Lamp\"}")).andExpect(status().isUnauthorized());
 		MockHttpSession again = signIn("ana", PASSWORD);
-		mvc.perform(json(post("/api/items").session(again), "{\"name\":\"Lamp\"}")).andExpect(status().isForbidden());
+		mvc.perform(json(post("/api/catalog").session(again), "{\"name\":\"Lamp\"}")).andExpect(status().isForbidden());
 	}
 
 	private void createUser(String username, Role role) throws Exception {

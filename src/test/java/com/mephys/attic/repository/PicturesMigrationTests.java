@@ -68,13 +68,13 @@ class PicturesMigrationTests {
 
 	@Test
 	void existingPicturesBecomeCovers() {
-		PictureRepository items = new PictureRepository(jdbc, storage, "inventory_picture", "item_id", "inventory_item");
+		PictureRepository items = new PictureRepository(jdbc, storage, "catalog_picture", "item_id", "catalog_item");
 		PictureRepository documents = new PictureRepository(jdbc, storage, "document_picture", "document_id",
 				"heir_document");
 
 		assertThat(items.list(ITEM)).extracting(PictureInfo::id).containsExactly(ITEM_PICTURE);
 		assertThat(documents.list(DOCUMENT)).extracting(PictureInfo::id).containsExactly(DOCUMENT_PICTURE);
-		assertThat(jdbc.sql("SELECT position FROM inventory_picture").query(Integer.class).single()).isZero();
+		assertThat(jdbc.sql("SELECT position FROM catalog_picture").query(Integer.class).single()).isZero();
 		assertThat(jdbc.sql("SELECT position FROM document_picture").query(Integer.class).single()).isZero();
 		// Owners can have several pictures now
 		assertThat(items.add(ITEM, new Picture("image/png", TestImages.png(10, 10)))).isPresent();
