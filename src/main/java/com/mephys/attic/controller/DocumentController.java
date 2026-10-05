@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -85,18 +86,21 @@ class DocumentController {
 		return repository.deleteById(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
 	}
 
-	@PostMapping(path = "/documents/{id}/pictures", consumes = "image/*")
+	/** A photo, or a PDF such as a scanned contract */
+	@PostMapping(path = "/documents/{id}/pictures", consumes = { "image/*", MediaType.APPLICATION_PDF_VALUE })
 	ResponseEntity<PictureResponse> addPicture(@PathVariable UUID id,
 			@RequestHeader(HttpHeaders.CONTENT_TYPE) String contentType, @RequestBody byte[] data) {
 		String base = DocumentResponse.base(id);
-		return repository.addPicture(id, uploads.read(contentType, data))
+		return repository.addPicture(id, uploads.readDocumentFile(contentType, data))
 			.map((info) -> ResponseEntity.created(URI.create(info.url(base))).body(PictureResponse.of(base, info)))
 			.orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
 	@GetMapping("/documents/{id}/pictures/{pictureId}")
 	ResponseEntity<byte[]> getPicture(@PathVariable UUID id, @PathVariable UUID pictureId) {
-		return PictureUploads.pictureResponse(maySee(id) ? repository.findPicture(id, pictureId) : Optional.empty());
+		Optional<DocumentRepository.NamedDocument> document = repository.findById(id).filter(this::maySee);
+		return PictureUploads.pictureResponse(document.flatMap((named) -> repository.findPicture(id, pictureId)),
+				document.map(this::fileName).orElse("document"));
 	}
 
 	@GetMapping("/documents/{id}/pictures/{pictureId}/thumbnail")
@@ -130,6 +134,12 @@ class DocumentController {
 	 */
 	private boolean maySee(DocumentRepository.NamedDocument named) {
 		return account.maySee(named.document().heirId());
+	}
+
+	/** e.g. "Ana Costa - PASSPORT", the name a downloaded file gets */
+	private String fileName(DocumentRepository.NamedDocument named) {
+		String type = named.document().type().toString();
+		return (named.heirName() != null) ? named.heirName() + " - " + type : type;
 	}
 
 	private boolean maySee(UUID documentId) {

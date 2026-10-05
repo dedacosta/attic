@@ -12,8 +12,9 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Response body for a document, with the name of its heir and its photos cover first.
- * {@code heirId} and {@code heir} are {@code null} for a document without heir.
+ * Response body for a document, with the name of its heir and its files cover first; a file
+ * is a photo or a PDF. {@code heirId} and {@code heir} are {@code null} for a document
+ * without heir.
  */
 public record DocumentResponse(UUID id, @Nullable UUID heirId, @Nullable String heir, DocumentType type,
 		@Nullable LocalDate validUntil, @Nullable String comments, List<PictureResponse> pictures) {
@@ -24,7 +25,7 @@ public record DocumentResponse(UUID id, @Nullable UUID heirId, @Nullable String 
 				document.validUntil(), document.comments(), PictureResponse.list(base(document.id()), pictures));
 	}
 
-	/** Where the document's photos live */
+	/** Where the document's files live */
 	public static String base(UUID documentId) {
 		return "/api/documents/" + documentId;
 	}

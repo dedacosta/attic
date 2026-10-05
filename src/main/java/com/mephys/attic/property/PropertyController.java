@@ -123,7 +123,7 @@ class PropertyController {
 
 	@GetMapping("/properties/{id}/pictures/{pictureId}")
 	ResponseEntity<byte[]> getPicture(@PathVariable UUID id, @PathVariable UUID pictureId) {
-		return PictureUploads.pictureResponse(repository.findPicture(id, pictureId));
+		return PictureUploads.pictureResponse(repository.findPicture(id, pictureId), "picture");
 	}
 
 	@GetMapping("/properties/{id}/pictures/{pictureId}/thumbnail")

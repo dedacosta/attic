@@ -2,7 +2,8 @@ import { documentName, documentTypeLabel, formatDate } from '../lib/format'
 import { validity } from '../lib/validity'
 import { useI18n } from '../i18n'
 import { usePermissions } from '../lib/permissions'
-import { IdCardIcon, ImageIcon, TrashIcon } from './icons'
+import { FileIcon, IdCardIcon, ImageIcon, TrashIcon } from './icons'
+import { PDF_TYPE } from './PhotosField'
 import ValidityBadge from './ValidityBadge'
 import type { HeirDocument } from '../api/types'
 
@@ -23,6 +24,11 @@ export default function DocumentCard({ document, onEdit, onDelete }: Props) {
         <div className="card-image card-image-document">
           {document.pictures[0]?.thumbnailUrl ? (
             <img src={document.pictures[0].thumbnailUrl} alt="" loading="lazy" />
+          ) : document.pictures[0]?.contentType === PDF_TYPE ? (
+            <span className="picture-pdf">
+              <FileIcon width={44} height={44} />
+              <span>PDF</span>
+            </span>
           ) : (
             <IdCardIcon className="card-placeholder" width={44} height={44} />
           )}

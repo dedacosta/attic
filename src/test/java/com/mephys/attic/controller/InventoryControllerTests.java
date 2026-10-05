@@ -115,6 +115,13 @@ class InventoryControllerTests {
 	private JdbcClient jdbc;
 
 	@Test
+	void itemPictureCannotBeAPdf() throws Exception {
+		String id = create("{\"name\":\"Painting\"}");
+		mvc.perform(post("/api/items/{id}/pictures", id).contentType(MediaType.APPLICATION_PDF).content("%PDF-1.7"))
+			.andExpect(status().isUnsupportedMediaType());
+	}
+
+	@Test
 	void photosKeepTheirOrderAndTheFirstIsTheCover() throws Exception {
 		String id = create("{\"name\":\"Painting\"}");
 		byte[] front = TestImages.png(600, 300);

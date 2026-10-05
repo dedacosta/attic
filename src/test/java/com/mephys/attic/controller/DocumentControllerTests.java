@@ -3,13 +3,13 @@ package com.mephys.attic.controller;
 import com.mephys.attic.model.DocumentType;
 import com.mephys.attic.support.TestImages;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
 import com.jayway.jsonpath.JsonPath;
-import com.mephys.attic.support.TestImages;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,12 +17,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -175,6 +177,40 @@ class DocumentControllerTests {
 		mvc.perform(get("/api/documents/{id}", id))
 			.andExpect(jsonPath("$.pictures.length()").value(1))
 			.andExpect(jsonPath("$.pictures[0].id").value(frontId));
+	}
+
+	@Test
+	void documentCanHaveAPdf() throws Exception {
+		String id = createDocument(createHeir("Ana Côrte"), "CONTRACT");
+		byte[] pdf = "%PDF-1.7\n1 0 obj << >> endobj\n%%EOF\n".getBytes(StandardCharsets.US_ASCII);
+
+		String pdfId = addPhoto(id, MediaType.APPLICATION_PDF, pdf);
+		mvc.perform(get("/api/documents/{id}", id))
+			.andExpect(jsonPath("$.pictures[0].url").value("/api/documents/" + id + "/pictures/" + pdfId))
+			.andExpect(jsonPath("$.pictures[0].contentType").value("application/pdf"))
+			.andExpect(jsonPath("$.pictures[0].thumbnailUrl").doesNotExist());
+		mvc.perform(get("/api/documents/{id}/pictures/{pictureId}", id, pdfId))
+			.andExpect(status().isOk())
+			.andExpect(content().contentType(MediaType.APPLICATION_PDF))
+			.andExpect(content().bytes(pdf))
+			.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, startsWith("inline;")))
+			.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+					containsString("filename*=UTF-8''Ana%20C%C3%B4rte%20-%20CONTRACT.pdf")));
+
+		// Something else sent as a PDF is refused
+		mvc.perform(post("/api/documents/{id}/pictures", id).contentType(MediaType.APPLICATION_PDF).content("<html>"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("file is not a PDF"));
+		mvc.perform(post("/api/documents/{id}/pictures", id).contentType(MediaType.APPLICATION_PDF)
+			.content(new byte[100 * 1024 + 1])).andExpect(status().isContentTooLarge());
+	}
+
+	@Test
+	void pictureOfDocumentHasItsType() throws Exception {
+		String id = createDocument(createHeir("David"), "PASSPORT");
+		addPhoto(id, MediaType.IMAGE_PNG, TestImages.png(50, 50));
+		mvc.perform(get("/api/documents"))
+			.andExpect(jsonPath("$[?(@.id == '" + id + "')].pictures[0].contentType").value("image/png"));
 	}
 
 	@Test
