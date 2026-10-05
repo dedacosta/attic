@@ -19,6 +19,19 @@ export function byName<T extends { name: string }>(heirs: T[], locale: string): 
   return [...heirs].sort((a, b) => a.name.localeCompare(b.name, locale))
 }
 
+/** An amount in euros as typed: 12, 12.5 or 12,50 */
+export const AMOUNT_PATTERN = /^\d+([.,]\d{1,2})?$/
+
+/** An amount as typed, e.g. "12,50", as a number */
+export function parseAmount(text: string): number {
+  return Number(text.trim().replace(',', '.'))
+}
+
+/** An amount for an input, e.g. 35.5 as "35,50" in Portuguese */
+export function amountText(value: number, locale: string): string {
+  return value.toFixed(2).replace('.', decimalSeparator(locale))
+}
+
 /** "," or "." for the locale, so 35.5 is shown as "35,50" in Portuguese */
 export function decimalSeparator(locale: string): string {
   return (1.5).toLocaleString(locale).charAt(1)

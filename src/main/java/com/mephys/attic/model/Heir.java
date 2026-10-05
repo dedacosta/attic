@@ -42,6 +42,16 @@ public record Heir(UUID id, String name, @Nullable LocalDate birthDate, boolean 
 		}
 	}
 
+	/**
+	 * Whether the heir was alive at some point in the year: born by its end, or birth date
+	 * unknown, and not dead before it began. A deceased heir without a date of death is not.
+	 */
+	public boolean activeIn(int year) {
+		boolean born = birthDate == null || birthDate.getYear() <= year;
+		boolean living = !deceased || (deathDate != null && deathDate.getYear() >= year);
+		return born && living;
+	}
+
 	private static @Nullable String blankToNull(@Nullable String text) {
 		return (text != null && !text.isBlank()) ? text.strip() : null;
 	}
