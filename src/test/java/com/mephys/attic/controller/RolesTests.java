@@ -97,12 +97,16 @@ class RolesTests {
 		mvc.perform(get("/api/session").session(user)).andExpect(jsonPath("$.role").value("USER"));
 
 		for (String path : new String[] { "/api/items", "/api/heirs", "/api/documents", "/api/locations",
-				"/api/sexes", "/api/document-types" }) {
+				"/api/sexes", "/api/document-types", "/api/contributions",
+				"/api/renovations" }) {
 			mvc.perform(get(path).session(user)).andExpect(status().isOk());
 		}
 		mvc.perform(json(post("/api/items").session(user), "{\"name\":\"Lamp\"}")).andExpect(status().isForbidden());
 		mvc.perform(json(post("/api/heirs").session(user), "{\"name\":\"Rui\"}")).andExpect(status().isForbidden());
 		mvc.perform(json(post("/api/documents").session(user), "{}")).andExpect(status().isForbidden());
+		mvc.perform(json(post("/api/contributions").session(user), "{\"year\":2026}")).andExpect(status().isForbidden());
+		mvc.perform(json(post("/api/renovations").session(user), "{\"year\":2026,\"title\":\"Roof\"}"))
+			.andExpect(status().isForbidden());
 
 		// Changes to existing data are refused too, whatever the item
 		String item = "00000000-0000-4000-8000-000000000000";

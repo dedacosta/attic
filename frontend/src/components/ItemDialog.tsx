@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { apiErrorMessage } from '../api/api'
-import { decimalSeparator, locationLabel, shortId } from '../lib/format'
+import { AMOUNT_PATTERN, decimalSeparator, locationLabel, shortId } from '../lib/format'
 import { useI18n } from '../i18n'
 import { usePermissions } from '../lib/permissions'
 import { CloseIcon, TrashIcon } from './icons'
@@ -8,7 +8,6 @@ import PictureField from './PictureField'
 import { useModal } from '../lib/useModal'
 import type { Item, ItemInput, PictureChange } from '../api/types'
 
-const VALUE_PATTERN = /^\d+([.,]\d{1,2})?$/
 
 interface Props {
   item: Item | null
@@ -64,7 +63,7 @@ export default function ItemDialog({ item, locations, onSave, onDelete, onClose 
     if (!Number.isInteger(quantity) || quantity < 0) {
       return setError(t.errorQuantity)
     }
-    if (!VALUE_PATTERN.test(value)) {
+    if (!AMOUNT_PATTERN.test(value)) {
       return setError(t.errorValue)
     }
     setSaving(true)

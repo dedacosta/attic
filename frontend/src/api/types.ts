@@ -96,4 +96,40 @@ export interface Heir {
 
 export type HeirInput = Omit<Heir, 'id' | 'calculatedShare' | 'createdAt' | 'updatedAt'>
 
+/** A year of the annual contribution */
+export interface ContributionYear {
+  year: number
+  /**
+   * Every heir. Those who pay are alive that year with no living parent above them; the others
+   * (not born yet, deceased, or a parent still alive) have a dash.
+   */
+  lines: {
+    heirId: string
+    heir: string
+    deceased: boolean
+    pays: boolean
+    /** Part of the yearly amount the heir owes: 1, or e.g. 0.5 when two children share a parent's */
+    portion: number | null
+    amountEur: number | null
+  }[]
+  totalEur: number
+  comment: string | null
+}
+
+/** A renovation of the house, its cost shared by those who pay the contribution in its year */
+export interface Renovation {
+  id: string
+  year: number
+  title: string
+  description: string | null
+  costEur: number
+  comment: string | null
+  /** Those who pay that year, with their part of the cost, and anyone else ticked off as paid */
+  lines: { heirId: string; heir: string; deceased: boolean; dueEur: number | null; paid: boolean }[]
+  paidEur: number
+  missingEur: number
+}
+
+export type RenovationInput = Pick<Renovation, 'year' | 'title' | 'description' | 'costEur'>
+
 export type PictureChange = { kind: 'keep' } | { kind: 'replace'; file: File } | { kind: 'remove' }

@@ -4,16 +4,18 @@ import AccountMenu from './components/AccountMenu'
 import Footer from './components/Footer'
 import LanguageSwitch from './components/LanguageSwitch'
 import SignInScreen from './components/SignInScreen'
-import { BoxIcon, HouseIcon, IdCardIcon, KeyIcon, HeirsIcon } from './components/icons'
+import { BoxIcon, CoinsIcon, HammerIcon, HouseIcon, IdCardIcon, KeyIcon, HeirsIcon } from './components/icons'
 import { useI18n } from './i18n'
 import { PermissionsProvider, usePermissions } from './lib/permissions'
+import ContributionsView from './views/ContributionsView'
 import DocumentsView from './views/DocumentsView'
 import InventoryView from './views/InventoryView'
+import RenovationsView from './views/RenovationsView'
 import HeirsView from './views/HeirsView'
 import UsersView from './views/UsersView'
 import type { Session } from './api/types'
 
-type View = 'inventory' | 'heirs' | 'documents' | 'users'
+type View = 'inventory' | 'heirs' | 'documents' | 'contributions' | 'renovations' | 'users'
 
 // The view lives in the URL hash (#/documents) so that reloading keeps it
 function viewFromHash(): View {
@@ -22,6 +24,10 @@ function viewFromHash(): View {
       return 'heirs'
     case '#/documents':
       return 'documents'
+    case '#/contributions':
+      return 'contributions'
+    case '#/renovations':
+      return 'renovations'
     case '#/users':
       return 'users'
     default:
@@ -100,8 +106,9 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
   const { seesHeirs, isAdmin } = usePermissions()
   const [hashView, setView] = useState(viewFromHash)
   // Tabs this account has: users without a linked heir have no Heirs and Documents tabs, and
-  // only administrators have the Users tab
-  const allowed = (id: View) => id === 'inventory' || (id === 'users' ? isAdmin : seesHeirs)
+  // only administrators have the Users tab. Everybody sees the contributions and renovations.
+  const allowed = (id: View) =>
+    id === 'inventory' || id === 'contributions' || id === 'renovations' || (id === 'users' ? isAdmin : seesHeirs)
   const view: View = allowed(hashView) ? hashView : 'inventory'
 
   useEffect(() => {
@@ -114,6 +121,8 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
     { id: 'inventory', href: '#/', label: t.tabInventory, Icon: BoxIcon },
     { id: 'heirs', href: '#/heirs', label: t.tabHeirs, Icon: HeirsIcon },
     { id: 'documents', href: '#/documents', label: t.tabDocuments, Icon: IdCardIcon },
+    { id: 'contributions', href: '#/contributions', label: t.tabContributions, Icon: CoinsIcon },
+    { id: 'renovations', href: '#/renovations', label: t.tabRenovations, Icon: HammerIcon },
     { id: 'users', href: '#/users', label: t.users, Icon: KeyIcon },
   ] as const).filter((tab) => allowed(tab.id))
 
@@ -140,6 +149,8 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
       {view === 'inventory' && <InventoryView />}
       {view === 'heirs' && <HeirsView />}
       {view === 'documents' && <DocumentsView />}
+      {view === 'contributions' && <ContributionsView />}
+      {view === 'renovations' && <RenovationsView />}
       {view === 'users' && <UsersView currentUser={username} />}
 
       <Footer />

@@ -1,6 +1,6 @@
 import type { Messages } from '../i18n'
 import type {
-  DocumentInput, Invitation, Item, ItemInput, OwnAccount, Heir, HeirDocument, HeirInput, Role, Session, UserAccount,
+  ContributionYear, DocumentInput, Renovation, RenovationInput, Invitation, Item, ItemInput, OwnAccount, Heir, HeirDocument, HeirInput, Role, Session, UserAccount,
 } from './types'
 
 /** A failed request. {@link apiErrorMessage} turns it into text in the user's language. */
@@ -118,6 +118,27 @@ export const api = {
   updateDocument: (id: string, input: DocumentInput) =>
     request<HeirDocument>(`/api/documents/${id}`, json('PUT', input)),
   deleteDocument: (id: string) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
+
+  listContributions: () => request<ContributionYear[]>('/api/contributions'),
+  createContributionYear: (year: number) => request<ContributionYear>('/api/contributions', json('POST', { year })),
+  deleteContributionYear: (year: number) => request<void>(`/api/contributions/${year}`, { method: 'DELETE' }),
+  /** Change the comment on a year; an empty one is removed */
+  setContributionComment: (year: number, comment: string) =>
+    request<ContributionYear>(`/api/contributions/${year}/comment`, json('PUT', { comment })),
+  /** Enter the amount an heir contributed in a year; null removes it */
+  setContribution: (year: number, heirId: string, amountEur: number | null) =>
+    request<ContributionYear>(`/api/contributions/${year}/${heirId}`, json('PUT', { amountEur })),
+
+  listRenovations: () => request<Renovation[]>('/api/renovations'),
+  createRenovation: (input: RenovationInput) => request<Renovation>('/api/renovations', json('POST', input)),
+  updateRenovation: (id: string, input: RenovationInput) =>
+    request<Renovation>(`/api/renovations/${id}`, json('PUT', input)),
+  deleteRenovation: (id: string) => request<void>(`/api/renovations/${id}`, { method: 'DELETE' }),
+  setRenovationComment: (id: string, comment: string) =>
+    request<Renovation>(`/api/renovations/${id}/comment`, json('PUT', { comment })),
+  /** Tick off, or untick, that the heir has paid their part */
+  setRenovationPaid: (id: string, heirId: string, paid: boolean) =>
+    request<Renovation>(`/api/renovations/${id}/payments/${heirId}`, json('PUT', { paid })),
 
   /** Upload the picture of an item or document, e.g. `putPicture('/api/items/<id>', file)` */
   putPicture: (owner: string, file: File) =>
