@@ -7,11 +7,11 @@ import { ChevronLeftIcon, HouseIcon, LandIcon, PlusIcon } from '../components/ic
 import { formatEuros, normalize } from '../lib/format'
 import { usePermissions } from '../lib/permissions'
 import { useI18n } from '../i18n'
-import type { Heritage, Property, PropertyKind } from '../api/types'
+import type { Estate, Property, PropertyKind } from '../api/types'
 
-/** The property shown, from a hash like #/heritage/<id>; null for the lists */
+/** The property shown, from a hash like #/estate/<id>; null for the lists */
 function propertyFromHash(): string | null {
-  const match = /^#\/heritage\/([0-9a-f-]+)$/i.exec(window.location.hash)
+  const match = /^#\/estate\/([0-9a-f-]+)$/i.exec(window.location.hash)
   return match ? match[1] : null
 }
 
@@ -23,11 +23,11 @@ function matches(property: Property, words: string[]): boolean {
   return words.every((word) => text.includes(word))
 }
 
-/** The heritage: its houses and its land parcels, and the page of one of them. */
-export default function HeritageView() {
+/** The estate: its buildings and its land parcels, and the page of one of them. */
+export default function EstateView() {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
-  const [heritage, setHeritage] = useState<Heritage | null>(null)
+  const [estate, setEstate] = useState<Estate | null>(null)
   const [loadError, setLoadError] = useState<unknown>(null)
   const [query, setQuery] = useState('')
   const [propertyId, setPropertyId] = useState(propertyFromHash)
@@ -35,7 +35,7 @@ export default function HeritageView() {
 
   const reload = useCallback(async () => {
     try {
-      setHeritage(await api.heritage())
+      setEstate(await api.estate())
       setLoadError(null)
     } catch (e) {
       setLoadError(e)
@@ -52,8 +52,8 @@ export default function HeritageView() {
   const words = useMemo(() => normalize(query).split(/\s+/).filter(Boolean), [query])
 
   const backLink = (
-    <a className="link property-back" href="#/heritage">
-      <ChevronLeftIcon width={16} height={16} /> {t.backToHeritage}
+    <a className="link property-back" href="#/estate">
+      <ChevronLeftIcon width={16} height={16} /> {t.backToEstate}
     </a>
   )
 
@@ -68,12 +68,12 @@ export default function HeritageView() {
     )
   }
 
-  if (heritage === null) {
+  if (estate === null) {
     return <main className="content"><p className="empty">{t.loading}</p></main>
   }
 
   if (propertyId !== null) {
-    const property = [...heritage.houses, ...heritage.lands].find((p) => p.id === propertyId)
+    const property = [...estate.buildings, ...estate.lands].find((p) => p.id === propertyId)
     if (!property) {
       return (
         <main className="content">
@@ -86,45 +86,45 @@ export default function HeritageView() {
       <>
         <div className="content property-back-bar">{backLink}</div>
         <PropertyPage property={property} onChanged={reload}
-          onDeleted={() => { window.location.hash = '#/heritage'; reload() }} />
+          onDeleted={() => { window.location.hash = '#/estate'; reload() }} />
       </>
     )
   }
 
   /** One of the two lists, with its count, its total and its button to add */
   function section(kind: PropertyKind, all: Property[]) {
-    const isHouse = kind === 'HOUSE'
-    const Icon = isHouse ? HouseIcon : LandIcon
+    const isBuilding = kind === 'BUILDING'
+    const Icon = isBuilding ? HouseIcon : LandIcon
     const visible = all.filter((p) => matches(p, words))
     // Properties without an estimated value are left out of the total
     const total = visible.reduce((sum, p) => sum + (p.valueEur ?? 0), 0)
-    const count = isHouse
-      ? (query ? t.filteredHouseCount(visible.length, all.length) : t.houseCount(all.length))
+    const count = isBuilding
+      ? (query ? t.filteredBuildingCount(visible.length, all.length) : t.buildingCount(all.length))
       : (query ? t.filteredLandCount(visible.length, all.length) : t.landCount(all.length))
     return (
-      <section className="property-section heritage-section">
+      <section className="property-section estate-section">
         <div className="property-section-header">
-          <h2>{isHouse ? t.houses : t.lands}</h2>
+          <h2>{isBuilding ? t.buildings : t.lands}</h2>
           {all.length > 0 && (
             <span className="count">{count}{' · '}{t.totalValue(formatEuros(total, t.locale))}</span>
           )}
           {canEdit && (
             <button type="button" className="button button-small" onClick={() => setCreating(kind)}>
-              <PlusIcon width={16} height={16} /> {isHouse ? t.newHouse : t.newLand}
+              <PlusIcon width={16} height={16} /> {isBuilding ? t.newBuilding : t.newLand}
             </button>
           )}
         </div>
 
-        {all.length === 0 && <p className="hint">{isHouse ? t.emptyHouses : t.emptyLand}</p>}
+        {all.length === 0 && <p className="hint">{isBuilding ? t.emptyBuildings : t.emptyLand}</p>}
         {all.length > 0 && visible.length === 0 && (
-          <p className="hint">{isHouse ? t.noHouseMatches : t.noLandMatches}</p>
+          <p className="hint">{isBuilding ? t.noBuildingMatches : t.noLandMatches}</p>
         )}
 
         {visible.length > 0 && (
           <div className="grid">
             {visible.map((property) => (
               <article key={property.id} className="card">
-                <a className="card-main" href={`#/heritage/${property.id}`}>
+                <a className="card-main" href={`#/estate/${property.id}`}>
                   <div className="card-image">
                     {property.pictures[0]?.thumbnailUrl ? (
                       <img src={property.pictures[0].thumbnailUrl} alt="" loading="lazy" />
@@ -137,7 +137,7 @@ export default function HeritageView() {
                     <dl className="card-facts">
                       {property.address && (
                         <div>
-                          <dt>{isHouse ? t.address : t.landLocation}</dt>
+                          <dt>{isBuilding ? t.address : t.landLocation}</dt>
                           <dd>{property.address}</dd>
                         </div>
                       )}
@@ -165,12 +165,12 @@ export default function HeritageView() {
       <SearchBar query={query} onQuery={setQuery} placeholder={t.propertySearchPlaceholder}
         label={t.propertySearchLabel} />
 
-      {section('HOUSE', heritage.houses)}
-      {section('LAND', heritage.lands)}
+      {section('BUILDING', estate.buildings)}
+      {section('LAND', estate.lands)}
 
       {creating && (
         <PropertyDialog property={null} kind={creating}
-          onSaved={(saved) => { setCreating(null); reload(); window.location.hash = `#/heritage/${saved.id}` }}
+          onSaved={(saved) => { setCreating(null); reload(); window.location.hash = `#/estate/${saved.id}` }}
           onClose={() => { setCreating(null); reload() }} />
       )}
     </main>

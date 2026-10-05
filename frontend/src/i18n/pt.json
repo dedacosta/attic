@@ -315,7 +315,7 @@
     "other": "{count} fotografias"
   },
   "errorPhotoUpload": "Não foi possível enviar «{file}»: {reason}",
-  "editHouse": "Editar imóvel",
+  "editBuilding": "Editar imóvel",
   "newLand": "Novo terreno",
   "editLand": "Editar terreno",
   "landLocation": "Localização",
@@ -374,22 +374,22 @@
   "sourceCode": "Código-fonte",
   "tabInventory": "Inventário",
   "pdfTitleInventory": "Inventário",
-  "tabHeritage": "Património",
-  "houses": "Imóveis",
+  "tabEstate": "Património",
+  "buildings": "Imóveis",
   "lands": "Terrenos",
-  "newHouse": "Novo imóvel",
-  "houseCount": {
+  "newBuilding": "Novo imóvel",
+  "buildingCount": {
     "one": "{count} imóvel",
     "other": "{count} imóveis"
   },
-  "filteredHouseCount": {
+  "filteredBuildingCount": {
     "one": "{shown} de {count} imóvel",
     "other": "{shown} de {count} imóveis"
   },
-  "emptyHouses": "Ainda não há imóveis.",
-  "noHouseMatches": "Nenhum imóvel corresponde à pesquisa.",
+  "emptyBuildings": "Ainda não há imóveis.",
+  "noBuildingMatches": "Nenhum imóvel corresponde à pesquisa.",
   "propertySearchPlaceholder": "Pesquisar nome, morada, detalhes…",
   "propertySearchLabel": "Pesquisar imóveis e terrenos",
-  "backToHeritage": "Património",
+  "backToEstate": "Património",
   "propertyNotFound": "Esta propriedade já não existe."
 }

@@ -104,3 +104,20 @@ one row of kind `HOUSE`. No row changes; the existing house is the first entry o
 ## Installing it
 
 The new jar applies V23 on the next start, with nothing to do by hand.
+
+## Later change
+
+Later on 2026-10-05 the words on screen and then the names in the code followed the Portuguese
+*Património – Imóveis – Terrenos*:
+
+| | Tab | First list | Second list |
+|---|---|---|---|
+| Portuguese | Património | Imóveis | Terrenos |
+| English | Estate | Buildings | Land |
+| French | Patrimoine | Immeubles | Terrains |
+
+In the code `Heritage` became `Estate` and `House` became `Building`; `Land` stayed. The API is
+`GET /api/estate` with `{ "buildings": […], "lands": […] }`, the address is `#/estate`, and the
+kind of a building is `BUILDING`. Migration `V24__houses_are_buildings.sql` changes the stored
+kind from `HOUSE` to `BUILDING` by replacing the column, without rebuilding the table. The
+sections above use the names of before this change.

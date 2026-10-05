@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
- * The heritage: its houses and land parcels, with their details and photos. Their official
+ * The estate: its buildings and land parcels, with their details and photos. Their official
  * documents are in {@link PropertyDocumentController}.
  */
 @RestController
@@ -42,16 +42,16 @@ class PropertyController {
 		this.uploads = uploads;
 	}
 
-	/** The houses and the land parcels of the heritage, each by name */
-	@GetMapping("/heritage")
-	HeritageResponse heritage() {
+	/** The buildings and the land parcels of the estate, each by name */
+	@GetMapping("/estate")
+	EstateResponse estate() {
 		Map<UUID, List<PictureInfo>> pictures = repository.listAllPictures();
 		Map<UUID, List<PictureInfo>> files = repository.listAllDocumentFiles();
-		Heritage heritage = Heritage.of(repository.findAll(null));
+		Estate estate = Estate.of(repository.findAll(null));
 		Function<Property, PropertyResponse> response = (property) -> PropertyResponse.of(property,
 				pictures.getOrDefault(property.id(), List.of()), documents(property.id(), files));
-		return new HeritageResponse(heritage.houses().stream().map(response).toList(),
-				heritage.lands().stream().map(response).toList());
+		return new EstateResponse(estate.buildings().stream().map(response).toList(),
+				estate.lands().stream().map(response).toList());
 	}
 
 	/** All properties by name, or those of one kind */

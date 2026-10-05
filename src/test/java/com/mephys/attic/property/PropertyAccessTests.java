@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Every signed-in account sees the house and the land; only administrators change them.
+ * Every signed-in account sees the building and the land; only administrators change them.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -50,10 +50,10 @@ class PropertyAccessTests {
 		mvc.perform(json(post("/api/setup"), "{\"username\":\"david\",\"password\":\"" + PASSWORD + "\"}"))
 			.andExpect(status().isNoContent());
 		MockHttpSession admin = signIn("david");
-		String house = id(mvc.perform(json(post("/api/properties").session(admin), "{\"kind\":\"HOUSE\",\"name\":\"Casa\"}")));
-		String photo = id(mvc.perform(post("/api/properties/" + house + "/pictures").session(admin).with(csrf())
+		String building = id(mvc.perform(json(post("/api/properties").session(admin), "{\"kind\":\"BUILDING\",\"name\":\"Casa\"}")));
+		String photo = id(mvc.perform(post("/api/properties/" + building + "/pictures").session(admin).with(csrf())
 			.contentType(MediaType.IMAGE_PNG).content(TestImages.png(10, 10))));
-		String document = id(mvc.perform(json(post("/api/properties/" + house + "/documents").session(admin),
+		String document = id(mvc.perform(json(post("/api/properties/" + building + "/documents").session(admin),
 				"{\"type\":\"TITLE_DEED\"}")));
 		String file = id(mvc.perform(post("/api/property-documents/" + document + "/pictures").session(admin).with(csrf())
 			.contentType(MediaType.APPLICATION_PDF).content(PropertyControllerTests.PDF)));
@@ -62,8 +62,8 @@ class PropertyAccessTests {
 			.andExpect(status().isCreated());
 		MockHttpSession user = signIn("ana");
 
-		for (String path : new String[] { "/api/heritage", "/api/properties", "/api/properties?kind=LAND", "/api/properties/" + house,
-				"/api/properties/" + house + "/pictures/" + photo, "/api/property-documents/" + document,
+		for (String path : new String[] { "/api/estate", "/api/properties", "/api/properties?kind=LAND", "/api/properties/" + building,
+				"/api/properties/" + building + "/pictures/" + photo, "/api/property-documents/" + document,
 				"/api/property-documents/" + document + "/pictures/" + file, "/api/property-labels",
 				"/api/property-document-types" }) {
 			mvc.perform(get(path).session(user)).andExpect(status().isOk());
@@ -71,16 +71,16 @@ class PropertyAccessTests {
 
 		mvc.perform(json(post("/api/properties").session(user), "{\"kind\":\"LAND\",\"name\":\"X\"}"))
 			.andExpect(status().isForbidden());
-		mvc.perform(json(put("/api/properties/" + house).session(user), "{\"kind\":\"HOUSE\",\"name\":\"X\"}"))
+		mvc.perform(json(put("/api/properties/" + building).session(user), "{\"kind\":\"BUILDING\",\"name\":\"X\"}"))
 			.andExpect(status().isForbidden());
-		mvc.perform(delete("/api/properties/" + house).session(user).with(csrf())).andExpect(status().isForbidden());
-		mvc.perform(post("/api/properties/" + house + "/pictures").session(user).with(csrf())
+		mvc.perform(delete("/api/properties/" + building).session(user).with(csrf())).andExpect(status().isForbidden());
+		mvc.perform(post("/api/properties/" + building + "/pictures").session(user).with(csrf())
 			.contentType(MediaType.IMAGE_PNG).content(TestImages.png(10, 10))).andExpect(status().isForbidden());
-		mvc.perform(delete("/api/properties/" + house + "/pictures/" + photo).session(user).with(csrf()))
+		mvc.perform(delete("/api/properties/" + building + "/pictures/" + photo).session(user).with(csrf()))
 			.andExpect(status().isForbidden());
-		mvc.perform(json(put("/api/properties/" + house + "/pictures/order").session(user), "[]"))
+		mvc.perform(json(put("/api/properties/" + building + "/pictures/order").session(user), "[]"))
 			.andExpect(status().isForbidden());
-		mvc.perform(json(post("/api/properties/" + house + "/documents").session(user), "{\"type\":\"PLAN\"}"))
+		mvc.perform(json(post("/api/properties/" + building + "/documents").session(user), "{\"type\":\"PLAN\"}"))
 			.andExpect(status().isForbidden());
 		mvc.perform(json(put("/api/property-documents/" + document).session(user), "{\"type\":\"PLAN\"}"))
 			.andExpect(status().isForbidden());

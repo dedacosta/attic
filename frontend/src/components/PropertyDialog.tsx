@@ -19,7 +19,7 @@ interface Props {
   onClose: () => void
 }
 
-/** Create or edit a house or a land parcel: main fields, details and photos. Administrators only. */
+/** Create or edit a building or a land parcel: main fields, details and photos. Administrators only. */
 export default function PropertyDialog({ property, kind, onSaved, onClose }: Props) {
   const { t } = useI18n()
   const ref = useModal()
@@ -40,8 +40,8 @@ export default function PropertyDialog({ property, kind, onSaved, onClose }: Pro
     api.propertyLabels().then(setUsedLabels, () => setUsedLabels([]))
   }, [])
 
-  const isHouse = kind === 'HOUSE'
-  const title = saved ? (isHouse ? t.editHouse : t.editLand) : (isHouse ? t.newHouse : t.newLand)
+  const isBuilding = kind === 'BUILDING'
+  const title = saved ? (isBuilding ? t.editBuilding : t.editLand) : (isBuilding ? t.newBuilding : t.newLand)
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -95,7 +95,7 @@ export default function PropertyDialog({ property, kind, onSaved, onClose }: Pro
               <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
             </label>
             <label className="field field-wide">
-              <span>{isHouse ? t.address : t.landLocation} <small>{t.optional}</small></span>
+              <span>{isBuilding ? t.address : t.landLocation} <small>{t.optional}</small></span>
               <input value={address} onChange={(e) => setAddress(e.target.value)} />
             </label>
             <label className="field">

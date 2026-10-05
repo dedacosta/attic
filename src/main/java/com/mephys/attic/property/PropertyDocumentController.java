@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The official documents of the house and the land (title deeds, plans, ...). Their files are
+ * The official documents of the building and the land (title deeds, plans, ...). Their files are
  * images or PDF.
  */
 @RestController

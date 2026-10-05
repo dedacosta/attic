@@ -316,7 +316,7 @@
     "other": "{count} photos"
   },
   "errorPhotoUpload": "«\u00a0{file}\u00a0» n’a pas pu être envoyée\u00a0: {reason}",
-  "editHouse": "Modifier l’immeuble",
+  "editBuilding": "Modifier l’immeuble",
   "newLand": "Nouveau terrain",
   "editLand": "Modifier le terrain",
   "landLocation": "Emplacement",
@@ -375,22 +375,22 @@
   "sourceCode": "Code source",
   "tabInventory": "Inventaire",
   "pdfTitleInventory": "Inventaire",
-  "tabHeritage": "Patrimoine",
-  "houses": "Immeubles",
+  "tabEstate": "Patrimoine",
+  "buildings": "Immeubles",
   "lands": "Terrains",
-  "newHouse": "Nouvel immeuble",
-  "houseCount": {
+  "newBuilding": "Nouvel immeuble",
+  "buildingCount": {
     "one": "{count} immeuble",
     "other": "{count} immeubles"
   },
-  "filteredHouseCount": {
+  "filteredBuildingCount": {
     "one": "{shown} sur {count} immeuble",
     "other": "{shown} sur {count} immeubles"
   },
-  "emptyHouses": "Aucun immeuble pour l’instant.",
-  "noHouseMatches": "Aucun immeuble ne correspond à la recherche.",
+  "emptyBuildings": "Aucun immeuble pour l’instant.",
+  "noBuildingMatches": "Aucun immeuble ne correspond à la recherche.",
   "propertySearchPlaceholder": "Rechercher nom, adresse, détails…",
   "propertySearchLabel": "Rechercher des immeubles et des terrains",
-  "backToHeritage": "Patrimoine",
+  "backToEstate": "Patrimoine",
   "propertyNotFound": "Cette propriété n’existe plus."
 }

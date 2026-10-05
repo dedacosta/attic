@@ -13,11 +13,11 @@ import CatalogView from './views/CatalogView'
 import InventoryView from './views/InventoryView'
 import RenovationsView from './views/RenovationsView'
 import HeirsView from './views/HeirsView'
-import HeritageView from './views/HeritageView'
+import EstateView from './views/EstateView'
 import UsersView from './views/UsersView'
 import type { Session } from './api/types'
 
-type View = 'catalog' | 'inventory' | 'heirs' | 'documents' | 'heritage' | 'contributions' | 'renovations' | 'users'
+type View = 'catalog' | 'inventory' | 'heirs' | 'documents' | 'estate' | 'contributions' | 'renovations' | 'users'
 
 // The view lives in the URL hash (#/documents) so that reloading keeps it
 function viewFromHash(): View {
@@ -36,9 +36,9 @@ function viewFromHash(): View {
       return 'renovations'
     case '#/users':
       return 'users'
-    // The heritage is the start page (#/, #/heritage or #/heritage/<id>)
+    // The estate is the start page (#/, #/estate or #/estate/<id>)
     default:
-      return 'heritage'
+      return 'estate'
   }
 }
 
@@ -115,7 +115,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
   // Tabs this account has: users without a linked heir have no Heirs and Documents tabs, and
   // only administrators have the Users tab. Everybody sees the rest.
   const allowed = (id: View) => (id === 'users' ? isAdmin : id === 'heirs' || id === 'documents' ? seesHeirs : true)
-  const view: View = allowed(hashView) ? hashView : 'heritage'
+  const view: View = allowed(hashView) ? hashView : 'estate'
 
   useEffect(() => {
     const onHashChange = () => setView(viewFromHash())
@@ -124,7 +124,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
   }, [])
 
   const tabs = ([
-    { id: 'heritage', href: '#/', label: t.tabHeritage, Icon: HouseIcon },
+    { id: 'estate', href: '#/', label: t.tabEstate, Icon: HouseIcon },
     { id: 'heirs', href: '#/heirs', label: t.tabHeirs, Icon: HeirsIcon },
     { id: 'catalog', href: '#/catalog', label: t.tabCatalog, Icon: BoxIcon },
     { id: 'inventory', href: '#/inventory', label: t.tabInventory, Icon: ClipboardIcon },
@@ -158,7 +158,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
       {view === 'inventory' && <InventoryView />}
       {view === 'heirs' && <HeirsView />}
       {view === 'documents' && <DocumentsView />}
-      {view === 'heritage' && <HeritageView />}
+      {view === 'estate' && <EstateView />}
       {view === 'contributions' && <ContributionsView />}
       {view === 'renovations' && <RenovationsView />}
       {view === 'users' && <UsersView currentUser={username} />}

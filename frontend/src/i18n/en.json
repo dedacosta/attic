@@ -309,7 +309,7 @@
     "other": "{count} photos"
   },
   "errorPhotoUpload": "“{file}” could not be uploaded: {reason}",
-  "editHouse": "Edit building",
+  "editBuilding": "Edit building",
   "newLand": "New land",
   "editLand": "Edit land",
   "landLocation": "Location",
@@ -368,22 +368,22 @@
   "sourceCode": "Source code",
   "tabInventory": "Inventory",
   "pdfTitleInventory": "Inventory",
-  "tabHeritage": "Estate",
-  "houses": "Buildings",
+  "tabEstate": "Estate",
+  "buildings": "Buildings",
   "lands": "Land",
-  "newHouse": "New building",
-  "houseCount": {
+  "newBuilding": "New building",
+  "buildingCount": {
     "one": "{count} building",
     "other": "{count} buildings"
   },
-  "filteredHouseCount": {
+  "filteredBuildingCount": {
     "one": "{shown} of {count} building",
     "other": "{shown} of {count} buildings"
   },
-  "emptyHouses": "No buildings yet.",
-  "noHouseMatches": "No building matches your search.",
+  "emptyBuildings": "No buildings yet.",
+  "noBuildingMatches": "No building matches your search.",
   "propertySearchPlaceholder": "Search name, address, details…",
   "propertySearchLabel": "Search buildings and land",
-  "backToHeritage": "Estate",
+  "backToEstate": "Estate",
   "propertyNotFound": "This property no longer exists."
 }

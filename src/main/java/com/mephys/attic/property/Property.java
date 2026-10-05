@@ -8,10 +8,10 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A property of the heritage: a {@link House} or a {@link Land}. {@code valueEur} is
+ * A property of the estate: a {@link Building} or a {@link Land}. {@code valueEur} is
  * {@code null} when not estimated; {@code facts} are its details in order, without blank lines.
  */
-abstract sealed class Property permits House, Land {
+abstract sealed class Property permits Building, Land {
 
 	private final UUID id;
 
@@ -45,7 +45,7 @@ abstract sealed class Property permits House, Land {
 	}
 
 	/**
-	 * The house or the land with these values, as {@code kind} says.
+	 * The building or the land with these values, as {@code kind} says.
 	 */
 	static Property of(@Nullable UUID id, PropertyKind kind, String name, @Nullable String address,
 			@Nullable BigDecimal valueEur, @Nullable String comments, @Nullable List<PropertyFact> facts) {
@@ -53,7 +53,7 @@ abstract sealed class Property permits House, Land {
 			throw new IllegalArgumentException("kind must not be null");
 		}
 		return switch (kind) {
-			case HOUSE -> new House(id, name, address, valueEur, comments, facts);
+			case BUILDING -> new Building(id, name, address, valueEur, comments, facts);
 			case LAND -> new Land(id, name, address, valueEur, comments, facts);
 		};
 	}
