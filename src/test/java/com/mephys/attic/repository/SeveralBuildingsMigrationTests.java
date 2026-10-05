@@ -1,4 +1,7 @@
-package com.mephys.attic.property;
+package com.mephys.attic.repository;
+
+import com.mephys.attic.model.Property;
+import com.mephys.attic.model.PropertyKind;
 
 import java.nio.file.Path;
 import java.sql.Connection;

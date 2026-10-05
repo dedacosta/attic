@@ -1,7 +1,6 @@
-package com.mephys.attic.property;
+package com.mephys.attic.controller;
 
 import com.mephys.attic.support.TestImages;
-import com.mephys.attic.controller.SignedInMockMvc;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;

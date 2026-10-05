@@ -1,4 +1,4 @@
-package com.mephys.attic.property;
+package com.mephys.attic.controller;
 
 import com.mephys.attic.support.TestImages;
 

@@ -1,4 +1,4 @@
-package com.mephys.attic.property;
+package com.mephys.attic.model;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -9,10 +9,10 @@ import org.jspecify.annotations.Nullable;
  * An official document of a property, such as its title deed. Its pages are files (images or
  * PDF) stored like photos.
  */
-record PropertyDocument(UUID id, UUID propertyId, PropertyDocumentType type, @Nullable LocalDate date,
+public record PropertyDocument(UUID id, UUID propertyId, PropertyDocumentType type, @Nullable LocalDate date,
 		@Nullable String notes) {
 
-	PropertyDocument {
+	public PropertyDocument {
 		if (propertyId == null) {
 			throw new IllegalArgumentException("propertyId must not be null");
 		}

@@ -1,7 +1,15 @@
-package com.mephys.attic.property;
+package com.mephys.attic.controller;
 
-import com.mephys.attic.model.PictureInfo;
+import com.mephys.attic.dto.EstateResponse;
 import com.mephys.attic.dto.PictureResponse;
+import com.mephys.attic.dto.PropertyDocumentResponse;
+import com.mephys.attic.dto.PropertyRequest;
+import com.mephys.attic.dto.PropertyResponse;
+import com.mephys.attic.model.Estate;
+import com.mephys.attic.model.PictureInfo;
+import com.mephys.attic.model.Property;
+import com.mephys.attic.model.PropertyKind;
+import com.mephys.attic.repository.PropertyRepository;
 import com.mephys.attic.service.PictureUploads;
 
 import java.net.URI;
