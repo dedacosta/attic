@@ -19,7 +19,7 @@ interface Props {
   onClose: () => void
 }
 
-/** Create or edit the house or a land parcel: main fields, details and photos. Administrators only. */
+/** Create or edit a house or a land parcel: main fields, details and photos. Administrators only. */
 export default function PropertyDialog({ property, kind, onSaved, onClose }: Props) {
   const { t } = useI18n()
   const ref = useModal()
@@ -41,7 +41,7 @@ export default function PropertyDialog({ property, kind, onSaved, onClose }: Pro
   }, [])
 
   const isHouse = kind === 'HOUSE'
-  const title = saved ? (isHouse ? t.editHouse : t.editLand) : (isHouse ? t.setUpHouse : t.newLand)
+  const title = saved ? (isHouse ? t.editHouse : t.editLand) : (isHouse ? t.newHouse : t.newLand)
 
   async function submit(event: FormEvent) {
     event.preventDefault()

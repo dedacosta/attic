@@ -1,4 +1,4 @@
-# Properties Tab Implementation Plan
+# Heritage Tab Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,18 @@
 
 **Tech Stack:** Spring Boot 4 (Java 25), SQLite with Flyway, React 19 with TypeScript and Vite.
 
-**Spec:** `docs/superpowers/specs/2026-10-05-properties-tab-design.md`
+**Spec:** `docs/superpowers/specs/2026-10-05-heritage-tab-design.md`
+
+> **Changed while it was carried out.** The tab is called **Heritage**, not Properties, and
+> `House` and `Land` are subclasses of `Property`. What was built differs from the tasks below
+> in these points; the spec describes the result:
+>
+> - Task 1 was followed by a further backend step: `Property` became an abstract class with the
+>   subclasses `House` and `Land`, `Heritage` holds both lists, and `GET /api/heritage` returns
+>   them. `PropertyTests` and a controller test cover it.
+> - Task 2 built `HeritageView` at `#/heritage` instead of `PropertiesView` at `#/properties`. It
+>   loads `api.heritage()` instead of `api.listProperties()`. The text keys are `tabHeritage`,
+>   `lands` and `backToHeritage` instead of `tabProperties`, `land` and `backToProperties`.
 
 ## Global Constraints
 

@@ -15,9 +15,9 @@ Tailscale.
 - **Documents** — ID cards, passports, licences, certificates, contracts or any other kind,
   grouped by heir or kept without one, with photos (e.g. front and back); with an optional expiry date and a validity badge (valid,
   expires soon, expired). Deleting an heir keeps their documents, without heir.
-- **House and Land** — a page for the family house and one for each land parcel: address with a map
-  link, estimated value (the Land tab shows the total), details such as the cadastral article,
-  photos, and official documents (title deed, land registry, plans…) with image or PDF files.
+- **Heritage** — the houses and the land parcels, each with address and map link, estimated value
+  (each list shows its total), details such as the cadastral article, photos, and official documents
+  (title deed, land registry, plans…) with image or PDF files.
 - **Accounts and roles** — *super-administrator*, *administrator* (edits everything, creates
   accounts) and *user* (reads everything, edits only their own heir and password). The first
   account is created on the setup screen. Administrators either create accounts themselves or
