@@ -46,9 +46,9 @@ class PicturesMigrationTests {
 	}
 
 	@BeforeAll
-	static void createVersion11Database() throws Exception {
+	static void createVersion14Database() throws Exception {
 		String url = "jdbc:sqlite:" + tempDir.resolve("attic.db") + "?foreign_keys=true";
-		Flyway.configure().dataSource(url, null, null).target("11").load().migrate();
+		Flyway.configure().dataSource(url, null, null).target("14").load().migrate();
 		try (Connection connection = DriverManager.getConnection(url);
 				Statement statement = connection.createStatement()) {
 			statement.execute("INSERT INTO inventory_item (id, name) VALUES ('" + ITEM + "', 'Sofa')");

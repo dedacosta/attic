@@ -30,6 +30,19 @@ public record HeritageShare(int numerator, int denominator) {
 		return new HeritageShare(numerator, denominator);
 	}
 
+	/**
+	 * One of {@code parts} equal parts of this share, in lowest terms.
+	 */
+	public HeritageShare split(int parts) {
+		long denominator = (long) this.denominator * parts;
+		long divisor = gcd(numerator, denominator);
+		return new HeritageShare(Math.toIntExact(numerator / divisor), Math.toIntExact(denominator / divisor));
+	}
+
+	private static long gcd(long a, long b) {
+		return (b == 0) ? Math.max(a, 1) : gcd(b, a % b);
+	}
+
 	@Override
 	public String toString() {
 		return numerator + "/" + denominator;

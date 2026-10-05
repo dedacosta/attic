@@ -1,4 +1,4 @@
-import { age } from '../lib/age'
+import { age, localDate } from '../lib/age'
 import { formatDate } from '../lib/format'
 import { parseFraction } from '../lib/fraction'
 import { validity } from '../lib/validity'
@@ -10,6 +10,8 @@ import type { Heir, HeirDocument } from '../api/types'
 interface Props {
   heir: Heir
   documents: HeirDocument[]
+  /** How many of their children are shown */
+  childCount: number
   onEdit: () => void
   onDelete: () => void
 }
@@ -19,22 +21,28 @@ function initials(name: string): string {
   return ((words[0]?.[0] ?? '') + (words.length > 1 ? words[words.length - 1][0] : '')).toUpperCase()
 }
 
-export default function HeirCard({ heir, documents, onEdit, onDelete }: Props) {
+export default function HeirCard({ heir, documents, childCount, onEdit, onDelete }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
-  const share = heir.heritageShare ? parseFraction(heir.heritageShare) : null
+  const share = heir.calculatedShare ? parseFraction(heir.calculatedShare) : null
+  // A deceased heir's share went on to their children
+  const passedOn = heir.deceased && childCount > 0
   const expired = documents.filter((d) => validity(d.validUntil) === 'expired').length
   const expiring = documents.filter((d) => validity(d.validUntil) === 'expiring').length
   return (
-    <article className="card heir-card">
+    <article className={heir.deceased ? 'card heir-card heir-deceased' : 'card heir-card'}>
       <button type="button" className="card-main" onClick={onEdit} aria-label={t.editNamed(heir.name)}>
         <div className="heir-header">
           <span className="avatar" aria-hidden="true">{initials(heir.name)}</span>
           <div>
             <h3 className="card-title">{heir.name}</h3>
-            {heir.birthDate && (
+            {(heir.birthDate || heir.deceased) && (
               <p className="heir-subtitle">
-                {formatDate(heir.birthDate, t.locale)} · {t.age(age(heir.birthDate))}
+                {heir.birthDate && formatDate(heir.birthDate, t.locale)}
+                {heir.birthDate && heir.deceased && ' – '}
+                {heir.deceased && `† ${heir.deathDate ? formatDate(heir.deathDate, t.locale) : t.deceased}`}
+                {heir.birthDate && (!heir.deceased || heir.deathDate)
+                  && ` · ${t.age(age(heir.birthDate, heir.deathDate ? localDate(heir.deathDate) : undefined))}`}
               </p>
             )}
           </div>
@@ -42,12 +50,11 @@ export default function HeirCard({ heir, documents, onEdit, onDelete }: Props) {
         <div className="card-body">
           <div className="card-tags">
             {heir.sex && <span className="tag">{t.sexes[heir.sex] ?? heir.sex}</span>}
-            {share && (
-              <span className="tag tag-accent">
-                {heir.heritageShare}
-              </span>
-            )}
           </div>
+          <p className="heir-share">
+            {t.heritageShare}{t.colon} <strong>{share ? heir.calculatedShare : '—'}</strong>
+          </p>
+          {share && passedOn && <p className="heir-share-note">{t.sharePassedOn}</p>}
           <p className="heir-documents">
             <IdCardIcon width={16} height={16} />
             <span>{documents.length === 0 ? t.noHeirDocuments : t.documentCount(documents.length)}</span>

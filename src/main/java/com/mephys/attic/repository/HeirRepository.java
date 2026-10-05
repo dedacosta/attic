@@ -29,26 +29,30 @@ public class HeirRepository {
 	public Heir save(Heir heir) {
 		HeritageShare share = heir.heritageShare();
 		jdbc.sql("""
-				INSERT INTO heir (id, name, birth_date, address, filiation, sex, heritage_numerator,
-					heritage_denominator, comments, created_at, updated_at)
-				VALUES (:id, :name, :birthDate, :address, :filiation, :sex, :numerator, :denominator, :comments,
-					strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+				INSERT INTO heir (id, name, birth_date, deceased, death_date, address, filiation, sex, heritage_numerator,
+					heritage_denominator, comments, parent_id, created_at, updated_at)
+				VALUES (:id, :name, :birthDate, :deceased, :deathDate, :address, :filiation, :sex, :numerator, :denominator, :comments,
+					:parentId, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 				ON CONFLICT (id) DO UPDATE SET
-					name = excluded.name, birth_date = excluded.birth_date, address = excluded.address,
+					name = excluded.name, birth_date = excluded.birth_date, deceased = excluded.deceased,
+					death_date = excluded.death_date, address = excluded.address,
 					filiation = excluded.filiation, sex = excluded.sex,
 					heritage_numerator = excluded.heritage_numerator,
 					heritage_denominator = excluded.heritage_denominator, comments = excluded.comments,
-					updated_at = excluded.updated_at
+					parent_id = excluded.parent_id, updated_at = excluded.updated_at
 				""")
 			.param("id", heir.id().toString())
 			.param("name", heir.name())
 			.param("birthDate", (heir.birthDate() != null) ? heir.birthDate().toString() : null)
+			.param("deceased", heir.deceased() ? 1 : 0)
+			.param("deathDate", (heir.deathDate() != null) ? heir.deathDate().toString() : null)
 			.param("address", heir.address())
 			.param("filiation", heir.filiation())
 			.param("sex", (heir.sex() != null) ? heir.sex().name() : null)
 			.param("numerator", (share != null) ? share.numerator() : null)
 			.param("denominator", (share != null) ? share.denominator() : null)
 			.param("comments", heir.comments())
+			.param("parentId", (heir.parentId() != null) ? heir.parentId().toString() : null)
 			.update();
 		// Read back for the timestamps the database set
 		return findById(heir.id()).orElseThrow();
@@ -78,13 +82,16 @@ public class HeirRepository {
 
 	private Heir map(ResultSet rs, int rowNum) throws SQLException {
 		String birthDate = rs.getString("birth_date");
+		String deathDate = rs.getString("death_date");
 		String sex = rs.getString("sex");
+		String parentId = rs.getString("parent_id");
 		int denominator = rs.getInt("heritage_denominator");
 		HeritageShare share = rs.wasNull() ? null : new HeritageShare(rs.getInt("heritage_numerator"), denominator);
 		return new Heir(UUID.fromString(rs.getString("id")), rs.getString("name"),
-				(birthDate != null) ? LocalDate.parse(birthDate) : null, rs.getString("address"),
+				(birthDate != null) ? LocalDate.parse(birthDate) : null, rs.getBoolean("deceased"),
+				(deathDate != null) ? LocalDate.parse(deathDate) : null, rs.getString("address"),
 				rs.getString("filiation"), (sex != null) ? Sex.valueOf(sex) : null, share, rs.getString("comments"),
-				instant(rs.getString("created_at")), instant(rs.getString("updated_at")));
+				(parentId != null) ? UUID.fromString(parentId) : null, instant(rs.getString("created_at")), instant(rs.getString("updated_at")));
 	}
 
 	private static @Nullable Instant instant(@Nullable String timestamp) {
