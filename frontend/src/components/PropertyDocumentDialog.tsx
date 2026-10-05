@@ -21,7 +21,7 @@ interface Props {
 /** A document with its files under the name saveWithPhotos expects */
 const withPictures = (document: PropertyDocument) => ({ ...document, pictures: document.files })
 
-/** An official document of a house or a land parcel, with its image or PDF files. */
+/** An official document of a building or a land parcel, with its image or PDF files. */
 export default function PropertyDocumentDialog({ propertyId, document, types, onChanged, onClose }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()

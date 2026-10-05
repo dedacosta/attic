@@ -164,7 +164,7 @@ export type PhotoEntry = { kind: 'stored'; picture: Picture } | { kind: 'new'; k
 export const storedPhotos = (pictures: Picture[]): PhotoEntry[] =>
   pictures.map((picture) => ({ kind: 'stored', picture }))
 
-export type PropertyKind = 'HOUSE' | 'LAND'
+export type PropertyKind = 'BUILDING' | 'LAND'
 
 /** One detail of a property, e.g. "Artigo matricial" → "1234" */
 export interface Fact {
@@ -172,7 +172,7 @@ export interface Fact {
   value: string
 }
 
-/** An official document of a house or a land parcel; its files are images or PDF */
+/** An official document of a building or a land parcel; its files are images or PDF */
 export interface PropertyDocument {
   id: string
   propertyId: string
@@ -184,7 +184,7 @@ export interface PropertyDocument {
 
 export type PropertyDocumentInput = Omit<PropertyDocument, 'id' | 'propertyId' | 'files'>
 
-/** What a house and a land parcel have in common */
+/** What a building and a land parcel have in common */
 interface PropertyBase {
   id: string
   name: string
@@ -199,20 +199,20 @@ interface PropertyBase {
   documents: PropertyDocument[]
 }
 
-export interface House extends PropertyBase {
-  kind: 'HOUSE'
+export interface Building extends PropertyBase {
+  kind: 'BUILDING'
 }
 
 export interface Land extends PropertyBase {
   kind: 'LAND'
 }
 
-/** A property of the heritage: a house or a land parcel */
-export type Property = House | Land
+/** A property of the estate: a building or a land parcel */
+export type Property = Building | Land
 
-/** The real estate of the heritage, each list by name */
-export interface Heritage {
-  houses: House[]
+/** The estate: its buildings and its land parcels, each list by name */
+export interface Estate {
+  buildings: Building[]
   lands: Land[]
 }
 

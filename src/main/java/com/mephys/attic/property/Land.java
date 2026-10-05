@@ -7,7 +7,7 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A land parcel of the heritage. {@code address} is its location, in free text.
+ * A land parcel of the estate. {@code address} is its location, in free text.
  */
 final class Land extends Property {
 

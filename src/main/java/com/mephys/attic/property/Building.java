@@ -7,18 +7,18 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A house of the heritage, such as the family house. {@code address} is its address.
+ * A building of the estate, such as the family building. {@code address} is its address.
  */
-final class House extends Property {
+final class Building extends Property {
 
-	House(@Nullable UUID id, String name, @Nullable String address, @Nullable BigDecimal valueEur,
+	Building(@Nullable UUID id, String name, @Nullable String address, @Nullable BigDecimal valueEur,
 			@Nullable String comments, @Nullable List<PropertyFact> facts) {
 		super(id, name, address, valueEur, comments, facts);
 	}
 
 	@Override
 	PropertyKind kind() {
-		return PropertyKind.HOUSE;
+		return PropertyKind.BUILDING;
 	}
 
 }

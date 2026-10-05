@@ -1874,12 +1874,12 @@ fieldset.fields:disabled .checkbox {
   margin: 0;
 }
 
-/* The Houses and Land lists of the Heritage tab: heading and count left, button right */
-.heritage-section .property-section-header {
+/* The Buildings and Land lists of the Estate tab: heading and count left, button right */
+.estate-section .property-section-header {
   flex-wrap: wrap;
 }
 
-.heritage-section .property-section-header .count {
+.estate-section .property-section-header .count {
   margin-right: auto;
 }
 

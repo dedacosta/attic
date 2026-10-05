@@ -21,7 +21,7 @@ interface Props {
 export const mapsUrl = (address: string) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
 
-/** The page of a house or a land parcel: photos, main facts, details, official documents, comments. */
+/** The page of a building or a land parcel: photos, main facts, details, official documents, comments. */
 export default function PropertyPage({ property, onChanged, onDeleted }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
@@ -35,8 +35,8 @@ export default function PropertyPage({ property, onChanged, onDeleted }: Props) 
   }, [])
 
   const cover = property.pictures[0]
-  const isHouse = property.kind === 'HOUSE'
-  const PlaceholderIcon = isHouse ? HouseIcon : LandIcon
+  const isBuilding = property.kind === 'BUILDING'
+  const PlaceholderIcon = isBuilding ? HouseIcon : LandIcon
 
   return (
     <main className="content property-page">
@@ -60,7 +60,7 @@ export default function PropertyPage({ property, onChanged, onDeleted }: Props) 
           {canEdit && (
             <div className="property-actions">
               <button type="button" className="button button-primary" onClick={() => setEditing(true)}>
-                {isHouse ? t.editHouse : t.editLand}
+                {isBuilding ? t.editBuilding : t.editLand}
               </button>
               {onDeleted && (
                 <button type="button" className="button button-quiet button-danger-text" onClick={() => setDeleting(true)}>

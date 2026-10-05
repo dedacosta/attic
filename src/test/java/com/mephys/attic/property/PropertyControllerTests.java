@@ -54,21 +54,21 @@ class PropertyControllerTests {
 	private JdbcClient jdbc;
 
 	@BeforeEach
-	void noHouse() {
-		jdbc.sql("DELETE FROM property WHERE kind = 'HOUSE'").update();
+	void noBuilding() {
+		jdbc.sql("DELETE FROM property WHERE kind = 'BUILDING'").update();
 	}
 
 	@Test
-	void houseLifecycle() throws Exception {
+	void buildingLifecycle() throws Exception {
 		String id = create("""
-				{"kind":"HOUSE","name":"Casa de Viseu","address":"Rua Direita 1, Viseu","valueEur":250000,
+				{"kind":"BUILDING","name":"Casa de Viseu","address":"Rua Direita 1, Viseu","valueEur":250000,
 				 "comments":"Roof redone in 2019","facts":[{"label":"Área (m²)","value":"180"}]}
 				""");
 
 		mvc.perform(get("/api/properties/{id}", id))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.id").value(id))
-			.andExpect(jsonPath("$.kind").value("HOUSE"))
+			.andExpect(jsonPath("$.kind").value("BUILDING"))
 			.andExpect(jsonPath("$.name").value("Casa de Viseu"))
 			.andExpect(jsonPath("$.address").value("Rua Direita 1, Viseu"))
 			.andExpect(jsonPath("$.valueEur").value(250000.0))
@@ -79,7 +79,7 @@ class PropertyControllerTests {
 			.andExpect(jsonPath("$.documents").isEmpty());
 
 		mvc.perform(put("/api/properties/{id}", id).contentType(MediaType.APPLICATION_JSON).content("""
-				{"kind":"HOUSE","name":"Casa da família","facts":[{"label":"Divisões","value":"7"}]}
+				{"kind":"BUILDING","name":"Casa da família","facts":[{"label":"Divisões","value":"7"}]}
 				"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value("Casa da família"))
@@ -94,11 +94,11 @@ class PropertyControllerTests {
 	}
 
 	@Test
-	void thereCanBeSeveralHouses() throws Exception {
-		String first = create("{\"kind\":\"HOUSE\",\"name\":\"Casa de Viseu\"}");
-		String second = create("{\"kind\":\"HOUSE\",\"name\":\"Casa da praia\"}");
+	void thereCanBeSeveralBuildings() throws Exception {
+		String first = create("{\"kind\":\"BUILDING\",\"name\":\"Casa de Viseu\"}");
+		String second = create("{\"kind\":\"BUILDING\",\"name\":\"Casa da praia\"}");
 
-		String body = mvc.perform(get("/api/properties").param("kind", "HOUSE"))
+		String body = mvc.perform(get("/api/properties").param("kind", "BUILDING"))
 			.andExpect(status().isOk())
 			.andReturn()
 			.getResponse()
@@ -106,13 +106,13 @@ class PropertyControllerTests {
 		List<String> ids = JsonPath.read(body, "$[*].id");
 		List<String> kinds = JsonPath.read(body, "$[*].kind");
 		assertThat(ids).containsExactlyInAnyOrder(first, second);
-		assertThat(kinds).containsOnly("HOUSE");
+		assertThat(kinds).containsOnly("BUILDING");
 	}
 
 	@Test
-	void theListWithoutKindHasHousesAndLandByName() throws Exception {
+	void theListWithoutKindHasBuildingsAndLandByName() throws Exception {
 		create("{\"kind\":\"LAND\",\"name\":\"Vinha\"}");
-		create("{\"kind\":\"HOUSE\",\"name\":\"Casa\"}");
+		create("{\"kind\":\"BUILDING\",\"name\":\"Casa\"}");
 		create("{\"kind\":\"LAND\",\"name\":\"Olival\"}");
 
 		String body = mvc.perform(get("/api/properties"))
@@ -125,26 +125,26 @@ class PropertyControllerTests {
 	}
 
 	@Test
-	void theHeritageHasTheHousesAndTheLand() throws Exception {
-		String house = create("{\"kind\":\"HOUSE\",\"name\":\"Casa\"}");
+	void theEstateHasTheBuildingsAndTheLand() throws Exception {
+		String building = create("{\"kind\":\"BUILDING\",\"name\":\"Casa\"}");
 		String vineyard = create("{\"kind\":\"LAND\",\"name\":\"Vinha\"}");
 
-		String body = mvc.perform(get("/api/heritage"))
+		String body = mvc.perform(get("/api/estate"))
 			.andExpect(status().isOk())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		List<String> houses = JsonPath.read(body, "$.houses[*].id");
+		List<String> buildings = JsonPath.read(body, "$.buildings[*].id");
 		List<String> lands = JsonPath.read(body, "$.lands[*].id");
-		List<String> houseKinds = JsonPath.read(body, "$.houses[*].kind");
-		assertThat(houses).contains(house).doesNotContain(vineyard);
-		assertThat(lands).contains(vineyard).doesNotContain(house);
-		assertThat(houseKinds).containsOnly("HOUSE");
+		List<String> buildingKinds = JsonPath.read(body, "$.buildings[*].kind");
+		assertThat(buildings).contains(building).doesNotContain(vineyard);
+		assertThat(lands).contains(vineyard).doesNotContain(building);
+		assertThat(buildingKinds).containsOnly("BUILDING");
 	}
 
 	@Test
 	void theSingleHouseAddressIsGone() throws Exception {
-		create("{\"kind\":\"HOUSE\",\"name\":\"Casa\"}");
+		create("{\"kind\":\"BUILDING\",\"name\":\"Casa\"}");
 
 		mvc.perform(get("/api/properties/house")).andExpect(status().is4xxClientError());
 	}
@@ -154,12 +154,12 @@ class PropertyControllerTests {
 		String id = create("{\"kind\":\"LAND\",\"name\":\"Pinhal\"}");
 
 		mvc.perform(put("/api/properties/{id}", id).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"kind\":\"HOUSE\",\"name\":\"Pinhal\"}")).andExpect(status().isBadRequest());
+			.content("{\"kind\":\"BUILDING\",\"name\":\"Pinhal\"}")).andExpect(status().isBadRequest());
 	}
 
 	@Test
-	void landIsListedByNameWithoutTheHouse() throws Exception {
-		create("{\"kind\":\"HOUSE\",\"name\":\"A casa\"}");
+	void landIsListedByNameWithoutTheBuildings() throws Exception {
+		create("{\"kind\":\"BUILDING\",\"name\":\"A casa\"}");
 		create("{\"kind\":\"LAND\",\"name\":\"Vinha\"}");
 		create("{\"kind\":\"LAND\",\"name\":\"Olival\"}");
 		create("{\"kind\":\"LAND\",\"name\":\"Mata\"}");
