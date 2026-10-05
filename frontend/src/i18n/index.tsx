@@ -114,6 +114,9 @@ const en = {
   sex: 'Sex',
   heritageShare: 'Share of heritage',
   heritageShareHint: 'e.g. 1/3',
+  /** Between a label and its value; French puts a space before it */
+  colon: ':',
+  heritageShareDefault: 'Left empty, the heir gets an equal part of what the entered shares leave.',
   heirCount: (count: number) => (count === 1 ? '1 heir' : `${count} heirs`),
   filteredHeirCount: (shown: number, total: number) => `${shown} of ${total} ${total === 1 ? 'heir' : 'heirs'}`,
   emptyHeirs: 'No heirs yet.',
@@ -124,6 +127,15 @@ const en = {
     documents === 0
       ? `“${name}” will be deleted permanently.`
       : `“${name}” and ${documents === 1 ? 'their document' : `their ${documents} documents`} will be deleted permanently.`,
+  deceased: 'Deceased',
+  deathDate: 'Date of death',
+  errorDeathDate: 'The date of death cannot be before the date of birth.',
+  sharePassedOn: 'Passed on to the children',
+  calculatedShareHint: 'Comes from the parent: their share is divided among their children once they have died.',
+  parentHeir: 'Child of',
+  childrenOf: (name: string) => `Children of ${name}`,
+  deleteHeirChildren: (count: number) =>
+    count === 1 ? 'Their child stays in the list, without a parent.' : `Their ${count} children stay in the list, without a parent.`,
   heirDocuments: 'Documents',
   addDocument: 'Add document',
   noHeirDocuments: 'No documents yet.',
@@ -348,6 +360,8 @@ const pt: Messages = {
   sex: 'Sexo',
   heritageShare: 'Quota da herança',
   heritageShareHint: 'ex.: 1/3',
+  colon: ':',
+  heritageShareDefault: 'Se ficar vazia, o herdeiro recebe uma parte igual do que as quotas indicadas deixam.',
   heirCount: (count) => (count === 1 ? '1 herdeiro' : `${count} herdeiros`),
   filteredHeirCount: (shown, total) => `${shown} de ${total} ${total === 1 ? 'herdeiro' : 'herdeiros'}`,
   emptyHeirs: 'Ainda não há herdeiros.',
@@ -358,6 +372,15 @@ const pt: Messages = {
     documents === 0
       ? `«${name}» será eliminado permanentemente.`
       : `«${name}» e ${documents === 1 ? 'o seu documento' : `os seus ${documents} documentos`} serão eliminados permanentemente.`,
+  deceased: 'Falecido(a)',
+  deathDate: 'Data de óbito',
+  errorDeathDate: 'A data de óbito não pode ser anterior à data de nascimento.',
+  sharePassedOn: 'Passada aos filhos',
+  calculatedShareHint: 'Vem do progenitor: a sua quota é dividida pelos filhos depois de falecer.',
+  parentHeir: 'Filho(a) de',
+  childrenOf: (name) => `Filhos de ${name}`,
+  deleteHeirChildren: (count) =>
+    count === 1 ? 'O filho continua na lista, sem progenitor.' : `Os ${count} filhos continuam na lista, sem progenitor.`,
   heirDocuments: 'Documentos',
   addDocument: 'Adicionar documento',
   noHeirDocuments: 'Ainda não há documentos.',
@@ -581,6 +604,8 @@ const fr: Messages = {
   sex: 'Sexe',
   heritageShare: 'Part d’héritage',
   heritageShareHint: 'p. ex. 1/3',
+  colon: '\u00a0:',
+  heritageShareDefault: 'Laissée vide, l’héritier reçoit une part égale de ce que laissent les parts saisies.',
   heirCount: (count) => (count < 2 ? `${count} héritier` : `${count} héritiers`),
   filteredHeirCount: (shown, total) => `${shown} sur ${total} ${total < 2 ? 'héritier' : 'héritiers'}`,
   emptyHeirs: 'Aucun héritier pour l’instant.',
@@ -591,6 +616,15 @@ const fr: Messages = {
     documents === 0
       ? `«\u00a0${name}\u00a0» sera supprimé définitivement.`
       : `«\u00a0${name}\u00a0» et ${documents === 1 ? 'son document' : `ses ${documents} documents`} seront supprimés définitivement.`,
+  deceased: 'Décédé(e)',
+  deathDate: 'Date de décès',
+  errorDeathDate: 'La date de décès ne peut pas précéder la date de naissance.',
+  sharePassedOn: 'Transmise aux enfants',
+  calculatedShareHint: 'Vient du parent : sa part est répartie entre ses enfants après son décès.',
+  parentHeir: 'Enfant de',
+  childrenOf: (name) => `Enfants de ${name}`,
+  deleteHeirChildren: (count) =>
+    count === 1 ? 'Son enfant reste dans la liste, sans parent.' : `Ses ${count} enfants restent dans la liste, sans parent.`,
   heirDocuments: 'Documents',
   addDocument: 'Ajouter un document',
   noHeirDocuments: 'Aucun document pour l’instant.',

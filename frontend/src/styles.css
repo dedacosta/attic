@@ -315,6 +315,20 @@ select {
   gap: 18px;
 }
 
+/* An heir's children, on their own row below the parent's card */
+.heir-children {
+  grid-column: 1 / -1;
+  padding-left: 14px;
+  border-left: 3px solid var(--border);
+}
+
+.heir-children h3 {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 550;
+}
+
 .card {
   position: relative;
   background: var(--surface);
@@ -869,6 +883,34 @@ form > .dialog-actions {
   color: var(--accent);
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+/* A deceased heir looks unavailable, but the card still opens */
+.heir-deceased {
+  background: var(--surface-muted);
+  box-shadow: none;
+}
+
+.heir-deceased .card-main {
+  filter: grayscale(1);
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+
+.heir-deceased:hover .card-main,
+.heir-deceased .card-main:focus-visible {
+  opacity: 0.85;
+}
+
+.heir-share {
+  margin: 0 0 2px;
+  font-size: 0.88rem;
+}
+
+.heir-share-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
 }
 
 .heir-subtitle {

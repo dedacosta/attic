@@ -3,13 +3,18 @@ package com.mephys.attic.controller;
 import com.mephys.attic.dto.HeirRequest;
 import com.mephys.attic.dto.HeirResponse;
 import com.mephys.attic.model.Heir;
+import com.mephys.attic.model.HeritageFlow;
+import com.mephys.attic.model.HeritageShare;
 import com.mephys.attic.model.Sex;
 import com.mephys.attic.repository.HeirRepository;
 import com.mephys.attic.service.CurrentAccount;
 import com.mephys.attic.service.HeirDocuments;
 
 import java.net.URI;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -48,42 +53,53 @@ class HeirController {
 	 */
 	@GetMapping("/heirs")
 	List<HeirResponse> list() {
-		return repository.findAll().stream().filter((heir) -> account.maySee(heir.id())).map(HeirResponse::of)
+		List<Heir> heirs = repository.findAll();
+		Map<UUID, HeritageShare> shares = HeritageFlow.calculate(heirs);
+		return heirs.stream()
+			.filter((heir) -> account.maySee(heir.id()))
+			.map((heir) -> HeirResponse.of(heir, shares))
 			.toList();
 	}
 
 	@GetMapping("/heirs/{id}")
 	ResponseEntity<HeirResponse> get(@PathVariable UUID id) {
-		return ResponseEntity.of(repository.findById(id).filter((heir) -> account.maySee(id)).map(HeirResponse::of));
+		return ResponseEntity.of(repository.findById(id).filter((heir) -> account.maySee(id)).map(this::response));
 	}
 
 	@PostMapping("/heirs")
-	ResponseEntity<HeirResponse> create(@RequestBody HeirRequest request) {
-		Heir heir = repository.save(request.toHeir(null));
+	@Transactional
+	synchronized ResponseEntity<HeirResponse> create(@RequestBody HeirRequest request) {
+		Heir heir = request.toHeir(null);
+		checkParent(heir);
+		heir = repository.save(heir);
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").build(heir.id());
-		return ResponseEntity.created(location).body(HeirResponse.of(heir));
+		return ResponseEntity.created(location).body(response(heir));
 	}
 
 	/**
 	 * Administrators change anybody. A user may change their own card, but not its heritage share,
-	 * which stays as the administrators set it.
+	 * parent or death, which stay as the administrators set them.
 	 */
 	@PutMapping("/heirs/{id}")
-	ResponseEntity<HeirResponse> replace(@PathVariable UUID id, @RequestBody HeirRequest request) {
+	@Transactional
+	synchronized ResponseEntity<HeirResponse> replace(@PathVariable UUID id, @RequestBody HeirRequest request) {
 		Heir existing = repository.findById(id).filter((heir) -> account.maySee(id)).orElse(null);
 		if (existing == null) {
 			return ResponseEntity.notFound().build();
 		}
 		Heir heir = request.toHeir(id);
 		if (!account.isAdmin()) {
-			heir = new Heir(id, heir.name(), heir.birthDate(), heir.address(), heir.filiation(),
-					heir.sex(), existing.heritageShare(), heir.comments(), null, null);
+			heir = new Heir(id, heir.name(), heir.birthDate(), existing.deceased(), existing.deathDate(),
+					heir.address(), heir.filiation(), heir.sex(), existing.heritageShare(), heir.comments(),
+					existing.parentId(), null, null);
 		}
-		return ResponseEntity.ok(HeirResponse.of(repository.save(heir)));
+		checkParent(heir);
+		return ResponseEntity.ok(response(repository.save(heir)));
 	}
 
 	/**
-	 * Delete the heir together with their documents and document pictures.
+	 * Delete the heir together with their documents and document pictures. Their children stay,
+	 * without a parent.
 	 */
 	@DeleteMapping("/heirs/{id}")
 	@Transactional
@@ -94,6 +110,28 @@ class HeirController {
 		documents.deleteAllOf(id);
 		repository.deleteById(id);
 		return ResponseEntity.noContent().build();
+	}
+
+	/** The heir, with the share they receive from the family as it is now */
+	private HeirResponse response(Heir heir) {
+		return HeirResponse.of(heir, HeritageFlow.calculate(repository.findAll()));
+	}
+
+	/**
+	 * The parent must exist and must not be the heir or one of the heir's descendants.
+	 */
+	private void checkParent(Heir heir) {
+		UUID parentId = heir.parentId();
+		Set<UUID> seen = new HashSet<>();
+		while (parentId != null && seen.add(parentId)) {
+			if (parentId.equals(heir.id())) {
+				throw new IllegalArgumentException("an heir cannot be a child of their own descendant");
+			}
+			UUID id = parentId;
+			parentId = repository.findById(id)
+				.orElseThrow(() -> new IllegalArgumentException("parent does not exist"))
+				.parentId();
+		}
 	}
 
 }

@@ -12,6 +12,8 @@ import type { Heir, HeirDocument, HeirInput } from '../api/types'
 
 interface Props {
   heir: Heir | null
+  /** Everybody this account sees, to choose the parent from */
+  heirs: Heir[]
   sexes: string[]
   documents: HeirDocument[]
   onSave: (input: HeirInput) => Promise<void>
@@ -22,7 +24,7 @@ interface Props {
 }
 
 export default function HeirDialog(props: Props) {
-  const { heir, sexes, documents, onSave, onDelete, onClose, onOpenDocument, onAddDocument } = props
+  const { heir, heirs, sexes, documents, onSave, onDelete, onClose, onOpenDocument, onAddDocument } = props
   const { t } = useI18n()
   const { canEdit, ownHeirId } = usePermissions()
   // Administrators edit everybody; a user edits their own card, apart from the heritage share
@@ -31,23 +33,31 @@ export default function HeirDialog(props: Props) {
   const [form, setForm] = useState({
     name: heir?.name ?? '',
     birthDate: heir?.birthDate ?? '',
+    deceased: heir?.deceased ?? false,
+    deathDate: heir?.deathDate ?? '',
     sex: heir?.sex ?? '',
     heritageShare: heir?.heritageShare ?? '',
     filiation: heir?.filiation ?? '',
     address: heir?.address ?? '',
     comments: heir?.comments ?? '',
+    parentId: heir?.parentId ?? '',
   })
+  // An heir cannot be the child of themselves or of one of their descendants
+  const parents = heir ? heirs.filter((other) => !isDescendant(other, heir.id, heirs)) : heirs
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const set = (key: keyof typeof form, value: string) => setForm((f) => ({ ...f, [key]: value }))
+  const set = (key: keyof typeof form, value: string | boolean) => setForm((f) => ({ ...f, [key]: value }))
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!form.name.trim()) {
       return setError(t.errorName)
     }
-    if (form.heritageShare.trim() && !parseFraction(form.heritageShare)) {
+    if (form.birthDate && form.deathDate && form.deathDate < form.birthDate) {
+      return setError(t.errorDeathDate)
+    }
+    if (!form.parentId && form.heritageShare.trim() && !parseFraction(form.heritageShare)) {
       return setError(t.errorHeritageShare)
     }
     setSaving(true)
@@ -56,11 +66,15 @@ export default function HeirDialog(props: Props) {
       await onSave({
         name: form.name.trim(),
         birthDate: form.birthDate || null,
+        deceased: form.deceased || form.deathDate !== '',
+        deathDate: form.deathDate || null,
         sex: form.sex || null,
-        heritageShare: form.heritageShare.trim() || null,
+        // Children receive their share from their parent
+        heritageShare: form.parentId ? null : form.heritageShare.trim() || null,
         filiation: form.filiation.trim() || null,
         address: form.address.trim() || null,
         comments: form.comments.trim() || null,
+        parentId: form.parentId || null,
       })
     } catch (e) {
       setError(apiErrorMessage(e, t))
@@ -107,11 +121,45 @@ export default function HeirDialog(props: Props) {
                 {sexes.map((sex) => <option key={sex} value={sex}>{t.sexes[sex] ?? sex}</option>)}
               </select>
             </label>
-            <label className="field">
-              <span>{t.heritageShare} <small>{t.optional}</small></span>
-              <input value={form.heritageShare} onChange={(e) => set('heritageShare', e.target.value)} disabled={!canEdit}
-                placeholder={t.heritageShareHint} inputMode="numeric" autoComplete="off" />
+            <label className="checkbox field-wide">
+              <input type="checkbox" checked={form.deceased || form.deathDate !== ''} disabled={!canEdit}
+                onChange={(e) => { set('deceased', e.target.checked); if (!e.target.checked) set('deathDate', '') }} />
+              <span>{t.deceased}</span>
             </label>
+            {(form.deceased || form.deathDate !== '') && (
+              <label className="field">
+                <span>{t.deathDate} <small>{t.optional}</small></span>
+                <input type="date" value={form.deathDate} onChange={(e) => set('deathDate', e.target.value)}
+                  disabled={!canEdit} />
+              </label>
+            )}
+            {form.parentId ? (
+              <div className="field">
+                <span>{t.heritageShare}</span>
+                <p className="hint">
+                  {heir?.parentId === form.parentId && heir.calculatedShare ? `${heir.calculatedShare} · ` : ''}
+                  {t.calculatedShareHint}
+                </p>
+              </div>
+            ) : (
+              <label className="field">
+                <span>{t.heritageShare} <small>{t.optional}</small></span>
+                <input value={form.heritageShare} onChange={(e) => set('heritageShare', e.target.value)}
+                  disabled={!canEdit} inputMode="numeric" autoComplete="off"
+                  placeholder={heir && !heir.parentId && !heir.heritageShare && heir.calculatedShare
+                    ? heir.calculatedShare : t.heritageShareHint} />
+                {canEdit && <small className="hint">{t.heritageShareDefault}</small>}
+              </label>
+            )}
+            {canEdit && (
+              <label className="field">
+                <span>{t.parentHeir} <small>{t.optional}</small></span>
+                <select value={form.parentId} onChange={(e) => set('parentId', e.target.value)}>
+                  <option value="">—</option>
+                  {parents.map((other) => <option key={other.id} value={other.id}>{other.name}</option>)}
+                </select>
+              </label>
+            )}
             <label className="field field-wide">
               <span>{t.filiation} <small>{t.filiationHint}</small></span>
               <textarea rows={2} value={form.filiation} onChange={(e) => set('filiation', e.target.value)} />
@@ -176,4 +224,17 @@ export default function HeirDialog(props: Props) {
       </form>
     </dialog>
   )
+}
+
+/** Whether `heir` is the heir with id `ancestorId` or one of their descendants */
+function isDescendant(heir: Heir, ancestorId: string, heirs: Heir[]): boolean {
+  const seen = new Set<string>()
+  for (let current: Heir | undefined = heir; current && !seen.has(current.id);
+    current = heirs.find((other) => other.id === current?.parentId)) {
+    if (current.id === ancestorId) {
+      return true
+    }
+    seen.add(current.id)
+  }
+  return false
 }

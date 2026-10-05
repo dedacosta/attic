@@ -22,6 +22,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
@@ -176,8 +177,102 @@ class HeirControllerTests {
 	}
 
 	@Test
+	void heirCanBeChildOfAnotherHeir() throws Exception {
+		String maria = createHeir("Maria");
+		String ana = JsonPath.read(mvc.perform(post("/api/heirs").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Ana\",\"parentId\":\"" + maria + "\"}"))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.parentId").value(maria))
+			.andReturn()
+			.getResponse()
+			.getContentAsString(), "$.id");
+		mvc.perform(get("/api/heirs/" + maria)).andExpect(jsonPath("$.parentId").doesNotExist());
+
+		// Moved to another parent, then made independent again
+		String joao = createHeir("João");
+		replace(ana, "{\"name\":\"Ana\",\"parentId\":\"" + joao + "\"}").andExpect(jsonPath("$.parentId").value(joao));
+		replace(ana, "{\"name\":\"Ana\"}").andExpect(jsonPath("$.parentId").doesNotExist());
+	}
+
+	@Test
+	void parentMustExistAndNotBeADescendant() throws Exception {
+		String maria = createHeir("Maria");
+		String ana = createHeir("Ana");
+		replace(ana, "{\"name\":\"Ana\",\"parentId\":\"" + maria + "\"}").andExpect(status().isOk());
+
+		replace(ana, "{\"name\":\"Ana\",\"parentId\":\"00000000-0000-4000-8000-000000000000\"}")
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("parent does not exist"));
+		replace(ana, "{\"name\":\"Ana\",\"parentId\":\"" + ana + "\"}")
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("an heir cannot be their own parent"));
+		replace(maria, "{\"name\":\"Maria\",\"parentId\":\"" + ana + "\"}")
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("an heir cannot be a child of their own descendant"));
+	}
+
+	@Test
+	void deletingParentKeepsChildren() throws Exception {
+		String maria = createHeir("Maria");
+		String ana = createHeir("Ana");
+		replace(ana, "{\"name\":\"Ana\",\"parentId\":\"" + maria + "\"}").andExpect(status().isOk());
+
+		mvc.perform(delete("/api/heirs/" + maria)).andExpect(status().isNoContent());
+
+		mvc.perform(get("/api/heirs/" + ana)).andExpect(status().isOk()).andExpect(jsonPath("$.parentId").doesNotExist());
+	}
+
+	@Test
+	void heirCanBeDeceasedWithOrWithoutDateOfDeath() throws Exception {
+		String maria = createHeir("Maria");
+		mvc.perform(get("/api/heirs/" + maria))
+			.andExpect(jsonPath("$.deceased").value(false))
+			.andExpect(jsonPath("$.deathDate").doesNotExist());
+
+		replace(maria, "{\"name\":\"Maria\",\"deceased\":true}")
+			.andExpect(jsonPath("$.deceased").value(true))
+			.andExpect(jsonPath("$.deathDate").doesNotExist());
+		// A date of death is enough
+		replace(maria, "{\"name\":\"Maria\",\"deathDate\":\"2024-03-01\"}")
+			.andExpect(jsonPath("$.deceased").value(true))
+			.andExpect(jsonPath("$.deathDate").value("2024-03-01"));
+		replace(maria, "{\"name\":\"Maria\"}").andExpect(jsonPath("$.deceased").value(false));
+
+		replace(maria, "{\"name\":\"Maria\",\"birthDate\":\"1950-05-01\",\"deathDate\":\"1949-01-01\"}")
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("date of death must not be before the date of birth"));
+	}
+
+	@Test
+	void sharesAreCalculatedDownTheFamily() throws Exception {
+		String maria = JsonPath.read(mvc.perform(post("/api/heirs").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Maria\",\"heritageShare\":\"1/2\"}"))
+			.andReturn()
+			.getResponse()
+			.getContentAsString(), "$.id");
+		// A share entered for a child is ignored: it comes from the parent
+		String ana = JsonPath.read(mvc.perform(post("/api/heirs").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Ana\",\"heritageShare\":\"1/1\",\"parentId\":\"" + maria + "\"}"))
+			.andExpect(jsonPath("$.heritageShare").doesNotExist())
+			.andExpect(jsonPath("$.calculatedShare").doesNotExist())
+			.andReturn()
+			.getResponse()
+			.getContentAsString(), "$.id");
+		replace(ana, "{\"name\":\"Ana\",\"parentId\":\"" + maria + "\"}").andExpect(status().isOk());
+		mvc.perform(get("/api/heirs/" + maria)).andExpect(jsonPath("$.calculatedShare").value("1/2"));
+
+		replace(maria, "{\"name\":\"Maria\",\"heritageShare\":\"1/2\",\"deceased\":true}")
+			.andExpect(jsonPath("$.calculatedShare").value("1/2"));
+		mvc.perform(get("/api/heirs/" + ana)).andExpect(jsonPath("$.calculatedShare").value("1/2"));
+	}
+
+	@Test
 	void listsSexes() throws Exception {
 		mvc.perform(get("/api/sexes")).andExpect(jsonPath("$.length()").value(3)).andExpect(jsonPath("$[0]").value("FEMALE"));
+	}
+
+	private ResultActions replace(String id, String body) throws Exception {
+		return mvc.perform(put("/api/heirs/" + id).contentType(MediaType.APPLICATION_JSON).content(body));
 	}
 
 	private String createHeir(String name) throws Exception {

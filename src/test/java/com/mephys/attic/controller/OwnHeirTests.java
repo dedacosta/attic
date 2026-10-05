@@ -107,16 +107,19 @@ class OwnHeirTests {
 	}
 
 	@Test
-	void linkedUserEditsOwnCardButNotTheShareOrOthers() throws Exception {
+	void linkedUserEditsOwnCardButNotTheShareParentDeathOrOthers() throws Exception {
 		link("ana", celina).andExpect(status().isOk());
 		MockHttpSession ana = signIn("ana");
 
 		mvc.perform(json(put("/api/heirs/" + celina).session(ana),
-				"{\"name\":\"Celina Costa\",\"address\":\"Rua Nova 1\",\"heritageShare\":\"1/1\"}"))
+				"{\"name\":\"Celina Costa\",\"address\":\"Rua Nova 1\",\"heritageShare\":\"1/1\",\"parentId\":\""
+						+ maria + "\",\"deceased\":true}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value("Celina Costa"))
 			.andExpect(jsonPath("$.address").value("Rua Nova 1"))
-			.andExpect(jsonPath("$.heritageShare").value("1/9"));
+			.andExpect(jsonPath("$.heritageShare").value("1/9"))
+			.andExpect(jsonPath("$.parentId").doesNotExist())
+			.andExpect(jsonPath("$.deceased").value(false));
 
 		mvc.perform(json(put("/api/heirs/" + maria).session(ana), "{\"name\":\"Hacked\"}"))
 			.andExpect(status().isNotFound());

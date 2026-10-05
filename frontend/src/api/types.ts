@@ -78,13 +78,20 @@ export interface Heir {
   filiation: string | null
   sex: string | null
   /** Share of the heritage as a fraction, e.g. "1/3" */
+  /** Entered for heirs without a parent; children receive theirs from their parent */
   heritageShare: string | null
+  /** What the heir receives: their own share, or their part of a deceased parent's share */
+  calculatedShare: string | null
+  deceased: boolean
+  deathDate: string | null
   comments: string | null
+  /** The heir this one is a child of */
+  parentId: string | null
   /** Set by the server; null for heirs added before timestamps were recorded */
   createdAt: string | null
   updatedAt: string | null
 }
 
-export type HeirInput = Omit<Heir, 'id' | 'createdAt' | 'updatedAt'>
+export type HeirInput = Omit<Heir, 'id' | 'calculatedShare' | 'createdAt' | 'updatedAt'>
 
 export type PictureChange = { kind: 'keep' } | { kind: 'replace'; file: File } | { kind: 'remove' }
