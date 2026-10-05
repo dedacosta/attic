@@ -73,7 +73,7 @@ class DatabaseMigrationTests {
 		assertThat(repository.findById(EXISTING_ID).orElseThrow().comments()).isEqualTo("Blue velvet");
 
 		assertThat(jdbc.sql("SELECT max(CAST(version AS INTEGER)) FROM flyway_schema_history").query(String.class).single())
-			.isEqualTo("22");
+			.isEqualTo("23");
 	}
 
 }

@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.dao.DataAccessException;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,8 +41,9 @@ class PropertyController {
 		this.uploads = uploads;
 	}
 
+	/** All properties by name, or those of one kind */
 	@GetMapping("/properties")
-	List<PropertyResponse> list(@RequestParam PropertyKind kind) {
+	List<PropertyResponse> list(@RequestParam(required = false) @Nullable PropertyKind kind) {
 		Map<UUID, List<PictureInfo>> pictures = repository.listAllPictures();
 		Map<UUID, List<PictureInfo>> files = repository.listAllDocumentFiles();
 		return repository.findAll(kind)
@@ -49,11 +51,6 @@ class PropertyController {
 			.map((property) -> PropertyResponse.of(property, pictures.getOrDefault(property.id(), List.of()),
 					documents(property.id(), files)))
 			.toList();
-	}
-
-	@GetMapping("/properties/house")
-	ResponseEntity<PropertyResponse> house() {
-		return ResponseEntity.of(repository.findHouse().map(this::toResponse));
 	}
 
 	@GetMapping("/properties/{id}")
@@ -64,22 +61,7 @@ class PropertyController {
 	@PostMapping("/properties")
 	@Transactional
 	ResponseEntity<PropertyResponse> create(@RequestBody PropertyRequest request) {
-		Property property = request.toProperty(null);
-		if (property.kind() == PropertyKind.HOUSE && repository.findHouse().isPresent()) {
-			throw new HouseAlreadyExistsException();
-		}
-		Property saved;
-		try {
-			saved = repository.save(property);
-		}
-		catch (DataAccessException ex) {
-			// Another request created the house in the meantime: the unique index refused this one.
-			// SQLite's constraint errors are not translated to DataIntegrityViolationException.
-			if (property.kind() == PropertyKind.HOUSE && repository.findHouse().isPresent()) {
-				throw new HouseAlreadyExistsException();
-			}
-			throw ex;
-		}
+		Property saved = repository.save(request.toProperty(null));
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").build(saved.id());
 		return ResponseEntity.created(location).body(toResponse(saved));
 	}
