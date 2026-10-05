@@ -125,6 +125,24 @@ class PropertyControllerTests {
 	}
 
 	@Test
+	void theHeritageHasTheHousesAndTheLand() throws Exception {
+		String house = create("{\"kind\":\"HOUSE\",\"name\":\"Casa\"}");
+		String vineyard = create("{\"kind\":\"LAND\",\"name\":\"Vinha\"}");
+
+		String body = mvc.perform(get("/api/heritage"))
+			.andExpect(status().isOk())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		List<String> houses = JsonPath.read(body, "$.houses[*].id");
+		List<String> lands = JsonPath.read(body, "$.lands[*].id");
+		List<String> houseKinds = JsonPath.read(body, "$.houses[*].kind");
+		assertThat(houses).contains(house).doesNotContain(vineyard);
+		assertThat(lands).contains(vineyard).doesNotContain(house);
+		assertThat(houseKinds).containsOnly("HOUSE");
+	}
+
+	@Test
 	void theSingleHouseAddressIsGone() throws Exception {
 		create("{\"kind\":\"HOUSE\",\"name\":\"Casa\"}");
 

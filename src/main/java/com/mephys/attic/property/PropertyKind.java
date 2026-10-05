@@ -1,6 +1,6 @@
 package com.mephys.attic.property;
 
-/** The family house (at most one) or a land parcel */
+/** The subclasses of {@link Property}, as stored and sent: a {@link House} or a {@link Land} */
 enum PropertyKind {
 
 	HOUSE, LAND

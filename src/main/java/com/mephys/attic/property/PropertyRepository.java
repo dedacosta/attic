@@ -233,7 +233,7 @@ class PropertyRepository {
 	private static Property map(ResultSet rs, List<PropertyFact> facts) throws SQLException {
 		long cents = rs.getLong("value_cents");
 		@Nullable BigDecimal value = rs.wasNull() ? null : BigDecimal.valueOf(cents, 2);
-		return new Property(UUID.fromString(rs.getString("id")), PropertyKind.valueOf(rs.getString("kind")),
+		return Property.of(UUID.fromString(rs.getString("id")), PropertyKind.valueOf(rs.getString("kind")),
 				rs.getString("name"), rs.getString("address"), value, rs.getString("comments"), facts);
 	}
 
