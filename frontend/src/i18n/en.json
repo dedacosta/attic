@@ -75,7 +75,6 @@
   "total": "Total",
   "exportContributionsPdf": "Download all years as PDF",
   "heirColumn": "Heir",
-  "contributionsLegend": "— does not pay that year: not born yet, deceased, or a parent still alive.  † deceased.",
   "yearlyAmount": "Yearly amount: {amount}",
   "amountPaid": "Paid",
   "amountMissing": "Missing",

@@ -26,17 +26,15 @@ function drawTitle(doc: jsPDF, title: string, subtitle: string) {
   doc.text(pdfText(subtitle), MARGIN, 25)
 }
 
-/** Copyright, page number and what the app is built with, at the bottom of every page */
+/** Copyright, Attic's version and the page number, at the bottom of every page */
 function drawFooter(doc: jsPDF, pageNumber: number, now: Date, t: Messages) {
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(...MUTED)
-  doc.text(pdfText(`© ${copyrightYears(now)} David Da Costa · v${__APP_VERSION__}`), MARGIN, pageHeight - 10)
-  doc.text(pdfText(t.page(pageNumber, TOTAL_PAGES)), pageWidth - MARGIN, pageHeight - 10, { align: 'right' })
-  doc.setFontSize(7)
-  doc.text(pdfText(__BUILT_WITH__), MARGIN, pageHeight - 6)
+  doc.text(pdfText(`© ${copyrightYears(now)} David Da Costa · Attic v${__APP_VERSION__}`), MARGIN, pageHeight - 8)
+  doc.text(pdfText(t.page(pageNumber, TOTAL_PAGES)), pageWidth - MARGIN, pageHeight - 8, { align: 'right' })
 }
 
 /** e.g. 2026-10-05, for file names */
@@ -179,13 +177,6 @@ export async function exportContributionsPdf(years: ContributionYear[], t: Messa
         }
       },
     })
-
-    // What the dash means, below each table
-    const end = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(...MUTED)
-    doc.text(pdfText(t.contributionsLegend), MARGIN, end + 6)
   }
 
   // The footer once every page exists, so that each knows its number

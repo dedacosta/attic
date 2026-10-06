@@ -75,7 +75,6 @@
   "total": "Total",
   "exportContributionsPdf": "Descarregar todos os anos em PDF",
   "heirColumn": "Herdeiro",
-  "contributionsLegend": "— não paga nesse ano: ainda não nascido, falecido ou com um progenitor ainda vivo.  † falecido.",
   "yearlyAmount": "Montante anual: {amount}",
   "amountPaid": "Pago",
   "amountMissing": "Em falta",
