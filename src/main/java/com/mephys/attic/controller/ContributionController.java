@@ -16,6 +16,11 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +31,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -45,13 +51,35 @@ class ContributionController {
 		this.heirs = heirs;
 	}
 
+	/** The longest range of years that can be asked for at once */
+	private static final int MAX_RANGE = 50;
+
+	/**
+	 * The stored years, the latest first. With {@code from} and {@code to}, every year of that
+	 * range instead, the earliest first: a year with nothing entered yet is answered like a stored
+	 * one, with who pays and no amounts.
+	 */
 	@GetMapping("/contributions")
-	List<ContributionYearResponse> list() {
+	List<ContributionYearResponse> list(@RequestParam(required = false) @Nullable Integer from,
+			@RequestParam(required = false) @Nullable Integer to) {
 		List<Heir> all = heirs.findAll();
 		Map<Integer, Map<UUID, BigDecimal>> amounts = contributions.findAmounts();
-		return contributions.findYears()
-			.stream()
-			.map((year) -> response(year, all, amounts.getOrDefault(year.year(), Map.of())))
+		List<ContributionRepository.StoredYear> stored = contributions.findYears();
+		if (from == null && to == null) {
+			return stored.stream()
+				.map((year) -> response(year, all, amounts.getOrDefault(year.year(), Map.of())))
+				.toList();
+		}
+		if (from == null || to == null || from > to || to - from >= MAX_RANGE) {
+			throw new IllegalArgumentException("from and to must be a range of at most " + MAX_RANGE + " years");
+		}
+		validYear(from);
+		validYear(to);
+		Map<Integer, ContributionRepository.StoredYear> byYear = stored.stream()
+			.collect(Collectors.toMap(ContributionRepository.StoredYear::year, Function.identity()));
+		return IntStream.rangeClosed(from, to)
+			.mapToObj((year) -> response(byYear.getOrDefault(year, new ContributionRepository.StoredYear(year, null)),
+					all, amounts.getOrDefault(year, Map.of())))
 			.toList();
 	}
 
@@ -59,9 +87,10 @@ class ContributionController {
 	@Transactional
 	ResponseEntity<ContributionYearResponse> createYear(@RequestBody NewContributionYear request) {
 		Integer year = request.year();
-		if (year == null || year < 1900 || year > 2999) {
+		if (year == null) {
 			throw new IllegalArgumentException("year must be between 1900 and 2999");
 		}
+		validYear(year);
 		if (!contributions.createYear(year)) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).build();
 		}
@@ -74,12 +103,16 @@ class ContributionController {
 		return contributions.deleteYear(year) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
 	}
 
-	/** Enter, change or, with a {@code null} amount, remove what the heir contributed in the year */
+	/**
+	 * Enter, change or, with a {@code null} amount, remove what the heir contributed in the year.
+	 * The first amount of a year stores the year.
+	 */
 	@PutMapping("/contributions/{year}/{heirId}")
 	@Transactional
 	ResponseEntity<ContributionYearResponse> setAmount(@PathVariable int year, @PathVariable UUID heirId,
 			@RequestBody ContributionAmount request) {
-		if (!contributions.yearExists(year) || heirs.findById(heirId).isEmpty()) {
+		validYear(year);
+		if (heirs.findById(heirId).isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
 		if (request.amountEur() == null) {
@@ -90,24 +123,38 @@ class ContributionController {
 			if (amount.signum() < 0) {
 				throw new IllegalArgumentException("amountEur must not be negative");
 			}
+			if (!contributions.yearExists(year)) {
+				contributions.createYear(year);
+			}
 			contributions.saveAmount(year, heirId, amount);
 		}
 		return ResponseEntity.ok(response(year));
 	}
 
-	/** Change the comment on the year; a blank one is removed */
+	/** Change the comment on the year; a blank one is removed. A comment stores its year. */
 	@PutMapping("/contributions/{year}/comment")
+	@Transactional
 	ResponseEntity<ContributionYearResponse> setComment(@PathVariable int year,
 			@RequestBody CommentRequest request) {
-		if (!contributions.yearExists(year)) {
-			return ResponseEntity.notFound().build();
+		validYear(year);
+		String comment = request.cleaned();
+		if (comment != null && !contributions.yearExists(year)) {
+			contributions.createYear(year);
 		}
-		contributions.updateComment(year, request.cleaned());
+		contributions.updateComment(year, comment);
 		return ResponseEntity.ok(response(year));
 	}
 
+	private static void validYear(int year) {
+		if (year < 1900 || year > 2999) {
+			throw new IllegalArgumentException("year must be between 1900 and 2999");
+		}
+	}
+
+	/** The year as it is stored, or as it would be when nothing is entered for it yet */
 	private ContributionYearResponse response(int year) {
-		return response(contributions.findYear(year).orElseThrow(), heirs.findAll(),
+		return response(contributions.findYear(year).orElseGet(() -> new ContributionRepository.StoredYear(year, null)),
+				heirs.findAll(),
 				contributions.findAmounts().getOrDefault(year, Map.of()));
 	}
 
