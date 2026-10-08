@@ -33,6 +33,12 @@ function yearlyAmount(year: ContributionYear): number | null {
   return sorted[0][0]
 }
 
+/** First and last name, e.g. "Maria Costa" for "Maria da Conceição Silva Costa" */
+function shortName(name: string): string {
+  const words = name.trim().split(/\s+/)
+  return words.length > 2 ? `${words[0]} ${words[words.length - 1]}` : name
+}
+
 /** Somebody has a cell in a year when they pay then, or an amount was entered all the same */
 const hasCell = (line: Line | undefined): line is Line => line !== undefined && (line.pays || line.amountEur !== null)
 
@@ -167,7 +173,10 @@ export default function ContributionsView() {
                 const total = lines.reduce((sum, line) => sum + (line?.amountEur ?? 0), 0)
                 return (
                   <tr key={heir.heirId}>
-                    <th scope="row">{heir.deceased ? `${heir.heir} †` : heir.heir}</th>
+                    {/* The grid has room for a short name; the whole one shows when pointing at it */}
+                    <th scope="row" title={heir.heir}>
+                      {shortName(heir.heir)}{heir.deceased && ' †'}
+                    </th>
                     {lines.map((line, column) => {
                       const year = years[column].year
                       if (!hasCell(line)) {
