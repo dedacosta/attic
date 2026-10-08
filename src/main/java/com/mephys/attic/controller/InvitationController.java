@@ -7,6 +7,7 @@ import com.mephys.attic.model.Contact;
 import com.mephys.attic.model.Role;
 import com.mephys.attic.repository.InvitationRepository;
 import com.mephys.attic.repository.UserRepository;
+import com.mephys.attic.service.SignInLog;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -55,10 +56,14 @@ class InvitationController {
 
 	private final PasswordEncoder passwordEncoder;
 
-	InvitationController(InvitationRepository invitations, UserRepository users, PasswordEncoder passwordEncoder) {
+	private final SignInLog signIns;
+
+	InvitationController(InvitationRepository invitations, UserRepository users, PasswordEncoder passwordEncoder,
+			SignInLog signIns) {
 		this.invitations = invitations;
 		this.users = users;
 		this.passwordEncoder = passwordEncoder;
+		this.signIns = signIns;
 	}
 
 	@GetMapping("/invitations")
@@ -109,6 +114,7 @@ class InvitationController {
 		InvitationRepository.StoredInvitation invitation = (registration.token() != null)
 				? invitations.findPendingByTokenHash(hash(registration.token()), Instant.now()).orElse(null) : null;
 		if (invitation == null) {
+			signIns.record(SignInLog.Event.REGISTRATION_REFUSED, registration.username());
 			throw new IllegalArgumentException("invitation is not valid");
 		}
 		String username = AccountController.validUsername(registration.username());
@@ -130,6 +136,7 @@ class InvitationController {
 			users.updateHeir(username, invitation.heirId());
 		}
 		invitations.delete(invitation.id());
+		signIns.record(SignInLog.Event.REGISTERED, username);
 		return ResponseEntity.noContent().build();
 	}
 
