@@ -128,7 +128,6 @@ class ContributionControllerTests {
 
 		comment(2026, "{\"comment\":\"  \"}").andExpect(jsonPath("$.comment").doesNotExist());
 		comment(2026, "{\"comment\":\"" + "x".repeat(1001) + "\"}").andExpect(status().isBadRequest());
-		comment(2025, "{\"comment\":\"x\"}").andExpect(status().isNotFound());
 	}
 
 	@Test
@@ -137,13 +136,61 @@ class ContributionControllerTests {
 		createYear(2026).andExpect(status().isCreated());
 		createYear(2026).andExpect(status().isConflict());
 		createYear(1800).andExpect(status().isBadRequest());
-		amount(2025, maria, "{\"amountEur\":1}").andExpect(status().isNotFound());
 		amount(2026, "00000000-0000-4000-8000-000000000000", "{\"amountEur\":1}").andExpect(status().isNotFound());
 
 		amount(2026, maria, "{\"amountEur\":1}").andExpect(status().isOk());
 		mvc.perform(delete("/api/contributions/2026")).andExpect(status().isNoContent());
 		mvc.perform(delete("/api/contributions/2026")).andExpect(status().isNotFound());
 		mvc.perform(get("/api/contributions")).andExpect(jsonPath("$.length()").value(0));
+	}
+
+	@Test
+	void aRangeHasEveryYearWhetherStoredOrNot() throws Exception {
+		String maria = createHeir("{\"name\":\"Maria\",\"birthDate\":\"2000-05-01\"}");
+		createYear(2025);
+		amount(2025, maria, "{\"amountEur\":200}");
+
+		mvc.perform(get("/api/contributions").param("from", "2024").param("to", "2026"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[*].year").value(contains(2024, 2025, 2026)))
+			.andExpect(jsonPath("$[0].totalEur").value(0))
+			.andExpect(jsonPath("$[0].lines[?(@.heir == 'Maria')].pays").value(contains(true)))
+			.andExpect(jsonPath("$[0].lines[?(@.heir == 'Maria')].amountEur").value(contains((Object) null)))
+			.andExpect(jsonPath("$[1].lines[?(@.heir == 'Maria')].amountEur").value(contains(200.0)));
+		// Asking does not store the years
+		mvc.perform(get("/api/contributions")).andExpect(jsonPath("$.length()").value(1));
+
+		// Before she was born she does not pay
+		mvc.perform(get("/api/contributions").param("from", "1999").param("to", "1999"))
+			.andExpect(jsonPath("$[0].lines[?(@.heir == 'Maria')].pays").value(contains(false)));
+	}
+
+	@Test
+	void aRangeMustBeSensible() throws Exception {
+		mvc.perform(get("/api/contributions").param("from", "2026").param("to", "2025")).andExpect(status().isBadRequest());
+		mvc.perform(get("/api/contributions").param("from", "1800").param("to", "1805")).andExpect(status().isBadRequest());
+		mvc.perform(get("/api/contributions").param("from", "1900").param("to", "2999")).andExpect(status().isBadRequest());
+		mvc.perform(get("/api/contributions").param("from", "2026")).andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void anAmountOrACommentStoresItsYear() throws Exception {
+		String maria = createHeir("{\"name\":\"Maria\"}");
+
+		amount(2024, maria, "{\"amountEur\":120}")
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.year").value(2024))
+			.andExpect(jsonPath("$.totalEur").value(120));
+		comment(2023, "{\"comment\":\"Nobody paid\"}").andExpect(status().isOk()).andExpect(jsonPath("$.comment").value("Nobody paid"));
+		mvc.perform(get("/api/contributions")).andExpect(jsonPath("$[*].year").value(contains(2024, 2023)));
+
+		// Nothing to store: the year is answered but not kept
+		amount(2022, maria, "{\"amountEur\":null}").andExpect(status().isOk()).andExpect(jsonPath("$.year").value(2022));
+		comment(2021, "{\"comment\":\" \"}").andExpect(status().isOk());
+		mvc.perform(get("/api/contributions")).andExpect(jsonPath("$.length()").value(2));
+
+		amount(1800, maria, "{\"amountEur\":1}").andExpect(status().isBadRequest());
+		comment(3000, "{\"comment\":\"x\"}").andExpect(status().isBadRequest());
 	}
 
 	private ResultActions createYear(int year) throws Exception {
