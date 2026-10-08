@@ -7,6 +7,7 @@ import com.mephys.attic.dto.SessionResponse;
 import com.mephys.attic.model.Contact;
 import com.mephys.attic.model.Role;
 import com.mephys.attic.repository.UserRepository;
+import com.mephys.attic.service.SignInLog;
 
 import java.security.Principal;
 
@@ -32,9 +33,12 @@ class AccountController {
 
 	private final PasswordEncoder passwordEncoder;
 
-	AccountController(UserRepository users, PasswordEncoder passwordEncoder) {
+	private final SignInLog signIns;
+
+	AccountController(UserRepository users, PasswordEncoder passwordEncoder, SignInLog signIns) {
 		this.users = users;
 		this.passwordEncoder = passwordEncoder;
+		this.signIns = signIns;
 	}
 
 	/**
@@ -60,6 +64,7 @@ class AccountController {
 		}
 		String username = validUsername(credentials.username());
 		users.create(username, passwordEncoder.encode(validPassword(credentials.password())), Role.SUPER_ADMIN);
+		signIns.record(SignInLog.Event.ACCOUNT_CREATED, username);
 		return ResponseEntity.noContent().build();
 	}
 

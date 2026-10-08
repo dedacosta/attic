@@ -66,10 +66,42 @@ systemctl --user start attic-backup        # back up now
 systemctl --user list-timers attic-backup  # when is the next backup?
 ```
 
+## Who signed in
+
+Attic keeps a log of everybody who gets in and everybody who tries, in the `logs` folder of the
+data directory (`<project>/data/logs` by default). It is for the super-administrator: there is
+no screen for it, and the files are readable only by you.
+
+- `sign-ins-2026-10.log` is the current month, a line per event, the newest last.
+- A month that is over is compressed: `sign-ins-2026-09.log.gz`.
+
+```bash
+tail -f data/logs/sign-ins-$(date +%Y-%m).log    # watch as it happens
+zcat data/logs/sign-ins-2026-09.log.gz           # a past month
+zgrep -h WRONG_PASSWORD data/logs/*.gz           # every wrong password of the past months
+```
+
+Each line has five columns separated by tabs: when, what, the username, the address it came from
+(through Tailscale, the device's Tailscale address) and the browser.
+
+| What | Meaning |
+|---|---|
+| `SIGNED_IN` | Signed in with username and password |
+| `SIGNED_IN_AUTOMATICALLY` | Signed in again by "stay signed in", without typing anything |
+| `WRONG_PASSWORD` | An existing username with a wrong password |
+| `UNKNOWN_USER` | A username that no account has, written as it was typed |
+| `SIGN_IN_REFUSED` | Refused for another reason |
+| `SIGNED_OUT` | Signed out |
+| `ACCOUNT_CREATED` | The first account was set up |
+| `REGISTERED` | An account was created with an invitation |
+| `REGISTRATION_REFUSED` | Somebody tried to register without a valid invitation |
+
+Passwords are never written. Nothing is deleted: a year of sign-ins is a few kilobytes.
+
 ## Backups and restoring
 
-Every day `backup.py` writes `attic-<date>.tar.gz` with a consistent copy of the database and all
-pictures, readable only by you. Copy them to another disk or cloud storage now and then: a backup
+Every day `backup.py` writes `attic-<date>.tar.gz` with a consistent copy of the database, all
+pictures and the sign-in log, readable only by you. Copy them to another disk or cloud storage now and then: a backup
 on the same disk does not survive a broken disk.
 
 To restore one:
