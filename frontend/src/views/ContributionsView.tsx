@@ -33,10 +33,30 @@ function yearlyAmount(year: ContributionYear): number | null {
   return sorted[0][0]
 }
 
-/** First and last name, e.g. "Maria Costa" for "Maria da Conceição Silva Costa" */
+/** Words that join names without being one: "Maria da Conceição", "João dos Santos" */
+const CONNECTORS = new Set(['de', 'da', 'do', 'dos', 'das'])
+
+/**
+ * First, second and last name, each with the connector before it:
+ * "Maria da Conceição Silva Costa" is "Maria da Conceição Costa", and
+ * "Ana Maria Ferreira dos Santos" is "Ana Maria dos Santos".
+ */
 function shortName(name: string): string {
-  const words = name.trim().split(/\s+/)
-  return words.length > 2 ? `${words[0]} ${words[words.length - 1]}` : name
+  const names: string[] = []
+  let connectors: string[] = []
+  for (const word of name.trim().split(/\s+/)) {
+    if (CONNECTORS.has(word.toLowerCase())) {
+      connectors.push(word)
+    } else {
+      names.push([...connectors, word].join(' '))
+      connectors = []
+    }
+  }
+  // A name that ends in a connector keeps it
+  if (connectors.length > 0) {
+    names.push(connectors.join(' '))
+  }
+  return names.length > 3 ? [names[0], names[1], names[names.length - 1]].join(' ') : names.join(' ')
 }
 
 /** Somebody has a cell in a year when they pay then, or an amount was entered all the same */

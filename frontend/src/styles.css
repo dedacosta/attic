@@ -1600,7 +1600,7 @@ fieldset.fields:disabled .checkbox {
   position: sticky;
   left: 0;
   z-index: 1;
-  width: 170px;
+  width: 200px;
   padding-left: 12px;
   overflow: hidden;
   background: var(--surface);
