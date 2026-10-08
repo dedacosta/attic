@@ -33,8 +33,8 @@ function yearlyAmount(year: ContributionYear): number | null {
   return sorted[0][0]
 }
 
-/** Words that join names without being one: "Maria da Conceição", "João dos Santos" */
-const CONNECTORS = new Set(['de', 'da', 'do', 'dos', 'das'])
+/** Words that join names without being one: "Maria da Conceição", "João dos Santos", "Costa e Silva" */
+const CONNECTORS = new Set(['de', 'da', 'do', 'dos', 'das', 'e'])
 
 /**
  * First, second and last name, each with the connector before it:
