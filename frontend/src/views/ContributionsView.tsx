@@ -220,19 +220,19 @@ export default function ContributionsView() {
             </tbody>
             <tfoot>
               <tr>
+                <th scope="row">{t.amountPaid}</th>
+                {years.map((year) => <td key={year.year}>{formatEuros(year.totalEur, t.locale)}</td>)}
+                <td className="contribution-total">
+                  {formatEuros(years.reduce((sum, year) => sum + year.totalEur, 0), t.locale)}
+                </td>
+              </tr>
+              <tr>
                 <th scope="row">{t.yearlyAmountLabel}</th>
                 {years.map((year) => {
                   const common = yearlyAmount(year)
                   return <td key={year.year}>{common !== null ? formatEuros(common, t.locale) : '—'}</td>
                 })}
                 <td />
-              </tr>
-              <tr>
-                <th scope="row">{t.amountPaid}</th>
-                {years.map((year) => <td key={year.year}>{formatEuros(year.totalEur, t.locale)}</td>)}
-                <td className="contribution-total">
-                  {formatEuros(years.reduce((sum, year) => sum + year.totalEur, 0), t.locale)}
-                </td>
               </tr>
               <tr>
                 <th scope="row">{t.comments}</th>
