@@ -33,18 +33,12 @@ function yearlyAmount(year: ContributionYear): number | null {
   return sorted[0][0]
 }
 
-/** What those who pay still owe: their part of the yearly amount, less what they gave */
-function missingAmount(year: ContributionYear, common: number | null): number | null {
-  return common === null ? null : year.lines.reduce((sum, line) =>
-    sum + (line.portion !== null ? Math.max(0, common * line.portion - (line.amountEur ?? 0)) : 0), 0)
-}
-
 /** Somebody has a cell in a year when they pay then, or an amount was entered all the same */
 const hasCell = (line: Line | undefined): line is Line => line !== undefined && (line.pays || line.amountEur !== null)
 
 /**
  * The Contributions tab: a grid with a line per heir and a column per year, ten years at a time,
- * the current year on the right at first. Everybody sees it; administrators enter the amounts,
+ * the current year on the right at first; the arrows go back and ahead. Everybody sees it; administrators enter the amounts,
  * and the first amount of a year adds that year.
  */
 export default function ContributionsView() {
@@ -84,7 +78,7 @@ export default function ContributionsView() {
 
   function move(by: number) {
     setError(null)
-    setEnd((current) => Math.min(currentYear, Math.max(1900 + SPAN - 1, current + by)))
+    setEnd((current) => Math.min(2999, Math.max(1900 + SPAN - 1, current + by)))
   }
 
   async function downloadPdf() {
@@ -131,7 +125,7 @@ export default function ContributionsView() {
             <ChevronLeftIcon />
           </button>
           <span className="contribution-range" aria-live="polite">{start}–{end}</span>
-          <button type="button" className="icon-button" onClick={() => move(SPAN)} disabled={end >= currentYear}
+          <button type="button" className="icon-button" onClick={() => move(SPAN)} disabled={end >= 2999}
             aria-label={t.laterYears} title={t.laterYears}>
             <ChevronRightIcon />
           </button>
@@ -210,19 +204,6 @@ export default function ContributionsView() {
                 <td className="contribution-total">
                   {formatEuros(years.reduce((sum, year) => sum + year.totalEur, 0), t.locale)}
                 </td>
-              </tr>
-              <tr>
-                <th scope="row">{t.amountMissing}</th>
-                {years.map((year) => {
-                  const missing = missingAmount(year, yearlyAmount(year))
-                  return (
-                    <td key={year.year} className={missing ? 'contribution-missing' : undefined}>
-                      {missing === null ? '—' : missing > 0 ? <strong>{formatEuros(missing, t.locale)}</strong>
-                        : formatEuros(missing, t.locale)}
-                    </td>
-                  )
-                })}
-                <td />
               </tr>
               <tr>
                 <th scope="row">{t.comments}</th>
