@@ -127,8 +127,11 @@ export const api = {
     request<HeirDocument>(`/api/documents/${id}`, json('PUT', input)),
   deleteDocument: (id: string) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
 
+  /** The years with something entered, the latest first */
   listContributions: () => request<ContributionYear[]>('/api/contributions'),
-  createContributionYear: (year: number) => request<ContributionYear>('/api/contributions', json('POST', { year })),
+  /** Every year from `from` to `to`, the earliest first, whether something is entered or not */
+  listContributionRange: (from: number, to: number) =>
+    request<ContributionYear[]>(`/api/contributions?from=${from}&to=${to}`),
   deleteContributionYear: (year: number) => request<void>(`/api/contributions/${year}`, { method: 'DELETE' }),
   /** Change the comment on a year; an empty one is removed */
   setContributionComment: (year: number, comment: string) =>

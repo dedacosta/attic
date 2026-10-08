@@ -1343,23 +1343,8 @@ fieldset.fields:disabled .checkbox {
 
 /* Contributions tab */
 
-.contribution-add-year {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-}
-
 .contribution-pdf {
   margin-left: auto;
-  align-self: flex-end;
-}
-
-.contribution-year-field input {
-  width: 110px;
-}
-
-.contribution-add {
   align-self: flex-end;
 }
 
@@ -1559,6 +1544,138 @@ fieldset.fields:disabled .checkbox {
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
+}
+
+/* The contributions grid: a line per heir, a column per year */
+
+.contribution-toolbar {
+  align-items: center;
+}
+
+.contribution-pager {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.contribution-range {
+  min-width: 96px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The years scroll sideways on a narrow screen; the names stay */
+.contribution-scroll {
+  overflow-x: auto;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Ten equal year columns between the names and the totals; narrower than this, it scrolls */
+.contribution-table {
+  width: 100%;
+  min-width: 1060px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.contribution-table th,
+.contribution-table td {
+  padding: 6px 5px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.contribution-table thead th {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.contribution-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 170px;
+  padding-left: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.contribution-table tbody th {
+  font-weight: 500;
+}
+
+.contribution-table tfoot th,
+.contribution-table tfoot td {
+  background: var(--surface-muted);
+  font-size: 0.85rem;
+}
+
+.contribution-table tfoot th:first-child {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.contribution-table tfoot tr:last-child th,
+.contribution-table tfoot tr:last-child td {
+  border-bottom: 0;
+}
+
+.contribution-now {
+  color: var(--accent);
+}
+
+.contribution-none {
+  color: var(--text-muted);
+}
+
+.contribution-table th:last-child,
+.contribution-table td:last-child {
+  width: 104px;
+  padding-right: 12px;
+}
+
+.contribution-total {
+  font-weight: 600;
+}
+
+.contribution-cell {
+  width: 100%;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: right;
+}
+
+.contribution-cell:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 25%, transparent);
+}
+
+.contribution-table .icon-button {
+  color: var(--text-muted);
+}
+
+.contribution-table .contribution-has-comment {
+  color: var(--accent);
+}
+
+/* In the dialog of a year, away from Cancel and Save */
+.contribution-delete-year {
+  margin-right: auto;
 }
 
 /* Users tab */
