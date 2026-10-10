@@ -1,8 +1,9 @@
 import { jsPDF } from 'jspdf'
 import { autoTable } from 'jspdf-autotable'
+import { age, localDate } from './age'
 import { copyrightYears, formatDate, formatEuros, locationLabel, shortId } from './format'
 import type { Messages } from '../i18n'
-import type { ContributionYear, CatalogItem } from '../api/types'
+import type { ContributionYear, CatalogItem, Heir } from '../api/types'
 
 const ACCENT: [number, number, number] = [181, 101, 29]
 const MUTED: [number, number, number] = [115, 106, 96]
@@ -19,7 +20,7 @@ function drawTitle(doc: jsPDF, title: string, subtitle: string) {
   doc.setTextColor(...TEXT)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(18)
-  doc.text(pdfText(`Attic — ${title}`), MARGIN, 18)
+  doc.text(pdfText(title), MARGIN, 18)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
   doc.setTextColor(...MUTED)
@@ -96,6 +97,68 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
   })
   doc.putTotalPages(TOTAL_PAGES)
   doc.save(`${fileName}-${isoDay(now)}.pdf`)
+}
+
+/** How far a child's name is set in from their parent's, in mm */
+const CHILD_INDENT = 4
+
+/**
+ * Download the given heirs as a PDF table, one line per heir, in the order given. `depth` is how
+ * many ancestors are listed above the heir, whose name is set in by as much. `everybody` is for
+ * the names of the parents. Sex, filiation, comments and documents are left out.
+ */
+export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], everybody: Heir[], filters: string[],
+  t: Messages) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const now = new Date()
+  // The heirs are counted without the deceased, who are still listed
+  const living = everybody.filter((heir) => !heir.deceased).length
+  const count = rows.length === everybody.length ? t.heirCount(living)
+    : t.filteredHeirCount(rows.filter(({ heir }) => !heir.deceased).length, living)
+  drawTitle(doc, t.tabHeirs, [generatedOn(now, t), count, ...filters].join('  ·  '))
+  const names = new Map(everybody.map((heir) => [heir.id, heir.name]))
+
+  autoTable(doc, {
+    startY: 31,
+    margin: { left: MARGIN, right: MARGIN, bottom: 18 },
+    head: [[t.name, t.birthDate, t.deathDate, t.ageColumn, t.heritageShare, t.parentHeir, t.address]],
+    body: rows.map(({ heir }) =>
+      [
+        heir.deceased ? `${heir.name} †` : heir.name,
+        heir.birthDate ? formatDate(heir.birthDate, t.locale) : '',
+        heir.deceased ? (heir.deathDate ? formatDate(heir.deathDate, t.locale) : t.deceased) : '',
+        // Of the deceased, the age at death; unknown without its date
+        heir.birthDate && (!heir.deceased || heir.deathDate)
+          ? String(age(heir.birthDate, heir.deathDate ? localDate(heir.deathDate) : now)) : '',
+        heir.calculatedShare ?? '—',
+        (heir.parentId && names.get(heir.parentId)) || '',
+        heir.address ?? '',
+      ].map(pdfText),
+    ),
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: [42, 38, 34] },
+    headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: STRIPE },
+    columnStyles: {
+      0: { cellWidth: 62 },
+      1: { cellWidth: 30 },
+      2: { cellWidth: 30 },
+      3: { halign: 'right', cellWidth: 14 },
+      4: { halign: 'right', cellWidth: 28 },
+      5: { cellWidth: 45 },
+      6: { cellWidth: 'auto' },
+    },
+    didParseCell: (data) => {
+      if (data.section === 'head') {
+        data.cell.styles.halign = data.column.index === 3 || data.column.index === 4 ? 'right' : 'left'
+      } else if (data.column.index === 0) {
+        const depth = rows[data.row.index].depth
+        data.cell.styles.cellPadding = { top: 2, right: 2, bottom: 2, left: 2 + depth * CHILD_INDENT }
+      }
+    },
+    didDrawPage: (data) => drawFooter(doc, data.pageNumber, now, t),
+  })
+  doc.putTotalPages(TOTAL_PAGES)
+  doc.save(`attic-heirs-${isoDay(now)}.pdf`)
 }
 
 /** Years of the annual contribution on one page */

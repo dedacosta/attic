@@ -132,6 +132,7 @@
     "one": "{count} ano",
     "other": "{count} anos"
   },
+  "ageColumn": "Idade",
   "address": "Morada",
   "filiation": "Filiação",
   "filiationHint": "pais, um por linha",
