@@ -132,6 +132,7 @@
     "one": "{count} year",
     "other": "{count} years"
   },
+  "ageColumn": "Age",
   "address": "Address",
   "filiation": "Filiation",
   "filiationHint": "parents, one per line",

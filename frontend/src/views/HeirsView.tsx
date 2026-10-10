@@ -1,12 +1,12 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, apiErrorMessage } from '../api/api'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DocumentDialog from '../components/DocumentDialog'
-import HeirCard from '../components/HeirCard'
 import HeirDetails from '../components/HeirDetails'
 import HeirDialog from '../components/HeirDialog'
+import HeirRow from '../components/HeirRow'
 import SearchBar from '../components/SearchBar'
-import { PlusIcon } from '../components/icons'
+import { FileIcon, PlusIcon } from '../components/icons'
 import { saveWithPhotos } from '../lib/photos'
 import { documentName, formatDate, normalize } from '../lib/format'
 import { add, compare, formatFraction, formatPercent, ONE, parseFraction, subtract, ZERO } from '../lib/fraction'
@@ -27,6 +27,16 @@ function matches(heir: Heir, words: string[], t: Messages): boolean {
   )
   return words.every((word) => text.includes(word))
 }
+
+function byBirthDate(a: Heir, b: Heir): number {
+  if (a.birthDate === null || b.birthDate === null) {
+    return a.birthDate === b.birthDate ? 0 : a.birthDate === null ? 1 : -1
+  }
+  return a.birthDate.localeCompare(b.birthDate)
+}
+
+/** The heirs are counted without the deceased, who are still listed */
+const living = (heirs: Heir[]) => heirs.filter((heir) => !heir.deceased).length
 
 function HeritageSummary({ heirs }: { heirs: Heir[] }) {
   const { t } = useI18n()
@@ -96,7 +106,8 @@ export default function HeirsView() {
 
   const visible = useMemo(() => {
     const words = normalize(query).split(/\s+/).filter(Boolean)
-    return (heirs ?? []).filter((heir) => matches(heir, words, t))
+    // Oldest first, among the roots and among each parent's children; those without a birth date come last
+    return (heirs ?? []).filter((heir) => matches(heir, words, t)).sort(byBirthDate)
   }, [heirs, query, t])
 
   // Children are grouped under their parent; those whose parent is not shown (not visible to this
@@ -108,17 +119,30 @@ export default function HeirsView() {
   function family(heir: Heir): ReactNode {
     const children = childrenOf(heir.id)
     return (
-      <Fragment key={heir.id}>
-        <HeirCard heir={heir} documents={documentsOf(heir.id)} childCount={children.length}
+      <li key={heir.id}>
+        <HeirRow heir={heir} documents={documentsOf(heir.id)} childCount={children.length}
           onOpen={() => setViewingId(heir.id)} />
         {children.length > 0 && (
-          <section className="heir-children" aria-label={t.childrenOf(heir.name)}>
-            <h3>{t.childrenOf(heir.name)}</h3>
-            <div className="grid">{children.map(family)}</div>
-          </section>
+          <ul className="heir-list heir-children" aria-label={t.childrenOf(heir.name)}>
+            {children.map(family)}
+          </ul>
         )}
-      </Fragment>
+      </li>
     )
+  }
+
+  async function downloadPdf() {
+    // The same order as on the screen: each heir followed by their children, set in
+    const rows: { heir: Heir; depth: number }[] = []
+    const list = (heir: Heir, depth: number) => {
+      rows.push({ heir, depth })
+      childrenOf(heir.id).forEach((child) => list(child, depth + 1))
+    }
+    roots.forEach((heir) => list(heir, 0))
+    const filters = query.trim() ? [t.searchFilter(query.trim())] : []
+    // Loaded on demand: the PDF library is large
+    const { exportHeirsPdf } = await import('../lib/pdf')
+    await exportHeirsPdf(rows, heirs ?? [], filters, t)
   }
 
   const editingHeir = editing !== null && editing !== 'new' ? editing : null
@@ -187,9 +211,13 @@ export default function HeirsView() {
           {heirs && canEdit && <HeritageSummary heirs={heirs} />}
           {heirs && (
             <span className="count">
-              {query ? t.filteredHeirCount(visible.length, heirs.length) : t.heirCount(heirs.length)}
+              {query ? t.filteredHeirCount(living(visible), living(heirs)) : t.heirCount(living(heirs))}
             </span>
           )}
+          <button type="button" className="button" onClick={downloadPdf} disabled={visible.length === 0}
+            aria-label={t.exportPdfLabel} title={t.exportPdfLabel}>
+            <FileIcon width={18} height={18} /> PDF
+          </button>
         </div>
 
         {loadError !== null && (
@@ -214,9 +242,7 @@ export default function HeirsView() {
           <p className="empty">{t.noHeirMatches}</p>
         )}
 
-        <div className="grid">
-          {roots.map(family)}
-        </div>
+        {roots.length > 0 && <ul className="heir-list">{roots.map(family)}</ul>}
       </main>
 
       {viewing && (
