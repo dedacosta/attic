@@ -237,6 +237,7 @@
   "errorLastAdmin": "There must always be at least one super-administrator.",
   "errorNotAllowed": "Only a super-administrator may do that.",
   "noHeir": "No heir",
+  "otherDocuments": "Others",
   "accountHeir": "Heir",
   "errorHeirLinked": "That heir already belongs to another account.",
   "email": "Email",

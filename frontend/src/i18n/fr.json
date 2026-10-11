@@ -244,6 +244,7 @@
   "errorLastAdmin": "Il doit toujours y avoir au moins un super-administrateur.",
   "errorNotAllowed": "Seul un super-administrateur peut faire cela.",
   "noHeir": "Aucun héritier",
+  "otherDocuments": "Autres",
   "accountHeir": "Héritier",
   "errorHeirLinked": "Cet héritier appartient déjà à un autre compte.",
   "email": "E-mail",
