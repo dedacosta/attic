@@ -243,6 +243,7 @@
   "errorLastAdmin": "Tem de existir sempre pelo menos um super-administrador.",
   "errorNotAllowed": "Só um super-administrador pode fazer isso.",
   "noHeir": "Nenhum herdeiro",
+  "otherDocuments": "Outros",
   "accountHeir": "Herdeiro",
   "errorHeirLinked": "Esse herdeiro já pertence a outra conta.",
   "email": "Email",

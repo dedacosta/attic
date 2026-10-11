@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, apiErrorMessage } from '../api/api'
 import ConfirmDialog from '../components/ConfirmDialog'
-import DocumentCard from '../components/DocumentCard'
 import DocumentDialog from '../components/DocumentDialog'
+import DocumentRow from '../components/DocumentRow'
 import SearchBar from '../components/SearchBar'
 import { PlusIcon } from '../components/icons'
 import { saveWithPhotos } from '../lib/photos'
@@ -20,7 +20,8 @@ const NO_HEIR = 'none'
 function matches(document: HeirDocument, words: string[], t: Messages): boolean {
   const text = normalize(
     [
-      document.heir ?? t.noHeir,
+      // Those without heir are listed under "Others"
+      document.heir ?? `${t.otherDocuments} ${t.noHeir}`,
       documentTypeLabel(document.type, t),
       document.comments ?? '',
       document.id,
@@ -111,7 +112,7 @@ export default function DocumentsView() {
       return
     }
     await api.deleteDocument(deleting.id)
-    // Refresh before closing so the deleted card is gone when the dialog disappears
+    // Refresh before closing so the deleted document is gone when the dialog disappears
     await reload()
     setDeleting(null)
     setEditing(null)
@@ -138,7 +139,7 @@ export default function DocumentsView() {
           <select value={heirFilter} onChange={(e) => setHeirFilter(e.target.value)} aria-label={t.filterByHeir}>
             <option value="">{t.allHeirs}</option>
             {byName(heirs, t.locale).map((heir) => <option key={heir.id} value={heir.id}>{heir.name}</option>)}
-            {(hasDocumentsWithoutHeir || heirFilter === NO_HEIR) && <option value={NO_HEIR}>{t.noHeir}</option>}
+            {(hasDocumentsWithoutHeir || heirFilter === NO_HEIR) && <option value={NO_HEIR}>{t.otherDocuments}</option>}
           </select>
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} aria-label={t.filterByType}>
             <option value="">{t.allTypes}</option>
@@ -182,16 +183,17 @@ export default function DocumentsView() {
         )}
 
         {groups.map((heirDocuments) => (
-          <section key={heirDocuments[0].heirId ?? NO_HEIR} className="group" aria-label={heirDocuments[0].heir ?? t.noHeir}>
+          <section key={heirDocuments[0].heirId ?? NO_HEIR} className="group"
+            aria-label={heirDocuments[0].heir ?? t.otherDocuments}>
             <h2 className="group-title">
-              {heirDocuments[0].heir ?? t.noHeir} <span className="group-count">{heirDocuments.length}</span>
+              {heirDocuments[0].heir ?? t.otherDocuments} <span className="group-count">{heirDocuments.length}</span>
             </h2>
-            <div className="grid">
+            <ul className="document-list">
               {heirDocuments.map((document) => (
-                <DocumentCard key={document.id} document={document} onEdit={() => setEditing(document)}
+                <DocumentRow key={document.id} document={document} onEdit={() => setEditing(document)}
                   onDelete={() => setDeleting(document)} />
               ))}
-            </div>
+            </ul>
           </section>
         ))}
       </main>
