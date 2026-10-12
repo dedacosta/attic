@@ -55,22 +55,32 @@ export interface CatalogItem {
 
 export type CatalogItemInput = Omit<CatalogItem, 'id' | 'pictures'>
 
-/** An item of the inventory; it has the structure of a catalog item but is its own list */
+/** A line of the inventory, in a room or in a list of the house (other items, missing items) */
 export interface InventoryItem {
-  id: string
-  name: string
+  description: string
   quantity: number
-  date: string | null
-  location: string | null
-  existent: boolean
+  /** What the line is worth, all of its quantity together */
   valueEur: number
-  owner: string
+}
+
+/** A room of a house in the inventory, the formal list of what matters there, with its items in order */
+export interface InventoryRoom {
+  id: string
+  /** The building the room is in; it never changes */
+  propertyId: string
+  /** The name of the room, entered on the house and shown on the screen */
+  title: string
+  /** Entered on the house with the name, to tell the rooms apart */
+  description: string | null
+  /** The title the room has in the PDF; null to use its name */
+  pdfTitle: string | null
   comments: string | null
+  items: InventoryItem[]
   /** Cover first */
   pictures: Picture[]
 }
 
-export type InventoryItemInput = Omit<InventoryItem, 'id' | 'pictures'>
+export type InventoryRoomInput = Omit<InventoryRoom, 'id' | 'pictures' | 'description'>
 
 export interface HeirDocument {
   id: string

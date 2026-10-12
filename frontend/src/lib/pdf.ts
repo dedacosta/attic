@@ -1,9 +1,9 @@
 import { jsPDF } from 'jspdf'
-import { autoTable } from 'jspdf-autotable'
+import { autoTable, type RowInput, type Styles } from 'jspdf-autotable'
 import { age, localDate } from './age'
 import { copyrightYears, formatDate, formatEuros, locationLabel, shortId } from './format'
 import type { Messages } from '../i18n'
-import type { ContributionYear, CatalogItem, Heir } from '../api/types'
+import type { ContributionYear, CatalogItem, Heir, InventoryItem } from '../api/types'
 
 const ACCENT: [number, number, number] = [181, 101, 29]
 const MUTED: [number, number, number] = [115, 106, 96]
@@ -99,6 +99,77 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
   doc.save(`${fileName}-${isoDay(now)}.pdf`)
 }
 
+/**
+ * Download the inventory of a house as a PDF, room by room: a line with the title of the room, its
+ * comments and, below, a line per item with its quantity, its description and its value, then the
+ * total of the room, as an amount without a label. The total of the house follows what the house holds; the missing items come
+ * after it, with a total of their own. Photos are left out.
+ */
+export async function exportInventoryPdf(
+  rooms: { title: string; comments: string | null; items: InventoryItem[]; missing: boolean }[],
+  totalCount: number, filters: string[], t: Messages, house: string) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const now = new Date()
+  const shown = rooms.reduce((sum, { items }) => sum + items.length, 0)
+  const count = shown === totalCount ? t.itemCount(totalCount) : t.filteredCount(shown, totalCount)
+  drawTitle(doc, `${t.pdfTitleInventory} — ${house}`, [generatedOn(now, t), count, ...filters].join('  ·  '))
+
+  // Sums in cents, as 33.33 + 66.67 is not exactly 100 in floating point
+  const sum = (items: InventoryItem[]) => items.reduce((cents, item) => cents + Math.round(item.valueEur * 100), 0) / 100
+  const euros = (value: number) => pdfText(formatEuros(value, t.locale))
+
+  // A line across the table, above the items of a room
+  const across = (content: string, styles: Partial<Styles>): RowInput =>
+    [{ content: pdfText(content), colSpan: 3, styles: { fillColor: 255, ...styles } }]
+  // A total: its label under the descriptions, its amount under the values
+  const totalLine = (label: string, value: number, styles: Partial<Styles>): RowInput => [
+    { content: pdfText(label), colSpan: 2, styles: { fillColor: 255, fontStyle: 'bold', halign: 'right', ...styles } },
+    { content: euros(value), styles: { fillColor: 255, fontStyle: 'bold', ...styles } },
+  ]
+  const section = ({ title, comments, items }: (typeof rooms)[number]): RowInput[] => [
+    across(title, { fontStyle: 'bold', fontSize: 11, textColor: ACCENT, cellPadding: { top: 5, right: 2, bottom: comments ? 0.5 : 2, left: 2 } }),
+    ...(comments ? [across(comments, { textColor: MUTED, cellPadding: { top: 0.5, right: 2, bottom: 2, left: 2 } })] : []),
+    ...items.map((item) => [String(item.quantity), pdfText(item.description), euros(item.valueEur)]),
+    // The amount alone: under the values of a room it is clearly their total
+    totalLine('', sum(items), {}),
+  ]
+  const held = rooms.filter((room) => !room.missing)
+  const missing = rooms.filter((room) => room.missing)
+
+  autoTable(doc, {
+    startY: 31,
+    margin: { left: MARGIN, right: MARGIN, bottom: 18 },
+    head: [[t.quantityShort, t.description, t.value]],
+    body: [
+      ...held.flatMap(section),
+      ...(held.length > 0
+        ? [totalLine(t.total, sum(held.flatMap((room) => room.items)),
+          { fontSize: 11, fillColor: STRIPE, cellPadding: { top: 3, right: 2, bottom: 3, left: 2 } })]
+        : []),
+      ...missing.flatMap(section),
+    ],
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: [42, 38, 34] },
+    headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
+    columnStyles: {
+      0: { halign: 'right', cellWidth: 14 },
+      1: { cellWidth: 'auto' },
+      2: { halign: 'right', cellWidth: 32 },
+    },
+    didParseCell: (data) => {
+      // Headers follow their column's alignment: quantity and value right
+      if (data.section === 'head') {
+        data.cell.styles.halign = data.column.index === 1 ? 'left' : 'right'
+      } else if (data.cell.colSpan === 3) {
+        // The lines across the table start at the left
+        data.cell.styles.halign = 'left'
+      }
+    },
+    didDrawPage: (data) => drawFooter(doc, data.pageNumber, now, t),
+  })
+  doc.putTotalPages(TOTAL_PAGES)
+  doc.save(`attic-inventory-${isoDay(now)}.pdf`)
+}
+
 /** How far a child's name is set in from their parent's, in mm */
 const CHILD_INDENT = 4
 
@@ -183,12 +254,12 @@ export async function exportContributionsPdf(years: ContributionYear[], t: Messa
       }
     }
   }
-  // Whole amounts without cents: €200, but €150.50. Sums are rounded to cents first, as
+  // Whole amounts without cents: 200 €, but 150.50 €. Sums are rounded to cents first, as
   // 33.33 + 66.67 is not exactly 100 in floating point.
   const euros = (value: number) => {
     const cents = Math.round(value * 100)
     return cents % 100 === 0
-      ? new Intl.NumberFormat(t.locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(cents / 100)
+      ? formatEuros(cents / 100, t.locale, false)
       : formatEuros(cents / 100, t.locale)
   }
 

@@ -1,8 +1,15 @@
 import type { Messages } from '../i18n'
 import type { HeirDocument } from '../api/types'
 
-export function formatEuros(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(value)
+/**
+ * An amount with the euro sign after it, separated by a no-break space, in every language:
+ * "1,234.50 €" in English too, where Intl would put the sign in front. Without `cents`, whole euros.
+ */
+export function formatEuros(value: number, locale: string, cents = true): string {
+  const digits = cents ? 2 : 0
+  const amount = new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    .format(value)
+  return `${amount}\u00a0€`
 }
 
 export function formatDate(isoDate: string, locale: string): string {
