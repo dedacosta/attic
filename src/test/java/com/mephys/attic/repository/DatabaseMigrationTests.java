@@ -13,15 +13,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A database created before Flyway (by the old schema.sql) keeps its data and gets new
- * migrations applied.
+ * A database that already has the schema but no Flyway history (one from before the migrations
+ * were squashed, with its history dropped) keeps its data, is marked as V1 and gets the newer migrations.
  */
 @SpringBootTest
 class DatabaseMigrationTests {
@@ -37,21 +39,11 @@ class DatabaseMigrationTests {
 	}
 
 	@BeforeAll
-	static void createPreFlywayDatabase() throws Exception {
+	static void createDatabaseWithoutHistory() throws Exception {
 		try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + tempDir.resolve("attic.db"));
 				Statement statement = connection.createStatement()) {
-			statement.execute("""
-					CREATE TABLE inventory_item (
-						id TEXT PRIMARY KEY, name TEXT NOT NULL, quantity INTEGER NOT NULL DEFAULT 1,
-						date TEXT, location TEXT, existent INTEGER NOT NULL DEFAULT 1,
-						value_cents INTEGER NOT NULL DEFAULT 0, owner TEXT NOT NULL DEFAULT 'Heritage')
-					""");
-			statement.execute("""
-					CREATE TABLE inventory_picture (
-						id TEXT PRIMARY KEY, item_id TEXT NOT NULL UNIQUE REFERENCES inventory_item (id) ON DELETE CASCADE,
-						file_name TEXT NOT NULL, content_type TEXT NOT NULL, thumbnail BLOB)
-					""");
-			statement.execute("INSERT INTO inventory_item (id, name, value_cents) VALUES ('" + EXISTING_ID
+			ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V1__schema.sql"));
+			statement.execute("INSERT INTO catalog_item (id, name, value_cents) VALUES ('" + EXISTING_ID
 					+ "', 'Sofa', 25000)");
 		}
 	}
@@ -63,17 +55,15 @@ class DatabaseMigrationTests {
 	private JdbcClient jdbc;
 
 	@Test
-	void keepsExistingDataAndAddsComments() {
+	void keepsExistingDataAndAppliesOnlyNewerMigrations() {
 		CatalogItem sofa = repository.findById(EXISTING_ID).orElseThrow();
 		assertThat(sofa.name()).isEqualTo("Sofa");
-		assertThat(sofa.comments()).isNull();
 
-		repository.save(new CatalogItem(sofa.id(), sofa.name(), sofa.quantity(), sofa.date(), sofa.location(),
-				sofa.existent(), sofa.valueEur(), sofa.owner(), "Blue velvet"));
-		assertThat(repository.findById(EXISTING_ID).orElseThrow().comments()).isEqualTo("Blue velvet");
-
-		assertThat(jdbc.sql("SELECT max(CAST(version AS INTEGER)) FROM flyway_schema_history").query(String.class).single())
-			.isEqualTo("24");
+		// V1 is not run again; the migrations after it are
+		assertThat(jdbc.sql("SELECT version || ' ' || type FROM flyway_schema_history ORDER BY installed_rank")
+			.query(String.class)
+			.list()).startsWith("1 BASELINE", "2 SQL", "3 SQL", "4 SQL", "5 SQL", "6 SQL", "7 SQL");
+		assertThat(jdbc.sql("SELECT count(*) FROM inventory_room").query(Integer.class).single()).isZero();
 	}
 
 }

@@ -9,6 +9,7 @@ import com.mephys.attic.model.Estate;
 import com.mephys.attic.model.PictureInfo;
 import com.mephys.attic.model.Property;
 import com.mephys.attic.model.PropertyKind;
+import com.mephys.attic.repository.InventoryRepository;
 import com.mephys.attic.repository.PropertyRepository;
 import com.mephys.attic.service.PictureUploads;
 
@@ -43,10 +44,13 @@ class PropertyController {
 
 	private final PropertyRepository repository;
 
+	private final InventoryRepository inventory;
+
 	private final PictureUploads uploads;
 
-	PropertyController(PropertyRepository repository, PictureUploads uploads) {
+	PropertyController(PropertyRepository repository, InventoryRepository inventory, PictureUploads uploads) {
 		this.repository = repository;
+		this.inventory = inventory;
 		this.uploads = uploads;
 	}
 
@@ -102,11 +106,13 @@ class PropertyController {
 	}
 
 	/**
-	 * Delete the property with its details, photos, official documents and all their files.
+	 * Delete the property with its details, photos, official documents, inventory and all their
+	 * files.
 	 */
 	@DeleteMapping("/properties/{id}")
 	@Transactional
 	ResponseEntity<Void> delete(@PathVariable UUID id) {
+		inventory.deleteByProperty(id);
 		return repository.deleteById(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
 	}
 

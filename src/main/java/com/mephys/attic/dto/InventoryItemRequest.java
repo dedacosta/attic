@@ -1,24 +1,23 @@
 package com.mephys.attic.dto;
 
 import com.mephys.attic.model.InventoryItem;
-import com.mephys.attic.model.Location;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.UUID;
+import java.util.List;
 
 import org.jspecify.annotations.Nullable;
 
 /**
- * Request body for creating or replacing an item. Omitted fields get their defaults.
+ * An item in a request body. Omitted fields get their defaults.
  */
-public record InventoryItemRequest(String name, @Nullable Integer quantity, @Nullable LocalDate date,
-		@Nullable Location location, @Nullable Boolean existent, @Nullable BigDecimal valueEur,
-		@Nullable String owner, @Nullable String comments) {
+public record InventoryItemRequest(String description, @Nullable Integer quantity, @Nullable BigDecimal valueEur) {
 
-	public InventoryItem toItem(@Nullable UUID id) {
-		return new InventoryItem(id, name, (quantity != null) ? quantity : InventoryItem.DEFAULT_QUANTITY, date,
-				location, (existent != null) ? existent : true, valueEur, owner, comments);
+	public InventoryItem toItem() {
+		return InventoryItem.of(description, quantity, valueEur);
+	}
+
+	public static List<InventoryItem> toItems(@Nullable List<InventoryItemRequest> items) {
+		return (items != null) ? items.stream().map(InventoryItemRequest::toItem).toList() : List.of();
 	}
 
 }

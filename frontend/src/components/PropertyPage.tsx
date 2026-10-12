@@ -8,7 +8,7 @@ import { FileIcon, HouseIcon, LandIcon, MapPinIcon, PlusIcon, TrashIcon } from '
 import PhotosField from './PhotosField'
 import PropertyDialog from './PropertyDialog'
 import PropertyDocumentDialog from './PropertyDocumentDialog'
-import { storedPhotos, type Property, type PropertyDocument } from '../api/types'
+import { storedPhotos, type InventoryRoom, type Property, type PropertyDocument } from '../api/types'
 
 interface Props {
   property: Property
@@ -29,6 +29,8 @@ export default function PropertyPage({ property, onChanged, onDeleted }: Props) 
   const [openDocument, setOpenDocument] = useState<PropertyDocument | 'new' | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [documentTypes, setDocumentTypes] = useState<string[]>([])
+  // The rooms of a building, with name and description; its inventory is kept room by room
+  const [rooms, setRooms] = useState<InventoryRoom[]>([])
 
   useEffect(() => {
     api.propertyDocumentTypes().then(setDocumentTypes, () => setDocumentTypes([]))
@@ -36,6 +38,13 @@ export default function PropertyPage({ property, onChanged, onDeleted }: Props) 
 
   const cover = property.pictures[0]
   const isBuilding = property.kind === 'BUILDING'
+
+  useEffect(() => {
+    if (isBuilding) {
+      api.listInventory(property.id).then(setRooms, () => setRooms([]))
+    }
+    // The property is loaded anew after each change, also of its rooms
+  }, [isBuilding, property])
   const PlaceholderIcon = isBuilding ? HouseIcon : LandIcon
 
   return (
@@ -72,7 +81,28 @@ export default function PropertyPage({ property, onChanged, onDeleted }: Props) 
         </div>
       </section>
 
-      {property.facts.length > 0 && (
+      {isBuilding && (
+        <section className="property-section">
+          <div className="property-section-header">
+            <h2>{t.houseRooms}</h2>
+            <a className="link" href="#/inventory">{t.tabInventory}</a>
+          </div>
+          {rooms.length > 0
+            ? (
+              <ul className="property-rooms">
+                {rooms.map((room) => (
+                  <li key={room.id}>
+                    <strong>{room.title}</strong>
+                    {room.description && <span>{room.description}</span>}
+                  </li>
+                ))}
+              </ul>
+            )
+            : <p className="muted">{t.noRooms}</p>}
+        </section>
+      )}
+
+      {!isBuilding && property.facts.length > 0 && (
         <section className="property-section">
           <h2>{t.details}</h2>
           <dl className="property-facts">

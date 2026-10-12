@@ -1,7 +1,7 @@
 import type { Messages } from '../i18n'
 import type {
   ContributionYear, DocumentInput, Renovation, RenovationInput, Invitation, CatalogItem, CatalogItemInput, OwnAccount, Heir, HeirDocument,
-  HeirInput, Estate, InventoryItem, InventoryItemInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
+  HeirInput, Estate, InventoryItem, InventoryRoom, InventoryRoomInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
 } from './types'
 
 /** A failed request. {@link apiErrorMessage} turns it into text in the user's language. */
@@ -106,13 +106,23 @@ export const api = {
   createCatalogItem: (input: CatalogItemInput) => request<CatalogItem>('/api/catalog', json('POST', input)),
   updateCatalogItem: (id: string, input: CatalogItemInput) => request<CatalogItem>(`/api/catalog/${id}`, json('PUT', input)),
   deleteCatalogItem: (id: string) => request<void>(`/api/catalog/${id}`, { method: 'DELETE' }),
-  listInventory: () => request<InventoryItem[]>('/api/inventory'),
-  createInventoryItem: (input: InventoryItemInput) =>
-    request<InventoryItem>('/api/inventory', json('POST', input)),
-  updateInventoryItem: (id: string, input: InventoryItemInput) =>
-    request<InventoryItem>(`/api/inventory/${id}`, json('PUT', input)),
-  deleteInventoryItem: (id: string) =>
-    request<void>(`/api/inventory/${id}`, { method: 'DELETE' }),
+  /** The rooms of a building, in the order of its list */
+  listInventory: (propertyId: string) => request<InventoryRoom[]>(`/api/inventory?propertyId=${propertyId}`),
+  updateInventoryRoom: (id: string, input: InventoryRoomInput) =>
+    request<InventoryRoom>(`/api/inventory/${id}`, json('PUT', input)),
+  /** Make the rooms of a building those of the list, in its order; rooms left out are deleted with their inventory */
+  saveInventoryRoomList: (propertyId: string, rooms: { id: string | null; title: string; description: string | null }[]) =>
+    request<InventoryRoom[]>(`/api/inventory/rooms?propertyId=${propertyId}`, json('PUT', rooms)),
+  /** The items of a building that are in no room */
+  listOtherInventoryItems: (propertyId: string) =>
+    request<InventoryItem[]>(`/api/inventory/other-items?propertyId=${propertyId}`),
+  saveOtherInventoryItems: (propertyId: string, items: InventoryItem[]) =>
+    request<InventoryItem[]>(`/api/inventory/other-items?propertyId=${propertyId}`, json('PUT', items)),
+  /** The items missing from a building */
+  listMissingInventoryItems: (propertyId: string) =>
+    request<InventoryItem[]>(`/api/inventory/missing-items?propertyId=${propertyId}`),
+  saveMissingInventoryItems: (propertyId: string, items: InventoryItem[]) =>
+    request<InventoryItem[]>(`/api/inventory/missing-items?propertyId=${propertyId}`, json('PUT', items)),
 
   listHeirs: () => request<Heir[]>('/api/heirs'),
   listSexes: () => request<string[]>('/api/sexes'),
