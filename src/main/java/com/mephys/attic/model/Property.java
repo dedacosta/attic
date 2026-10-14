@@ -9,7 +9,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * A property of the estate: a {@link Building} or a {@link Land}. {@code valueEur} is
- * {@code null} when not estimated; {@code facts} are its details in order, without blank lines.
+ * its estate value, {@code null} when it has none; {@code facts} are its details in order, without blank lines.
  */
 public abstract sealed class Property permits Building, Land {
 

@@ -2273,6 +2273,18 @@ fieldset.fields:disabled .checkbox {
   margin-right: auto;
 }
 
+/* The value of all buildings and land together, above the two lists */
+.estate-total {
+  margin: 0 0 18px;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+.estate-total strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
 .property-facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

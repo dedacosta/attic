@@ -63,8 +63,8 @@ export default function PropertyPage({ property, onChanged, onDeleted }: Props) 
             </p>
           )}
           <p className="property-value">
-            <span>{t.estimatedValue}</span>
-            <strong>{property.valueEur != null ? formatEuros(property.valueEur, t.locale) : t.notEstimated}</strong>
+            <span>{t.estateValue}</span>
+            <strong>{property.valueEur != null ? formatEuros(property.valueEur, t.locale) : t.noEstateValue}</strong>
           </p>
           {canEdit && (
             <div className="property-actions">

@@ -122,7 +122,7 @@ export default function PropertyDialog({ property, kind, onSaved, onClose }: Pro
               <input value={address} onChange={(e) => setAddress(e.target.value)} />
             </label>
             <label className="field">
-              <span>{t.estimatedValue} <small>{t.optional}</small></span>
+              <span>{t.estateValue} <small>{t.optional}</small></span>
               <input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)}
                 placeholder={`0${decimalSeparator(t.locale)}00`} />
             </label>

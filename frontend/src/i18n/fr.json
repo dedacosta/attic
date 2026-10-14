@@ -348,10 +348,11 @@
     "other": "{shown} sur {count} terrains"
   },
   "totalValue": "Total {value}",
+  "estateTotal": "Total du patrimoine",
   "emptyLand": "Aucun terrain pour l’instant.",
   "noLandMatches": "Aucun terrain ne correspond à la recherche.",
-  "estimatedValue": "Valeur estimée",
-  "notEstimated": "Non estimée",
+  "estateValue": "Valeur patrimoniale",
+  "noEstateValue": "Sans valeur patrimoniale",
   "openInMaps": "Ouvrir dans la carte",
   "details": "Détails",
   "addDetail": "Ajouter un détail",
@@ -379,7 +380,6 @@
     "Registre foncier",
     "Année de construction",
     "Pièces",
-    "Valeur fiscale",
     "Fournisseur d’eau",
     "Fournisseur d’électricité"
   ],

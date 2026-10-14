@@ -96,7 +96,7 @@ export default function EstateView() {
     const isBuilding = kind === 'BUILDING'
     const Icon = isBuilding ? HouseIcon : LandIcon
     const visible = all.filter((p) => matches(p, words))
-    // Properties without an estimated value are left out of the total
+    // Properties without an estate value are left out of the total
     const total = visible.reduce((sum, p) => sum + (p.valueEur ?? 0), 0)
     const count = isBuilding
       ? (query ? t.filteredBuildingCount(visible.length, all.length) : t.buildingCount(all.length))
@@ -142,8 +142,8 @@ export default function EstateView() {
                         </div>
                       )}
                       <div>
-                        <dt>{t.estimatedValue}</dt>
-                        <dd>{property.valueEur != null ? formatEuros(property.valueEur, t.locale) : t.notEstimated}</dd>
+                        <dt>{t.estateValue}</dt>
+                        <dd>{property.valueEur != null ? formatEuros(property.valueEur, t.locale) : t.noEstateValue}</dd>
                       </div>
                       <div>
                         <dt>{t.officialDocuments}</dt>
@@ -160,10 +160,21 @@ export default function EstateView() {
     )
   }
 
+  // The whole estate, buildings and land together, of the properties shown
+  const estateTotal = [...estate.buildings, ...estate.lands]
+    .filter((p) => matches(p, words))
+    .reduce((sum, p) => sum + (p.valueEur ?? 0), 0)
+
   return (
     <main className="content">
       <SearchBar query={query} onQuery={setQuery} placeholder={t.propertySearchPlaceholder}
         label={t.propertySearchLabel} />
+
+      {estate.buildings.length + estate.lands.length > 0 && (
+        <p className="estate-total">
+          {t.estateTotal}{' '}<strong>{formatEuros(estateTotal, t.locale)}</strong>
+        </p>
+      )}
 
       {section('BUILDING', estate.buildings)}
       {section('LAND', estate.lands)}
