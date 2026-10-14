@@ -32,7 +32,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * read: by default in a {@code logs} directory next to the database file.
  * <p>
  * There is a file per month, {@code sign-ins-2026-10.log}, with a line per event: when, what,
- * the username, the address it came from and the browser, separated by tabs. A month that is
+ * the username, the IP address it came from and the browser, separated by tabs. A month that is
  * over is compressed to {@code sign-ins-2026-09.log.gz}. Passwords are never written.
  */
 @Component

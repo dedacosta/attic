@@ -347,10 +347,11 @@
     "other": "{shown} de {count} terrenos"
   },
   "totalValue": "Total {value}",
+  "estateTotal": "Total do património",
   "emptyLand": "Ainda não há terrenos.",
   "noLandMatches": "Nenhum terreno corresponde à pesquisa.",
-  "estimatedValue": "Valor estimado",
-  "notEstimated": "Sem estimativa",
+  "estateValue": "Valor patrimonial",
+  "noEstateValue": "Sem valor patrimonial",
   "openInMaps": "Abrir no mapa",
   "details": "Detalhes",
   "addDetail": "Adicionar detalhe",
@@ -378,7 +379,6 @@
     "Registo predial",
     "Ano de construção",
     "Divisões",
-    "Valor patrimonial",
     "Fornecedor de água",
     "Fornecedor de eletricidade"
   ],

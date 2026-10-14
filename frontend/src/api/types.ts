@@ -200,7 +200,7 @@ interface PropertyBase {
   name: string
   /** For land: its location, in free text */
   address: string | null
-  /** Null when not estimated */
+  /** Estate value; null when it has none */
   valueEur: number | null
   comments: string | null
   facts: Fact[]

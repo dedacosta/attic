@@ -81,7 +81,7 @@ zcat data/logs/sign-ins-2026-09.log.gz           # a past month
 zgrep -h WRONG_PASSWORD data/logs/*.gz           # every wrong password of the past months
 ```
 
-Each line has five columns separated by tabs: when, what, the username, the address it came from
+Each line has five columns separated by tabs: when, what, the username, the IP address it came from
 (through Tailscale, the device's Tailscale address) and the browser.
 
 | What | Meaning |

@@ -341,10 +341,11 @@
     "other": "{shown} of {count} parcels"
   },
   "totalValue": "Total {value}",
+  "estateTotal": "Estate total",
   "emptyLand": "No land yet.",
   "noLandMatches": "No land matches your search.",
-  "estimatedValue": "Estimated value",
-  "notEstimated": "Not estimated",
+  "estateValue": "Estate value",
+  "noEstateValue": "No estate value",
   "openInMaps": "Open in maps",
   "details": "Details",
   "addDetail": "Add detail",
@@ -372,7 +373,6 @@
     "Land registry",
     "Year built",
     "Rooms",
-    "Tax value",
     "Water supplier",
     "Electricity supplier"
   ],
