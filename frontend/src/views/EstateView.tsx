@@ -3,7 +3,7 @@ import { api, apiErrorMessage } from '../api/api'
 import PropertyDialog from '../components/PropertyDialog'
 import PropertyPage from '../components/PropertyPage'
 import SearchBar from '../components/SearchBar'
-import { ChevronLeftIcon, HouseIcon, LandIcon, PlusIcon } from '../components/icons'
+import { ChevronLeftIcon, PlusIcon } from '../components/icons'
 import { formatEuros, normalize } from '../lib/format'
 import { usePermissions } from '../lib/permissions'
 import { useI18n } from '../i18n'
@@ -94,7 +94,6 @@ export default function EstateView() {
   /** One of the two lists, with its count, its total and its button to add */
   function section(kind: PropertyKind, all: Property[]) {
     const isBuilding = kind === 'BUILDING'
-    const Icon = isBuilding ? HouseIcon : LandIcon
     const visible = all.filter((p) => matches(p, words))
     // Properties without an estate value are left out of the total
     const total = visible.reduce((sum, p) => sum + (p.valueEur ?? 0), 0)
@@ -125,13 +124,11 @@ export default function EstateView() {
             {visible.map((property) => (
               <article key={property.id} className="card">
                 <a className="card-main" href={`#/estate/${property.id}`}>
-                  <div className="card-image">
-                    {property.pictures[0]?.thumbnailUrl ? (
+                  {property.pictures[0]?.thumbnailUrl && (
+                    <div className="card-image">
                       <img src={property.pictures[0].thumbnailUrl} alt="" loading="lazy" />
-                    ) : (
-                      <Icon className="card-placeholder" width={40} height={40} />
-                    )}
-                  </div>
+                    </div>
+                  )}
                   <div className="card-body">
                     <h3 className="card-title">{property.name}</h3>
                     <dl className="card-facts">

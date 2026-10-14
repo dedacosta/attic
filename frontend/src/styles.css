@@ -354,8 +354,9 @@ select {
   object-fit: cover;
 }
 
-.card-placeholder {
-  opacity: 0.5;
+/* A card without a photo: its title keeps clear of the delete button in the corner */
+.card-no-photo .card-title {
+  padding-right: 32px;
 }
 
 .card-quantity {
