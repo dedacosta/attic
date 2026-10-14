@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, apiErrorMessage } from '../api/api'
+import { exportHeirsLatex } from '../lib/latex'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DocumentDialog from '../components/DocumentDialog'
 import HeirDetails from '../components/HeirDetails'
@@ -131,7 +132,7 @@ export default function HeirsView() {
     )
   }
 
-  async function downloadPdf() {
+  async function download(format: 'pdf' | 'latex') {
     // The same order as on the screen: each heir followed by their children, set in
     const rows: { heir: Heir; depth: number }[] = []
     const list = (heir: Heir, depth: number) => {
@@ -140,6 +141,10 @@ export default function HeirsView() {
     }
     roots.forEach((heir) => list(heir, 0))
     const filters = query.trim() ? [t.searchFilter(query.trim())] : []
+    if (format === 'latex') {
+      exportHeirsLatex(rows, heirs ?? [], filters, t)
+      return
+    }
     // Loaded on demand: the PDF library is large
     const { exportHeirsPdf } = await import('../lib/pdf')
     await exportHeirsPdf(rows, heirs ?? [], filters, t)
@@ -214,9 +219,13 @@ export default function HeirsView() {
               {query ? t.filteredHeirCount(living(visible), living(heirs)) : t.heirCount(living(heirs))}
             </span>
           )}
-          <button type="button" className="button" onClick={downloadPdf} disabled={visible.length === 0}
+          <button type="button" className="button" onClick={() => download('pdf')} disabled={visible.length === 0}
             aria-label={t.exportPdfLabel} title={t.exportPdfLabel}>
             <FileIcon width={18} height={18} /> PDF
+          </button>
+          <button type="button" className="button" onClick={() => download('latex')} disabled={visible.length === 0}
+            aria-label={t.exportLatexLabel} title={t.exportLatexLabel}>
+            <FileIcon width={18} height={18} /> LaTeX
           </button>
         </div>
 
