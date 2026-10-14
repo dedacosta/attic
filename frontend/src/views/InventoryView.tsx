@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, apiErrorMessage } from '../api/api'
+import { exportInventoryLatex } from '../lib/latex'
 import { saveWithPhotos } from '../lib/photos'
 import InventoryRoomDialog from '../components/InventoryRoomDialog'
 import SearchBar from '../components/SearchBar'
@@ -108,19 +109,22 @@ export default function InventoryView() {
   // What is missing is not part of what the house holds
   const houseTotal = total(sections.filter((section) => section.list !== 'missing').flatMap((section) => section.items))
 
-  async function downloadPdf() {
+  async function download(format: 'pdf' | 'latex') {
     const filters = query.trim() ? [t.searchFilter(query.trim())] : []
+    const rooms = sections.filter((section) => section.items.length > 0).map((section) => ({
+      // In the PDF a room has its own title, if it was given one
+      title: section.room?.pdfTitle ?? section.title,
+      comments: section.room?.comments ?? null,
+      items: section.items,
+      missing: section.list === 'missing',
+    }))
+    if (format === 'latex') {
+      exportInventoryLatex(rooms, totalCount, filters, t, house?.name ?? '')
+      return
+    }
+    // Loaded on demand: the PDF library is large
     const { exportInventoryPdf } = await import('../lib/pdf')
-    await exportInventoryPdf(
-      sections.filter((section) => section.items.length > 0).map((section) => ({
-        // In the PDF a room has its own title, if it was given one
-        title: section.room?.pdfTitle ?? section.title,
-        comments: section.room?.comments ?? null,
-        items: section.items,
-        missing: section.list === 'missing',
-      })),
-      totalCount, filters, t, house?.name ?? '',
-    )
+    await exportInventoryPdf(rooms, totalCount, filters, t, house?.name ?? '')
   }
 
   async function saveRoom(input: Pick<InventoryRoomInput, 'pdfTitle' | 'comments' | 'items'>, photos: PhotoEntry[],
@@ -171,9 +175,13 @@ export default function InventoryView() {
               {' · '}{t.total}{t.colon} <strong>{formatEuros(houseTotal, t.locale)}</strong>
             </span>
           )}
-          <button type="button" className="button" onClick={downloadPdf} disabled={visibleCount === 0}
+          <button type="button" className="button" onClick={() => download('pdf')} disabled={visibleCount === 0}
             aria-label={t.exportPdfLabel} title={t.exportPdfLabel}>
             <FileIcon width={18} height={18} /> PDF
+          </button>
+          <button type="button" className="button" onClick={() => download('latex')} disabled={visibleCount === 0}
+            aria-label={t.exportLatexLabel} title={t.exportLatexLabel}>
+            <FileIcon width={18} height={18} /> LaTeX
           </button>
         </div>
 

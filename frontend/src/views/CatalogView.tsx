@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, apiErrorMessage } from '../api/api'
+import { exportCatalogLatex } from '../lib/latex'
 import { saveWithPhotos } from '../lib/photos'
 import ConfirmDialog from '../components/ConfirmDialog'
 import CatalogItemCard from '../components/CatalogItemCard'
@@ -65,12 +66,17 @@ export default function CatalogView() {
 
   const filtered = query !== '' || locationFilter !== '' || presence !== 'all'
 
-  async function downloadPdf() {
+  async function download(format: 'pdf' | 'latex') {
     const filters = [
       query.trim() && t.searchFilter(query.trim()),
       locationFilter && `${t.location}: ${locationLabel(locationFilter, t)}`,
       presence !== 'all' && (presence === 'present' ? t.present : t.missing),
     ].filter((f): f is string => Boolean(f))
+    if (format === 'latex') {
+      exportCatalogLatex(visible, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog')
+      return
+    }
+    // Loaded on demand: the PDF library is large
     const { exportPdf } = await import('../lib/pdf')
     await exportPdf(visible, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog')
   }
@@ -132,9 +138,13 @@ export default function CatalogView() {
               {filtered ? t.filteredCount(visible.length, items.length) : t.itemCount(items.length)}
             </span>
           )}
-          <button type="button" className="button" onClick={downloadPdf} disabled={visible.length === 0}
+          <button type="button" className="button" onClick={() => download('pdf')} disabled={visible.length === 0}
             aria-label={t.exportPdfLabel} title={t.exportPdfLabel}>
             <FileIcon width={18} height={18} /> PDF
+          </button>
+          <button type="button" className="button" onClick={() => download('latex')} disabled={visible.length === 0}
+            aria-label={t.exportLatexLabel} title={t.exportLatexLabel}>
+            <FileIcon width={18} height={18} /> LaTeX
           </button>
         </div>
 

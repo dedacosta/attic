@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { api, apiErrorMessage } from '../api/api'
+import { exportContributionsLatex } from '../lib/latex'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { ChevronLeftIcon, ChevronRightIcon, FileIcon, PencilIcon } from '../components/icons'
 import { AMOUNT_PATTERN, amountText, formatEuros, parseAmount } from '../lib/format'
@@ -113,6 +114,10 @@ export default function ContributionsView() {
     await exportContributionsPdf(all, t)
   }
 
+  async function downloadLatex() {
+    exportContributionsLatex(await api.listContributions(), t)
+  }
+
   /** Show a year as the server answered after a change */
   const replace = (changed: ContributionYear) =>
     setYears((current) => current?.map((year) => (year.year === changed.year ? changed : year)) ?? null)
@@ -156,10 +161,16 @@ export default function ContributionsView() {
             <ChevronRightIcon />
           </button>
         </div>
-        <button type="button" className="button contribution-pdf" onClick={downloadPdf}
-          aria-label={t.exportContributionsPdf} title={t.exportContributionsPdf}>
-          <FileIcon width={18} height={18} /> PDF
-        </button>
+        <div className="contribution-exports">
+          <button type="button" className="button" onClick={downloadPdf}
+            aria-label={t.exportContributionsPdf} title={t.exportContributionsPdf}>
+            <FileIcon width={18} height={18} /> PDF
+          </button>
+          <button type="button" className="button" onClick={downloadLatex}
+            aria-label={t.exportContributionsLatex} title={t.exportContributionsLatex}>
+            <FileIcon width={18} height={18} /> LaTeX
+          </button>
+        </div>
       </div>
 
       {loadError !== null && (

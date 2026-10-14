@@ -1,9 +1,12 @@
 import { jsPDF } from 'jspdf'
 import { autoTable, type RowInput, type Styles } from 'jspdf-autotable'
-import { age, localDate } from './age'
-import { copyrightYears, formatDate, formatEuros, locationLabel, shortId } from './format'
+import {
+  catalogCells, catalogHead, catalogSubtitle, contributionPages, copyrightLine, generatedOn, heirCells, heirsHead,
+  heirsSubtitle, inventorySubtitle, inventorySum, isoDay, type InventoryRoomExport,
+} from './export'
+import { formatEuros } from './format'
 import type { Messages } from '../i18n'
-import type { ContributionYear, CatalogItem, Heir, InventoryItem } from '../api/types'
+import type { ContributionYear, CatalogItem, Heir } from '../api/types'
 
 const ACCENT: [number, number, number] = [181, 101, 29]
 const MUTED: [number, number, number] = [115, 106, 96]
@@ -34,17 +37,9 @@ function drawFooter(doc: jsPDF, pageNumber: number, now: Date, t: Messages) {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(...MUTED)
-  doc.text(pdfText(`© ${copyrightYears(now)} David Da Costa · Attic v${__APP_VERSION__}`), MARGIN, pageHeight - 8)
+  doc.text(pdfText(copyrightLine(now)), MARGIN, pageHeight - 8)
   doc.text(pdfText(t.page(pageNumber, TOTAL_PAGES)), pageWidth - MARGIN, pageHeight - 8, { align: 'right' })
 }
-
-/** e.g. 2026-10-05, for file names */
-function isoDay(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-const generatedOn = (now: Date, t: Messages) =>
-  t.pdfGenerated(now.toLocaleString(t.locale, { dateStyle: 'long', timeStyle: 'short' }))
 
 /**
  * Download the given items as a PDF table, one line per item. Comments are left out.
@@ -54,25 +49,13 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
   fileName: string) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
-  const count = items.length === totalCount ? t.itemCount(totalCount) : t.filteredCount(items.length, totalCount)
-  drawTitle(doc, title, [generatedOn(now, t), count, ...filters].join('  ·  '))
+  drawTitle(doc, title, catalogSubtitle(items, totalCount, filters, now, t))
 
   autoTable(doc, {
     startY: 31,
     margin: { left: MARGIN, right: MARGIN, bottom: 18 },
-    head: [[t.idColumn, t.name, t.quantityShort, t.location, t.date, t.present, t.value, t.owner]],
-    body: items.map((item) =>
-      [
-        shortId(item.id),
-        item.name,
-        String(item.quantity),
-        item.location ? locationLabel(item.location, t) : '',
-        item.date ? formatDate(item.date, t.locale) : '',
-        item.existent ? t.yes : t.no,
-        formatEuros(item.valueEur, t.locale),
-        item.owner,
-      ].map(pdfText),
-    ),
+    head: [catalogHead(t)],
+    body: items.map((item) => catalogCells(item, t).map(pdfText)),
     styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: [42, 38, 34] },
     headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: STRIPE },
@@ -105,17 +88,12 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
  * total of the room, as an amount without a label. The total of the house follows what the house holds; the missing items come
  * after it, with a total of their own. Photos are left out.
  */
-export async function exportInventoryPdf(
-  rooms: { title: string; comments: string | null; items: InventoryItem[]; missing: boolean }[],
-  totalCount: number, filters: string[], t: Messages, house: string) {
+export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCount: number, filters: string[],
+  t: Messages, house: string) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const now = new Date()
-  const shown = rooms.reduce((sum, { items }) => sum + items.length, 0)
-  const count = shown === totalCount ? t.itemCount(totalCount) : t.filteredCount(shown, totalCount)
-  drawTitle(doc, `${t.pdfTitleInventory} — ${house}`, [generatedOn(now, t), count, ...filters].join('  ·  '))
+  drawTitle(doc, `${t.pdfTitleInventory} — ${house}`, inventorySubtitle(rooms, totalCount, filters, now, t))
 
-  // Sums in cents, as 33.33 + 66.67 is not exactly 100 in floating point
-  const sum = (items: InventoryItem[]) => items.reduce((cents, item) => cents + Math.round(item.valueEur * 100), 0) / 100
   const euros = (value: number) => pdfText(formatEuros(value, t.locale))
 
   // A line across the table, above the items of a room
@@ -131,7 +109,7 @@ export async function exportInventoryPdf(
     ...(comments ? [across(comments, { textColor: MUTED, cellPadding: { top: 0.5, right: 2, bottom: 2, left: 2 } })] : []),
     ...items.map((item) => [String(item.quantity), pdfText(item.description), euros(item.valueEur)]),
     // The amount alone: under the values of a room it is clearly their total
-    totalLine('', sum(items), {}),
+    totalLine('', inventorySum(items), {}),
   ]
   const held = rooms.filter((room) => !room.missing)
   const missing = rooms.filter((room) => room.missing)
@@ -143,7 +121,7 @@ export async function exportInventoryPdf(
     body: [
       ...held.flatMap(section),
       ...(held.length > 0
-        ? [totalLine(t.total, sum(held.flatMap((room) => room.items)),
+        ? [totalLine(t.total, inventorySum(held.flatMap((room) => room.items)),
           { fontSize: 11, fillColor: STRIPE, cellPadding: { top: 3, right: 2, bottom: 3, left: 2 } })]
         : []),
       ...missing.flatMap(section),
@@ -182,30 +160,14 @@ export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], ever
   t: Messages) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
-  // The heirs are counted without the deceased, who are still listed
-  const living = everybody.filter((heir) => !heir.deceased).length
-  const count = rows.length === everybody.length ? t.heirCount(living)
-    : t.filteredHeirCount(rows.filter(({ heir }) => !heir.deceased).length, living)
-  drawTitle(doc, t.tabHeirs, [generatedOn(now, t), count, ...filters].join('  ·  '))
+  drawTitle(doc, t.tabHeirs, heirsSubtitle(rows, everybody, filters, now, t))
   const names = new Map(everybody.map((heir) => [heir.id, heir.name]))
 
   autoTable(doc, {
     startY: 31,
     margin: { left: MARGIN, right: MARGIN, bottom: 18 },
-    head: [[t.name, t.birthDate, t.deathDate, t.ageColumn, t.heritageShare, t.parentHeir, t.address]],
-    body: rows.map(({ heir }) =>
-      [
-        heir.deceased ? `${heir.name} †` : heir.name,
-        heir.birthDate ? formatDate(heir.birthDate, t.locale) : '',
-        heir.deceased ? (heir.deathDate ? formatDate(heir.deathDate, t.locale) : t.deceased) : '',
-        // Of the deceased, the age at death; unknown without its date
-        heir.birthDate && (!heir.deceased || heir.deathDate)
-          ? String(age(heir.birthDate, heir.deathDate ? localDate(heir.deathDate) : now)) : '',
-        heir.calculatedShare ?? '—',
-        (heir.parentId && names.get(heir.parentId)) || '',
-        heir.address ?? '',
-      ].map(pdfText),
-    ),
+    head: [heirsHead(t)],
+    body: rows.map(({ heir }) => heirCells(heir, names, now, t).map(pdfText)),
     styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: [42, 38, 34] },
     headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: STRIPE },
@@ -232,70 +194,27 @@ export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], ever
   doc.save(`attic-heirs-${isoDay(now)}.pdf`)
 }
 
-/** Years of the annual contribution on one page */
-const YEARS_PER_PAGE = 10
-
 /**
  * Download every year of the annual contribution, ten years per page, the oldest first: a line
- * per heir and a column per year. A dash marks a year in which the heir does not pay (not born
- * yet, deceased, or a parent still alive); an empty cell, one whose amount is not entered yet.
+ * per heir and a column per year (see contributionPages).
  */
 export async function exportContributionsPdf(years: ContributionYear[], t: Messages) {
-  const ordered = [...years].sort((a, b) => a.year - b.year)
-  const doc = new jsPDF({ orientation: ordered.length > 5 ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
+  const doc = new jsPDF({ orientation: years.length > 5 ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
   const now = new Date()
 
-  // Everybody, in the order of the latest year, which knows every heir there is now
-  const heirs = new Map<string, { name: string; deceased: boolean }>()
-  for (const year of [...ordered].reverse()) {
-    for (const line of year.lines) {
-      if (!heirs.has(line.heirId)) {
-        heirs.set(line.heirId, { name: line.heir, deceased: line.deceased })
-      }
-    }
-  }
-  // Whole amounts without cents: 200 €, but 150.50 €. Sums are rounded to cents first, as
-  // 33.33 + 66.67 is not exactly 100 in floating point.
-  const euros = (value: number) => {
-    const cents = Math.round(value * 100)
-    return cents % 100 === 0
-      ? formatEuros(cents / 100, t.locale, false)
-      : formatEuros(cents / 100, t.locale)
-  }
-
-  for (let first = 0; first < ordered.length; first += YEARS_PER_PAGE) {
-    const page = ordered.slice(first, first + YEARS_PER_PAGE)
-    if (first > 0) {
+  contributionPages(years, t).forEach((page, index) => {
+    if (index > 0) {
       doc.addPage()
     }
-    const range = page.length === 1 ? String(page[0].year) : `${page[0].year}–${page[page.length - 1].year}`
-    drawTitle(doc, `${t.tabContributions} ${range}`, generatedOn(now, t))
-
-    const body = [...heirs].map(([heirId, heir]) => {
-      let total = 0
-      let concerned = false
-      const cells = page.map((year) => {
-        const line = year.lines.find((l) => l.heirId === heirId)
-        concerned ||= line !== undefined && (line.pays || line.amountEur !== null)
-        if (line && line.amountEur !== null) {
-          total += line.amountEur
-          return euros(line.amountEur)
-        }
-        return line?.pays ? '' : '—'
-      })
-      // Somebody who never had to pay in these years has no total either
-      return [heir.deceased ? `${heir.name} †` : heir.name, ...cells, concerned ? euros(total) : '—'].map(pdfText)
-    })
-    const totals = [t.total, ...page.map((year) => euros(year.totalEur)),
-      euros(page.reduce((sum, year) => sum + year.totalEur, 0))].map(pdfText)
-    const last = page.length + 1
+    drawTitle(doc, page.title, generatedOn(now, t))
+    const last = page.head.length - 1
 
     autoTable(doc, {
       startY: 31,
       margin: { left: MARGIN, right: MARGIN, bottom: 18 },
-      head: [[t.heirColumn, ...page.map((year) => String(year.year)), t.total].map(pdfText)],
-      body,
-      foot: [totals],
+      head: [page.head.map(pdfText)],
+      body: page.body.map((row) => row.map(pdfText)),
+      foot: [page.totals.map(pdfText)],
       showFoot: 'lastPage',
       styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: [42, 38, 34] },
       headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
@@ -311,7 +230,7 @@ export async function exportContributionsPdf(years: ContributionYear[], t: Messa
         }
       },
     })
-  }
+  })
 
   // The footer once every page exists, so that each knows its number
   for (let number = 1; number <= doc.getNumberOfPages(); number++) {
