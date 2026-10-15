@@ -18,16 +18,11 @@ const TOTAL_PAGES = '{total_pages}'
 /** The built-in PDF fonts have no narrow or no-break spaces, which Intl uses in "1 234,50 €". */
 const pdfText = (text: string) => text.replace(/[  ]/g, ' ')
 
-/** The title, at the top of the first page */
-function drawTitle(doc: jsPDF, title: string) {
-  doc.setTextColor(...TEXT)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.text(pdfText(title), MARGIN, 18)
-}
+/** The table speaks for itself: the title is only in the document's properties, for the viewer's title bar */
+const setTitle = (doc: jsPDF, title: string) => doc.setProperties({ title })
 
-/** Where the table starts, below the title */
-const TABLE_TOP = 25
+/** Where the table starts, at the top of the page */
+const TABLE_TOP = MARGIN
 
 /** Between the lines of the footer, in mm */
 const FOOTER_LINE_HEIGHT = 3.5
@@ -62,14 +57,14 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
   const note = catalogNote(items, totalCount, filters, now, t)
-  drawTitle(doc, title)
+  setTitle(doc, title)
 
   autoTable(doc, {
     startY: TABLE_TOP,
     margin: { left: MARGIN, right: MARGIN, bottom: 18 },
     head: [catalogHead(t)],
     body: items.map((item) => catalogCells(item, t).map(pdfText)),
-    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: [42, 38, 34] },
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: TEXT },
     headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: STRIPE },
     columnStyles: {
@@ -105,8 +100,8 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
   t: Messages, house: string) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const now = new Date()
-  const note = inventoryNote(rooms, totalCount, filters, now, t)
-  drawTitle(doc, `${t.pdfTitleInventory} — ${house}`)
+  const note = inventoryNote(rooms, totalCount, filters, house, now, t)
+  setTitle(doc, house ? `${t.pdfTitleInventory} — ${house}` : t.pdfTitleInventory)
 
   const euros = (value: number) => pdfText(formatEuros(value, t.locale))
 
@@ -140,7 +135,7 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
         : []),
       ...missing.flatMap(section),
     ],
-    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: [42, 38, 34] },
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: TEXT },
     headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
     columnStyles: {
       0: { halign: 'right', cellWidth: 14 },
@@ -175,7 +170,7 @@ export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], ever
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
   const note = heirsNote(rows, everybody, filters, now, t)
-  drawTitle(doc, t.tabHeirs)
+  setTitle(doc, t.tabHeirs)
   const names = new Map(everybody.map((heir) => [heir.id, heir.name]))
 
   autoTable(doc, {
@@ -183,7 +178,7 @@ export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], ever
     margin: { left: MARGIN, right: MARGIN, bottom: 18 },
     head: [heirsHead(t)],
     body: rows.map(({ heir }) => heirCells(heir, names, now, t).map(pdfText)),
-    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: [42, 38, 34] },
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: TEXT },
     headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: STRIPE },
     columnStyles: {
@@ -217,12 +212,12 @@ export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], ever
 export async function exportContributionsPdf(years: ContributionYear[], t: Messages) {
   const doc = new jsPDF({ orientation: years.length > 5 ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
   const now = new Date()
+  setTitle(doc, t.tabContributions)
 
   contributionPages(years, t).forEach((page, index) => {
     if (index > 0) {
       doc.addPage()
     }
-    drawTitle(doc, page.title)
     const last = page.head.length - 1
 
     autoTable(doc, {
@@ -232,9 +227,9 @@ export async function exportContributionsPdf(years: ContributionYear[], t: Messa
       body: page.body.map((row) => row.map(pdfText)),
       foot: [page.totals.map(pdfText)],
       showFoot: 'lastPage',
-      styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: [42, 38, 34] },
+      styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: TEXT },
       headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
-      footStyles: { fillColor: STRIPE, textColor: [42, 38, 34], fontStyle: 'bold' },
+      footStyles: { fillColor: STRIPE, textColor: TEXT, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: STRIPE },
       didParseCell: (data) => {
         // Amounts and dashes to the right, the heir's total in bold

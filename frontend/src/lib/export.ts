@@ -48,12 +48,12 @@ export interface InventoryRoomExport {
   missing: boolean
 }
 
-/** What the footer says of the inventory after the copyright: when, how many and the filters */
-export function inventoryNote(rooms: InventoryRoomExport[], totalCount: number, filters: string[], now: Date,
-  t: Messages) {
+/** What the footer says of the inventory after the copyright: the house, when, how many and the filters */
+export function inventoryNote(rooms: InventoryRoomExport[], totalCount: number, filters: string[], house: string,
+  now: Date, t: Messages) {
   const shown = rooms.reduce((sum, { items }) => sum + items.length, 0)
   const count = shown === totalCount ? t.itemCount(totalCount) : t.filteredCount(shown, totalCount)
-  return [generatedOn(now, t), count, ...filters].join('  ·  ')
+  return [...(house ? [house] : []), generatedOn(now, t), count, ...filters].join('  ·  ')
 }
 
 /** Sums in cents, as 33.33 + 66.67 is not exactly 100 in floating point */
@@ -87,9 +87,8 @@ export const heirCells = (heir: Heir, names: Map<string, string>, now: Date, t: 
 /** Years of the annual contribution on one page */
 const YEARS_PER_PAGE = 10
 
-/** One page of the contributions: its title, and a table with a line per heir and a column per year */
+/** One page of the contributions: a table with a line per heir and a column per year */
 export interface ContributionPage {
-  title: string
   head: string[]
   body: string[][]
   totals: string[]
@@ -124,7 +123,6 @@ export function contributionPages(years: ContributionYear[], t: Messages): Contr
   const pages: ContributionPage[] = []
   for (let first = 0; first < ordered.length; first += YEARS_PER_PAGE) {
     const page = ordered.slice(first, first + YEARS_PER_PAGE)
-    const range = page.length === 1 ? String(page[0].year) : `${page[0].year}–${page[page.length - 1].year}`
     const body = [...heirs].map(([heirId, heir]) => {
       let total = 0
       let concerned = false
@@ -141,7 +139,6 @@ export function contributionPages(years: ContributionYear[], t: Messages): Contr
       return [heir.deceased ? `${heir.name} †` : heir.name, ...cells, concerned ? euros(total) : '—']
     })
     pages.push({
-      title: `${t.tabContributions} ${range}`,
       head: [t.heirColumn, ...page.map((year) => String(year.year)), t.total],
       body,
       totals: [t.total, ...page.map((year) => euros(year.totalEur)),
