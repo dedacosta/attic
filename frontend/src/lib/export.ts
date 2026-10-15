@@ -1,5 +1,5 @@
 import { age, localDate } from './age'
-import { copyrightYears, formatDate, formatEuros, locationLabel, shortId } from './format'
+import { copyrightYears, formatDate, formatEuros, locationLabel, shortId, shortName } from './format'
 import type { Messages } from '../i18n'
 import type { CatalogItem, ContributionYear, Heir, InventoryItem } from '../api/types'
 
@@ -20,8 +20,8 @@ export const generatedOn = (now: Date, t: Messages) =>
 /** Copyright and Attic's version, at the bottom of every page */
 export const copyrightLine = (now: Date) => `© ${copyrightYears(now)} David Da Costa · Attic v${__APP_VERSION__}`
 
-/** The line below the title of the catalog: when, how many and the filters */
-export function catalogSubtitle(items: CatalogItem[], totalCount: number, filters: string[], now: Date, t: Messages) {
+/** What the footer says of the catalog after the copyright: when, how many and the filters */
+export function catalogNote(items: CatalogItem[], totalCount: number, filters: string[], now: Date, t: Messages) {
   const count = items.length === totalCount ? t.itemCount(totalCount) : t.filteredCount(items.length, totalCount)
   return [generatedOn(now, t), count, ...filters].join('  ·  ')
 }
@@ -48,7 +48,8 @@ export interface InventoryRoomExport {
   missing: boolean
 }
 
-export function inventorySubtitle(rooms: InventoryRoomExport[], totalCount: number, filters: string[], now: Date,
+/** What the footer says of the inventory after the copyright: when, how many and the filters */
+export function inventoryNote(rooms: InventoryRoomExport[], totalCount: number, filters: string[], now: Date,
   t: Messages) {
   const shown = rooms.reduce((sum, { items }) => sum + items.length, 0)
   const count = shown === totalCount ? t.itemCount(totalCount) : t.filteredCount(shown, totalCount)
@@ -59,8 +60,8 @@ export function inventorySubtitle(rooms: InventoryRoomExport[], totalCount: numb
 export const inventorySum = (items: InventoryItem[]) =>
   items.reduce((cents, item) => cents + Math.round(item.valueEur * 100), 0) / 100
 
-/** The line below the title of the heirs. The heirs are counted without the deceased, who are still listed */
-export function heirsSubtitle(rows: { heir: Heir }[], everybody: Heir[], filters: string[], now: Date, t: Messages) {
+/** What the footer says of the heirs after the copyright. The heirs are counted without the deceased, who are still listed */
+export function heirsNote(rows: { heir: Heir }[], everybody: Heir[], filters: string[], now: Date, t: Messages) {
   const living = everybody.filter((heir) => !heir.deceased).length
   const count = rows.length === everybody.length ? t.heirCount(living)
     : t.filteredHeirCount(rows.filter(({ heir }) => !heir.deceased).length, living)
@@ -70,7 +71,7 @@ export function heirsSubtitle(rows: { heir: Heir }[], everybody: Heir[], filters
 export const heirsHead = (t: Messages) =>
   [t.name, t.birthDate, t.deathDate, t.ageColumn, t.heritageShare, t.parentHeir, t.address]
 
-/** `names` gives the names of the parents */
+/** `names` gives the names of the parents, shortened as on the contributions tab */
 export const heirCells = (heir: Heir, names: Map<string, string>, now: Date, t: Messages) => [
   heir.deceased ? `${heir.name} †` : heir.name,
   heir.birthDate ? formatDate(heir.birthDate, t.locale) : '',
@@ -79,7 +80,7 @@ export const heirCells = (heir: Heir, names: Map<string, string>, now: Date, t: 
   heir.birthDate && (!heir.deceased || heir.deathDate)
     ? String(age(heir.birthDate, heir.deathDate ? localDate(heir.deathDate) : now)) : '',
   heir.calculatedShare ?? '—',
-  (heir.parentId && names.get(heir.parentId)) || '',
+  heir.parentId && names.has(heir.parentId) ? shortName(names.get(heir.parentId)!) : '',
   heir.address ?? '',
 ]
 
