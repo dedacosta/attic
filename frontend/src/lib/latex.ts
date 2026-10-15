@@ -29,11 +29,15 @@ const footerNote = (text: string) => tex(text).replaceAll('  ·  ', '\\quad·\\q
 const rest = (fixedMm: number, columns: number, also = '') =>
   `\\dimexpr\\textwidth-${fixedMm}mm${also && `-${also}`}-${2 * columns}\\tabcolsep\\relax`
 
-/** A whole LaTeX document around the given body, the note (when, how many…) in the footer after the copyright */
-function texDocument(body: string, note: string, landscape: boolean, now: Date, t: Messages): string {
+/**
+ * A whole LaTeX document around the given body, the note (when, how many…) in the footer after the
+ * copyright. The table speaks for itself: the title is only in the comment at the top.
+ */
+function texDocument(title: string, body: string, note: string, landscape: boolean, now: Date, t: Messages): string {
   const language = LANGUAGES[t.locale.split('-')[0]] ?? 'british'
   const page = tex(t.page('@PAGE@', '@TOTAL@')).replace('@PAGE@', '\\thepage{}').replace('@TOTAL@', '\\pageref{LastPage}')
-  return `% ${tex(generatedOn(now, t))}
+  return `% ${tex(title)}
+% ${tex(generatedOn(now, t))}
 % ${tex(copyrightLine(now))}
 % Compile it twice with pdflatex, lualatex or xelatex.
 \\documentclass[10pt]{article}
@@ -64,7 +68,6 @@ function texDocument(body: string, note: string, landscape: boolean, now: Date, 
 % A header cell: white and bold on the accent colour. \\leavevmode, or \\color would start a
 % wrapping cell with an empty line
 \\newcommand{\\head}[1]{\\leavevmode{\\normalfont\\bfseries\\color{white}#1}}
-\\newcommand{\\doctitle}[1]{{\\LARGE\\bfseries #1\\par}\\bigskip}
 
 \\setlength{\\parindent}{0pt}
 \\renewcommand{\\arraystretch}{1.35}
@@ -113,9 +116,8 @@ export function exportCatalogLatex(items: CatalogItem[], totalCount: number, fil
   title: string, fileName: string) {
   const now = new Date()
   const columns = `>{\\ttfamily}L{20mm}L{${rest(186, 8)}}R{14mm}L{32mm}L{28mm}C{24mm}R{28mm}L{40mm}`
-  const body = `\\doctitle{${tex(title)}}
-${longTable(columns, catalogHead(t), items.map((item) => row(catalogCells(item, t).map(tex))), true)}`
-  save(texDocument(body, catalogNote(items, totalCount, filters, now, t), true, now, t), `${fileName}-${isoDay(now)}.tex`)
+  const body = longTable(columns, catalogHead(t), items.map((item) => row(catalogCells(item, t).map(tex))), true)
+  save(texDocument(title, body, catalogNote(items, totalCount, filters, now, t), true, now, t), `${fileName}-${isoDay(now)}.tex`)
 }
 
 /**
@@ -144,9 +146,9 @@ export function exportInventoryLatex(rooms: InventoryRoomExport[], totalCount: n
       : []),
     ...missing.flatMap(section),
   ]
-  const body = `\\doctitle{${tex(`${t.pdfTitleInventory} — ${house}`)}}
-${longTable(`R{14mm}L{${rest(46, 3)}}R{32mm}`, [t.quantityShort, t.description, t.value], rows, false)}`
-  save(texDocument(body, inventoryNote(rooms, totalCount, filters, now, t), false, now, t),
+  const body = longTable(`R{14mm}L{${rest(46, 3)}}R{32mm}`, [t.quantityShort, t.description, t.value], rows, false)
+  save(texDocument(house ? `${t.pdfTitleInventory} — ${house}` : t.pdfTitleInventory, body,
+    inventoryNote(rooms, totalCount, filters, house, now, t), false, now, t),
     `attic-inventory-${isoDay(now)}.tex`)
 }
 
@@ -167,13 +169,12 @@ export function exportHeirsLatex(rows: { heir: Heir; depth: number }[], everybod
   // name stays on one line; the address takes what is left
   const widest = [`\\textbf{${tex(t.name)}}`, ...cells.map(([name]) => name)]
     .map((name) => `\\settowidth{\\heircell}{${name}}\\ifdim\\heircell>\\namewidth\\setlength{\\namewidth}{\\heircell}\\fi`)
-  const body = `\\doctitle{${tex(t.tabHeirs)}}
-\\newlength{\\namewidth}\\newlength{\\heircell}
+  const body = `\\newlength{\\namewidth}\\newlength{\\heircell}
 {\\small
 ${widest.join('\n')}
 \\global\\namewidth=\\namewidth}
 ${longTable(`L{\\namewidth}L{30mm}L{30mm}R{14mm}R{28mm}L{45mm}L{${rest(147, 7, '\\namewidth')}}`, heirsHead(t), lines, true)}`
-  save(texDocument(body, heirsNote(rows, everybody, filters, now, t), true, now, t), `attic-heirs-${isoDay(now)}.tex`)
+  save(texDocument(t.tabHeirs, body, heirsNote(rows, everybody, filters, now, t), true, now, t), `attic-heirs-${isoDay(now)}.tex`)
 }
 
 /** Every year of the annual contribution as LaTeX, like exportContributionsPdf: ten years per page. */
@@ -186,9 +187,9 @@ export function exportContributionsLatex(years: ContributionYear[], t: Messages)
       ...page.body.map((cells) => row(cells.map(tex))),
       `\\rowcolor{stripe}${row(page.totals.map((cell) => `\\bfseries ${tex(cell)}`))}`,
     ]
-    return `\\doctitle{${tex(page.title)}}
-${longTable(columns, page.head, rows, true)}`
+    return longTable(columns, page.head, rows, true)
   })
-  const body = pages.length > 0 ? pages.join('\\newpage\n') : `\\doctitle{${tex(t.tabContributions)}}`
-  save(texDocument(body, generatedOn(now, t), years.length > 5, now, t), `attic-contributions-${isoDay(now)}.tex`)
+  // Without any year, an empty page all the same, with its footer
+  const body = pages.length > 0 ? pages.join('\\newpage\n') : '\\mbox{}'
+  save(texDocument(t.tabContributions, body, generatedOn(now, t), years.length > 5, now, t), `attic-contributions-${isoDay(now)}.tex`)
 }
