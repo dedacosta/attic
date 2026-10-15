@@ -1,8 +1,8 @@
 import { jsPDF } from 'jspdf'
 import { autoTable, type RowInput, type Styles } from 'jspdf-autotable'
 import {
-  catalogCells, catalogHead, catalogSubtitle, contributionPages, copyrightLine, generatedOn, heirCells, heirsHead,
-  heirsSubtitle, inventorySubtitle, inventorySum, isoDay, type InventoryRoomExport,
+  catalogCells, catalogHead, catalogNote, contributionPages, copyrightLine, generatedOn, heirCells, heirsHead,
+  heirsNote, inventoryNote, inventorySum, isoDay, type InventoryRoomExport,
 } from './export'
 import { formatEuros } from './format'
 import type { Messages } from '../i18n'
@@ -18,26 +18,38 @@ const TOTAL_PAGES = '{total_pages}'
 /** The built-in PDF fonts have no narrow or no-break spaces, which Intl uses in "1 234,50 €". */
 const pdfText = (text: string) => text.replace(/[  ]/g, ' ')
 
-/** Title and the line below it, at the top of the first page */
-function drawTitle(doc: jsPDF, title: string, subtitle: string) {
+/** The title, at the top of the first page */
+function drawTitle(doc: jsPDF, title: string) {
   doc.setTextColor(...TEXT)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(18)
   doc.text(pdfText(title), MARGIN, 18)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.setTextColor(...MUTED)
-  doc.text(pdfText(subtitle), MARGIN, 25)
 }
 
-/** Copyright, Attic's version and the page number, at the bottom of every page */
-function drawFooter(doc: jsPDF, pageNumber: number, now: Date, t: Messages) {
+/** Where the table starts, below the title */
+const TABLE_TOP = 25
+
+/** Between the lines of the footer, in mm */
+const FOOTER_LINE_HEIGHT = 3.5
+
+/** Room kept for the page number, right of the rest of the footer, in mm */
+const PAGE_NUMBER_WIDTH = 30
+
+/**
+ * Copyright, Attic's version, the note (when, how many…) and the page number, at the bottom of
+ * every page. A note too long for one line goes on over more.
+ */
+function drawFooter(doc: jsPDF, pageNumber: number, note: string, now: Date, t: Messages) {
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(...MUTED)
-  doc.text(pdfText(copyrightLine(now)), MARGIN, pageHeight - 8)
+  const lines: string[] = doc.splitTextToSize(pdfText(`${copyrightLine(now)}  ·  ${note}`),
+    pageWidth - 2 * MARGIN - PAGE_NUMBER_WIDTH)
+  // The last line where a footer of one line is, next to the page number, the others above it
+  const top = pageHeight - 8 - (lines.length - 1) * FOOTER_LINE_HEIGHT
+  doc.text(lines, MARGIN, top, { lineHeightFactor: FOOTER_LINE_HEIGHT / (8 * 25.4 / 72) })
   doc.text(pdfText(t.page(pageNumber, TOTAL_PAGES)), pageWidth - MARGIN, pageHeight - 8, { align: 'right' })
 }
 
@@ -49,10 +61,11 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
   fileName: string) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
-  drawTitle(doc, title, catalogSubtitle(items, totalCount, filters, now, t))
+  const note = catalogNote(items, totalCount, filters, now, t)
+  drawTitle(doc, title)
 
   autoTable(doc, {
-    startY: 31,
+    startY: TABLE_TOP,
     margin: { left: MARGIN, right: MARGIN, bottom: 18 },
     head: [catalogHead(t)],
     body: items.map((item) => catalogCells(item, t).map(pdfText)),
@@ -76,7 +89,7 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
           : data.column.index === 5 ? 'center' : 'left'
       }
     },
-    didDrawPage: (data) => drawFooter(doc, data.pageNumber, now, t),
+    didDrawPage: (data) => drawFooter(doc, data.pageNumber, note, now, t),
   })
   doc.putTotalPages(TOTAL_PAGES)
   doc.save(`${fileName}-${isoDay(now)}.pdf`)
@@ -92,7 +105,8 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
   t: Messages, house: string) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const now = new Date()
-  drawTitle(doc, `${t.pdfTitleInventory} — ${house}`, inventorySubtitle(rooms, totalCount, filters, now, t))
+  const note = inventoryNote(rooms, totalCount, filters, now, t)
+  drawTitle(doc, `${t.pdfTitleInventory} — ${house}`)
 
   const euros = (value: number) => pdfText(formatEuros(value, t.locale))
 
@@ -115,7 +129,7 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
   const missing = rooms.filter((room) => room.missing)
 
   autoTable(doc, {
-    startY: 31,
+    startY: TABLE_TOP,
     margin: { left: MARGIN, right: MARGIN, bottom: 18 },
     head: [[t.quantityShort, t.description, t.value]],
     body: [
@@ -142,7 +156,7 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
         data.cell.styles.halign = 'left'
       }
     },
-    didDrawPage: (data) => drawFooter(doc, data.pageNumber, now, t),
+    didDrawPage: (data) => drawFooter(doc, data.pageNumber, note, now, t),
   })
   doc.putTotalPages(TOTAL_PAGES)
   doc.save(`attic-inventory-${isoDay(now)}.pdf`)
@@ -160,11 +174,12 @@ export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], ever
   t: Messages) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
-  drawTitle(doc, t.tabHeirs, heirsSubtitle(rows, everybody, filters, now, t))
+  const note = heirsNote(rows, everybody, filters, now, t)
+  drawTitle(doc, t.tabHeirs)
   const names = new Map(everybody.map((heir) => [heir.id, heir.name]))
 
   autoTable(doc, {
-    startY: 31,
+    startY: TABLE_TOP,
     margin: { left: MARGIN, right: MARGIN, bottom: 18 },
     head: [heirsHead(t)],
     body: rows.map(({ heir }) => heirCells(heir, names, now, t).map(pdfText)),
@@ -172,7 +187,8 @@ export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], ever
     headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: STRIPE },
     columnStyles: {
-      0: { cellWidth: 62 },
+      // As wide as the longest name, which stays on one line; the address takes what is left
+      0: { cellWidth: 'wrap' },
       1: { cellWidth: 30 },
       2: { cellWidth: 30 },
       3: { halign: 'right', cellWidth: 14 },
@@ -188,7 +204,7 @@ export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], ever
         data.cell.styles.cellPadding = { top: 2, right: 2, bottom: 2, left: 2 + depth * CHILD_INDENT }
       }
     },
-    didDrawPage: (data) => drawFooter(doc, data.pageNumber, now, t),
+    didDrawPage: (data) => drawFooter(doc, data.pageNumber, note, now, t),
   })
   doc.putTotalPages(TOTAL_PAGES)
   doc.save(`attic-heirs-${isoDay(now)}.pdf`)
@@ -206,11 +222,11 @@ export async function exportContributionsPdf(years: ContributionYear[], t: Messa
     if (index > 0) {
       doc.addPage()
     }
-    drawTitle(doc, page.title, generatedOn(now, t))
+    drawTitle(doc, page.title)
     const last = page.head.length - 1
 
     autoTable(doc, {
-      startY: 31,
+      startY: TABLE_TOP,
       margin: { left: MARGIN, right: MARGIN, bottom: 18 },
       head: [page.head.map(pdfText)],
       body: page.body.map((row) => row.map(pdfText)),
@@ -235,7 +251,7 @@ export async function exportContributionsPdf(years: ContributionYear[], t: Messa
   // The footer once every page exists, so that each knows its number
   for (let number = 1; number <= doc.getNumberOfPages(); number++) {
     doc.setPage(number)
-    drawFooter(doc, number, now, t)
+    drawFooter(doc, number, generatedOn(now, t), now, t)
   }
   doc.putTotalPages(TOTAL_PAGES)
   doc.save(`attic-contributions-${isoDay(now)}.pdf`)

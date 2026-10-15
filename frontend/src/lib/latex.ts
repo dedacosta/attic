@@ -1,6 +1,6 @@
 import {
-  catalogCells, catalogHead, catalogSubtitle, contributionPages, copyrightLine, generatedOn, heirCells, heirsHead,
-  heirsSubtitle, inventorySubtitle, inventorySum, isoDay, type InventoryRoomExport,
+  catalogCells, catalogHead, catalogNote, contributionPages, copyrightLine, generatedOn, heirCells, heirsHead,
+  heirsNote, inventoryNote, inventorySum, isoDay, type InventoryRoomExport,
 } from './export'
 import { formatEuros } from './format'
 import type { Messages } from '../i18n'
@@ -22,15 +22,15 @@ const ESCAPES: Record<string, string> = {
 /** Text as LaTeX, its special characters escaped */
 const tex = (text: string) => text.replace(/[\\{}$&#%_^~\u00a0\u202f\r\n]/g, (c) => ESCAPES[c])
 
-/** The line below a title, with room around its separators */
-const subtitle = (text: string) => tex(text).replaceAll('  ·  ', '\\quad·\\quad ')
+/** The note of the footer, with room around its separators */
+const footerNote = (text: string) => tex(text).replaceAll('  ·  ', '\\quad·\\quad ')
 
 /** A column that takes what the others leave of the width of the page */
-const rest = (fixedMm: number, columns: number) =>
-  `\\dimexpr\\textwidth-${fixedMm}mm-${2 * columns}\\tabcolsep\\relax`
+const rest = (fixedMm: number, columns: number, also = '') =>
+  `\\dimexpr\\textwidth-${fixedMm}mm${also && `-${also}`}-${2 * columns}\\tabcolsep\\relax`
 
-/** A whole LaTeX document around the given body */
-function texDocument(body: string, landscape: boolean, now: Date, t: Messages): string {
+/** A whole LaTeX document around the given body, the note (when, how many…) in the footer after the copyright */
+function texDocument(body: string, note: string, landscape: boolean, now: Date, t: Messages): string {
   const language = LANGUAGES[t.locale.split('-')[0]] ?? 'british'
   const page = tex(t.page('@PAGE@', '@TOTAL@')).replace('@PAGE@', '\\thepage{}').replace('@TOTAL@', '\\pageref{LastPage}')
   return `% ${tex(generatedOn(now, t))}
@@ -64,7 +64,7 @@ function texDocument(body: string, landscape: boolean, now: Date, t: Messages): 
 % A header cell: white and bold on the accent colour. \\leavevmode, or \\color would start a
 % wrapping cell with an empty line
 \\newcommand{\\head}[1]{\\leavevmode{\\normalfont\\bfseries\\color{white}#1}}
-\\newcommand{\\doctitle}[2]{{\\LARGE\\bfseries #1\\par}\\smallskip{\\small\\color{muted}#2\\par}\\medskip}
+\\newcommand{\\doctitle}[1]{{\\LARGE\\bfseries #1\\par}\\bigskip}
 
 \\setlength{\\parindent}{0pt}
 \\renewcommand{\\arraystretch}{1.35}
@@ -73,7 +73,8 @@ function texDocument(body: string, landscape: boolean, now: Date, t: Messages): 
 \\pagestyle{fancy}
 \\fancyhf{}
 \\renewcommand{\\headrulewidth}{0pt}
-\\fancyfoot[L]{\\scriptsize\\color{muted}${tex(copyrightLine(now))}}
+% A note too long for one line goes on over more, clear of the page number
+\\fancyfoot[L]{\\parbox[b]{\\dimexpr\\textwidth-30mm\\relax}{\\raggedright\\scriptsize\\color{muted}${tex(copyrightLine(now))}\\quad·\\quad ${footerNote(note)}}}
 \\fancyfoot[R]{\\scriptsize\\color{muted}${page}}
 
 \\begin{document}
@@ -112,9 +113,9 @@ export function exportCatalogLatex(items: CatalogItem[], totalCount: number, fil
   title: string, fileName: string) {
   const now = new Date()
   const columns = `>{\\ttfamily}L{20mm}L{${rest(186, 8)}}R{14mm}L{32mm}L{28mm}C{24mm}R{28mm}L{40mm}`
-  const body = `\\doctitle{${tex(title)}}{${subtitle(catalogSubtitle(items, totalCount, filters, now, t))}}
+  const body = `\\doctitle{${tex(title)}}
 ${longTable(columns, catalogHead(t), items.map((item) => row(catalogCells(item, t).map(tex))), true)}`
-  save(texDocument(body, true, now, t), `${fileName}-${isoDay(now)}.tex`)
+  save(texDocument(body, catalogNote(items, totalCount, filters, now, t), true, now, t), `${fileName}-${isoDay(now)}.tex`)
 }
 
 /**
@@ -143,9 +144,10 @@ export function exportInventoryLatex(rooms: InventoryRoomExport[], totalCount: n
       : []),
     ...missing.flatMap(section),
   ]
-  const body = `\\doctitle{${tex(`${t.pdfTitleInventory} — ${house}`)}}{${subtitle(inventorySubtitle(rooms, totalCount, filters, now, t))}}
+  const body = `\\doctitle{${tex(`${t.pdfTitleInventory} — ${house}`)}}
 ${longTable(`R{14mm}L{${rest(46, 3)}}R{32mm}`, [t.quantityShort, t.description, t.value], rows, false)}`
-  save(texDocument(body, false, now, t), `attic-inventory-${isoDay(now)}.tex`)
+  save(texDocument(body, inventoryNote(rooms, totalCount, filters, now, t), false, now, t),
+    `attic-inventory-${isoDay(now)}.tex`)
 }
 
 /** How far a child's name is set in from their parent's, in mm */
@@ -156,13 +158,22 @@ export function exportHeirsLatex(rows: { heir: Heir; depth: number }[], everybod
   t: Messages) {
   const now = new Date()
   const names = new Map(everybody.map((heir) => [heir.id, heir.name]))
-  const lines = rows.map(({ heir, depth }) => {
-    const [name, ...cells] = heirCells(heir, names, now, t).map(tex)
-    return row([depth > 0 ? `\\hspace*{${depth * CHILD_INDENT}mm}${name}` : name, ...cells])
+  const cells = rows.map(({ heir, depth }) => {
+    const [name, ...others] = heirCells(heir, names, now, t).map(tex)
+    return [depth > 0 ? `\\hspace*{${depth * CHILD_INDENT}mm}${name}` : name, ...others]
   })
-  const body = `\\doctitle{${tex(t.tabHeirs)}}{${subtitle(heirsSubtitle(rows, everybody, filters, now, t))}}
-${longTable(`L{62mm}L{30mm}L{30mm}R{14mm}R{28mm}L{45mm}L{${rest(209, 7)}}`, heirsHead(t), lines, true)}`
-  save(texDocument(body, true, now, t), `attic-heirs-${isoDay(now)}.tex`)
+  const lines = cells.map(row)
+  // The name column is as wide as the longest name, measured in the table's font, so that every
+  // name stays on one line; the address takes what is left
+  const widest = [`\\textbf{${tex(t.name)}}`, ...cells.map(([name]) => name)]
+    .map((name) => `\\settowidth{\\heircell}{${name}}\\ifdim\\heircell>\\namewidth\\setlength{\\namewidth}{\\heircell}\\fi`)
+  const body = `\\doctitle{${tex(t.tabHeirs)}}
+\\newlength{\\namewidth}\\newlength{\\heircell}
+{\\small
+${widest.join('\n')}
+\\global\\namewidth=\\namewidth}
+${longTable(`L{\\namewidth}L{30mm}L{30mm}R{14mm}R{28mm}L{45mm}L{${rest(147, 7, '\\namewidth')}}`, heirsHead(t), lines, true)}`
+  save(texDocument(body, heirsNote(rows, everybody, filters, now, t), true, now, t), `attic-heirs-${isoDay(now)}.tex`)
 }
 
 /** Every year of the annual contribution as LaTeX, like exportContributionsPdf: ten years per page. */
@@ -175,9 +186,9 @@ export function exportContributionsLatex(years: ContributionYear[], t: Messages)
       ...page.body.map((cells) => row(cells.map(tex))),
       `\\rowcolor{stripe}${row(page.totals.map((cell) => `\\bfseries ${tex(cell)}`))}`,
     ]
-    return `\\doctitle{${tex(page.title)}}{${subtitle(generatedOn(now, t))}}
+    return `\\doctitle{${tex(page.title)}}
 ${longTable(columns, page.head, rows, true)}`
   })
-  const body = pages.length > 0 ? pages.join('\\newpage\n') : `\\doctitle{${tex(t.tabContributions)}}{${subtitle(generatedOn(now, t))}}`
-  save(texDocument(body, years.length > 5, now, t), `attic-contributions-${isoDay(now)}.tex`)
+  const body = pages.length > 0 ? pages.join('\\newpage\n') : `\\doctitle{${tex(t.tabContributions)}}`
+  save(texDocument(body, generatedOn(now, t), years.length > 5, now, t), `attic-contributions-${isoDay(now)}.tex`)
 }
