@@ -119,6 +119,8 @@
   "errorYear": "Please enter a year between 1900 and 2999.",
   "errorAmount": "An amount must look like 12.50.",
   "sections": "Sections",
+  "scrollTabsBack": "Show earlier sections",
+  "scrollTabsForward": "Show more sections",
   "docSearchPlaceholder": "Search heir, type, comments…",
   "docSearchLabel": "Search documents",
   "newDocument": "New document",
@@ -411,5 +413,14 @@
   "laterYears": "Later years",
   "yearlyAmountLabel": "Yearly amount",
   "commentOfYear": "Comment on {year}",
-  "noContributors": "Nobody pays in these years."
+  "noContributors": "Nobody pays in these years.",
+  "tabFolder": "Folder",
+  "folderEmpty": "The folder is empty.",
+  "folderEmptySubfolder": "Empty folder",
+  "folderEntryCount": {
+    "=0": "empty",
+    "one": "{count} item",
+    "other": "{count} items"
+  },
+  "downloadNamed": "Download {name}"
 }

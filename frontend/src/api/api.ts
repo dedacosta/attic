@@ -1,6 +1,6 @@
 import type { Messages } from '../i18n'
 import type {
-  ContributionYear, DocumentInput, Renovation, RenovationInput, Invitation, CatalogItem, CatalogItemInput, OwnAccount, Heir, HeirDocument,
+  ContributionYear, DocumentInput, FolderEntry, Renovation, RenovationInput, Invitation, CatalogItem, CatalogItemInput, OwnAccount, Heir, HeirDocument,
   HeirInput, Estate, InventoryItem, InventoryRoom, InventoryRoomInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
 } from './types'
 
@@ -151,6 +151,11 @@ export const api = {
     request<ContributionYear>(`/api/contributions/${year}/${heirId}`, json('PUT', { amountEur })),
 
   listRenovations: () => request<Renovation[]>('/api/renovations'),
+
+  listFolder: () => request<FolderEntry[]>('/api/folder'),
+  /** Where a file of the Folder tab opens in the browser, or with `download` is saved */
+  folderFileUrl: (path: string, download = false) =>
+    `/api/folder/file?path=${encodeURIComponent(path)}${download ? '&download=true' : ''}`,
   createRenovation: (input: RenovationInput) => request<Renovation>('/api/renovations', json('POST', input)),
   updateRenovation: (id: string, input: RenovationInput) =>
     request<Renovation>(`/api/renovations/${id}`, json('PUT', input)),

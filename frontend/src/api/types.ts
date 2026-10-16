@@ -142,6 +142,17 @@ export interface ContributionYear {
   comment: string | null
 }
 
+/** A file or subfolder of the Folder tab, as put on disk by hand; path is relative to the folder, with "/" */
+export interface FolderEntry {
+  name: string
+  path: string
+  folder: boolean
+  /** Bytes; 0 for a folder */
+  size: number
+  modified: string
+  children: FolderEntry[]
+}
+
 /** A renovation of the house, its cost shared by those who pay the contribution in its year */
 export interface Renovation {
   id: string

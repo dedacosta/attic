@@ -4,7 +4,8 @@ import AccountMenu from './components/AccountMenu'
 import Footer from './components/Footer'
 import LanguageSwitch from './components/LanguageSwitch'
 import SignInScreen from './components/SignInScreen'
-import { BoxIcon, ClipboardIcon, CoinsIcon, HammerIcon, HouseIcon, IdCardIcon, KeyIcon, HeirsIcon } from './components/icons'
+import { BoxIcon, ClipboardIcon, CoinsIcon, FolderIcon, HammerIcon, HouseIcon, IdCardIcon, HeirsIcon } from './components/icons'
+import SectionTabs from './components/SectionTabs'
 import { useI18n } from './i18n'
 import { PermissionsProvider, usePermissions } from './lib/permissions'
 import ContributionsView from './views/ContributionsView'
@@ -14,10 +15,11 @@ import InventoryView from './views/InventoryView'
 import RenovationsView from './views/RenovationsView'
 import HeirsView from './views/HeirsView'
 import EstateView from './views/EstateView'
+import FolderView from './views/FolderView'
 import UsersView from './views/UsersView'
 import type { Session } from './api/types'
 
-type View = 'catalog' | 'inventory' | 'heirs' | 'documents' | 'estate' | 'contributions' | 'renovations' | 'users'
+type View = 'catalog' | 'inventory' | 'heirs' | 'documents' | 'estate' | 'contributions' | 'renovations' | 'folder' | 'users'
 
 // The view lives in the URL hash (#/documents) so that reloading keeps it
 function viewFromHash(): View {
@@ -34,6 +36,8 @@ function viewFromHash(): View {
       return 'contributions'
     case '#/renovations':
       return 'renovations'
+    case '#/folder':
+      return 'folder'
     case '#/users':
       return 'users'
     // The estate is the start page (#/, #/estate or #/estate/<id>)
@@ -112,8 +116,8 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
   const { t } = useI18n()
   const { seesHeirs, isAdmin } = usePermissions()
   const [hashView, setView] = useState(viewFromHash)
-  // Tabs this account has: users without a linked heir have no Heirs and Documents tabs, and
-  // only administrators have the Users tab. Everybody sees the rest.
+  // Views this account has: users without a linked heir have no Heirs and Documents tabs, and
+  // only administrators have the Users view, opened from the account menu. Everybody sees the rest.
   const allowed = (id: View) => (id === 'users' ? isAdmin : id === 'heirs' || id === 'documents' ? seesHeirs : true)
   const view: View = allowed(hashView) ? hashView : 'estate'
 
@@ -131,7 +135,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
     { id: 'documents', href: '#/documents', label: t.tabDocuments, Icon: IdCardIcon },
     { id: 'contributions', href: '#/contributions', label: t.tabContributions, Icon: CoinsIcon },
     { id: 'renovations', href: '#/renovations', label: t.tabRenovations, Icon: HammerIcon },
-    { id: 'users', href: '#/users', label: t.users, Icon: KeyIcon },
+    { id: 'folder', href: '#/folder', label: t.tabFolder, Icon: FolderIcon },
   ] as const).filter((tab) => allowed(tab.id))
 
   return (
@@ -142,13 +146,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
             <HouseIcon width={26} height={26} />
             <span>Attic</span>
           </div>
-          <nav className="tabs" aria-label={t.sections}>
-            {tabs.map(({ id, href, label, Icon }) => (
-              <a key={id} href={href} className="tab" aria-current={view === id ? 'page' : undefined}>
-                <Icon width={18} height={18} /> {label}
-              </a>
-            ))}
-          </nav>
+          <SectionTabs tabs={tabs} current={view} />
           <LanguageSwitch />
           <AccountMenu username={username} onSignedOut={onSignedOut} />
         </div>
@@ -161,6 +159,7 @@ function SignedInApp({ username, onSignedOut }: { username: string; onSignedOut:
       {view === 'estate' && <EstateView />}
       {view === 'contributions' && <ContributionsView />}
       {view === 'renovations' && <RenovationsView />}
+      {view === 'folder' && <FolderView />}
       {view === 'users' && <UsersView currentUser={username} />}
 
       <Footer />

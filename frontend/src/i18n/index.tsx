@@ -65,6 +65,8 @@ const PARAMS = {
   totalValue: ['value'],
   fileCount: ['count'],
   deletePropertyMessage: ['name'],
+  folderEntryCount: ['count'],
+  downloadNamed: ['name'],
 } as const satisfies Partial<Record<keyof typeof en, readonly string[]>>
 
 type Params = typeof PARAMS
