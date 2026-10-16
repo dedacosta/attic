@@ -55,6 +55,11 @@ export default function AccountMenu({ username, onSignedOut }: Props) {
         </summary>
         <div className="account-popover" role="menu">
           <p className="account-role">{isSuperAdmin ? t.roleSuperAdmin : isAdmin ? t.roleAdmin : t.roleUser}</p>
+          {isAdmin && (
+            <a href="#/users" role="menuitem" onClick={() => { menu.current!.open = false }}>
+              {t.users}
+            </a>
+          )}
           <button type="button" role="menuitem"
             onClick={async () => { menu.current!.open = false; setAccount(await api.myAccount()) }}>
             {t.myAccount}

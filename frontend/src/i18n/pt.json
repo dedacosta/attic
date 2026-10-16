@@ -119,6 +119,8 @@
   "errorYear": "Indique um ano entre 1900 e 2999.",
   "errorAmount": "Um montante deve ser como 12,50.",
   "sections": "Secções",
+  "scrollTabsBack": "Mostrar secções anteriores",
+  "scrollTabsForward": "Mostrar mais secções",
   "docSearchPlaceholder": "Pesquisar herdeiro, tipo, comentários…",
   "docSearchLabel": "Pesquisar documentos",
   "newDocument": "Novo documento",
@@ -417,5 +419,14 @@
   "laterYears": "Anos seguintes",
   "yearlyAmountLabel": "Montante anual",
   "commentOfYear": "Comentário de {year}",
-  "noContributors": "Ninguém paga nestes anos."
+  "noContributors": "Ninguém paga nestes anos.",
+  "tabFolder": "Pasta",
+  "folderEmpty": "A pasta está vazia.",
+  "folderEmptySubfolder": "Pasta vazia",
+  "folderEntryCount": {
+    "=0": "vazia",
+    "one": "{count} elemento",
+    "other": "{count} elementos"
+  },
+  "downloadNamed": "Descarregar {name}"
 }

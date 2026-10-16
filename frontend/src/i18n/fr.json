@@ -119,6 +119,8 @@
   "errorYear": "Veuillez saisir une année entre 1900 et 2999.",
   "errorAmount": "Un montant doit ressembler à 12,50.",
   "sections": "Sections",
+  "scrollTabsBack": "Afficher les sections précédentes",
+  "scrollTabsForward": "Afficher plus de sections",
   "docSearchPlaceholder": "Rechercher un héritier, un type, un commentaire…",
   "docSearchLabel": "Rechercher des documents",
   "newDocument": "Nouveau document",
@@ -418,5 +420,14 @@
   "laterYears": "Années suivantes",
   "yearlyAmountLabel": "Montant annuel",
   "commentOfYear": "Commentaire de {year}",
-  "noContributors": "Personne ne paie ces années-là."
+  "noContributors": "Personne ne paie ces années-là.",
+  "tabFolder": "Dossier",
+  "folderEmpty": "Le dossier est vide.",
+  "folderEmptySubfolder": "Dossier vide",
+  "folderEntryCount": {
+    "=0": "vide",
+    "one": "{count} élément",
+    "other": "{count} éléments"
+  },
+  "downloadNamed": "Télécharger {name}"
 }
