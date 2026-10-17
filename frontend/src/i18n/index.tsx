@@ -55,6 +55,7 @@ const PARAMS = {
   invitationCreated: ['username', 'when'],
   invitationExpires: ['when'],
   photoOf: ['n', 'total'],
+  pdfPageCount: ['count'],
   openPhoto: ['n'],
   photoCount: ['count'],
   errorPhotoUpload: ['file', 'reason'],
@@ -87,7 +88,7 @@ export type Messages = {
 }
 
 function fill(text: string, values: Record<string, string | number>): string {
-  return text.replace(/\{(\w+)\}/g, (placeholder, name: string) => (name in values ? String(values[name]) : placeholder))
+  return text.replace(/\{(\w+)}/g, (placeholder, name: string) => (name in values ? String(values[name]) : placeholder))
 }
 
 /** The messages of a language. Every text of English must be there, so a missing one fails the build. */

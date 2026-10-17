@@ -329,6 +329,14 @@
   "previousPhoto": "Photo précédente",
   "nextPhoto": "Photo suivante",
   "photoOf": "Photo {n} sur {total}",
+  "zoomIn": "Agrandir",
+  "zoomOut": "Réduire",
+  "downloadPdf": "Télécharger le PDF",
+  "pdfPageCount": {
+    "one": "{count} page",
+    "other": "{count} pages"
+  },
+  "errorPdfOpen": "Le PDF n'a pas pu être ouvert.",
   "addPhotos": "Ajouter des photos",
   "cover": "Couverture",
   "makeCover": "Mettre en couverture",

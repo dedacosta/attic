@@ -6,6 +6,7 @@ import DocumentDialog from '../components/DocumentDialog'
 import HeirDetails from '../components/HeirDetails'
 import HeirDialog from '../components/HeirDialog'
 import HeirRow from '../components/HeirRow'
+import PdfViewer from '../components/PdfViewer'
 import SearchBar from '../components/SearchBar'
 import { FileIcon, PlusIcon } from '../components/icons'
 import { saveWithPhotos } from '../lib/photos'
@@ -14,6 +15,7 @@ import { add, compare, formatFraction, formatPercent, ONE, parseFraction, subtra
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
 import type { DocumentInput, Heir, HeirDocument, HeirInput, PhotoEntry } from '../api/types'
+import type { GeneratedPdf } from '../lib/pdf'
 
 function matches(heir: Heir, words: string[], t: Messages): boolean {
   const text = normalize(
@@ -83,6 +85,7 @@ export default function HeirsView() {
   // By id, so that it shows the heir as reloaded
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<Heir | null>(null)
+  const [preview, setPreview] = useState<GeneratedPdf | null>(null)
   const [editingDocument, setEditingDocument] = useState<HeirDocument | 'new' | null>(null)
   const [confirmingDocumentDelete, setConfirmingDocumentDelete] = useState(false)
 
@@ -147,7 +150,7 @@ export default function HeirsView() {
     }
     // Loaded on demand: the PDF library is large
     const { exportHeirsPdf } = await import('../lib/pdf')
-    await exportHeirsPdf(rows, heirs ?? [], filters, t)
+    setPreview(await exportHeirsPdf(rows, heirs ?? [], filters, t))
   }
 
   const editingHeir = editing !== null && editing !== 'new' ? editing : null
@@ -307,6 +310,10 @@ export default function HeirsView() {
           onConfirm={confirmDelete}
           onCancel={() => setDeleting(null)}
         />
+      )}
+      {preview && (
+        <PdfViewer source={preview.blob} title={preview.title} fileName={preview.fileName}
+          onClose={() => setPreview(null)} />
       )}
     </>
   )

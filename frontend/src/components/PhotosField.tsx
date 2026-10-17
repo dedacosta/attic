@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { FileIcon, ImageIcon, PlusIcon, TrashIcon } from './icons'
+import PdfViewer from './PdfViewer'
 import PhotoViewer from './PhotoViewer'
 import type { PhotoEntry } from '../api/types'
 
@@ -39,6 +40,7 @@ export default function PhotosField(props: Props) {
   const { photos, onChange, onError, readOnly = false, allowPdf = false, cover = !allowPdf } = props
   const { t } = useI18n()
   const [viewing, setViewing] = useState<number | null>(null)
+  const [viewingPdf, setViewingPdf] = useState<PhotoEntry | null>(null)
 
   // Previews of photos that are not uploaded yet, by entry key
   const localUrls = useMemo(
@@ -52,12 +54,12 @@ export default function PhotosField(props: Props) {
   const full = (entry: PhotoEntry) =>
     entry.kind === 'stored' ? entry.picture.url : (localUrls.get(entry.key) ?? '')
 
-  // The viewer shows images only; PDFs open in the browser's own viewer
+  // The photo viewer shows images only; PDFs have a viewer of their own
   const images = photos.filter((entry) => !isPdf(entry))
 
   function open(entry: PhotoEntry) {
     if (isPdf(entry)) {
-      window.open(full(entry), '_blank', 'noopener')
+      setViewingPdf(entry)
     } else {
       setViewing(images.indexOf(entry))
     }
@@ -127,6 +129,13 @@ export default function PhotosField(props: Props) {
       </ul>
       {viewing !== null && (
         <PhotoViewer sources={images.map(full)} start={viewing} onClose={() => setViewing(null)} />
+      )}
+      {viewingPdf !== null && (
+        // A PDF not uploaded yet is shown from its file, and keeps its name when downloaded
+        <PdfViewer source={viewingPdf.kind === 'stored' ? viewingPdf.picture.url : viewingPdf.file}
+          title={viewingPdf.kind === 'stored' ? 'PDF' : viewingPdf.file.name}
+          fileName={viewingPdf.kind === 'stored' ? undefined : viewingPdf.file.name}
+          onClose={() => setViewingPdf(null)} />
       )}
     </div>
   )
