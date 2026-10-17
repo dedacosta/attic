@@ -6,13 +6,14 @@ import { exportInventoryLatex } from '../lib/latex'
 import { PhotoUploadError, saveWithPhotos } from '../lib/photos'
 import InventoryLine from '../components/InventoryLine'
 import PdfViewer from '../components/PdfViewer'
+import ConfirmDialog from '../components/ConfirmDialog'
 import PhotosField from '../components/PhotosField'
 import SearchBar from '../components/SearchBar'
 import { AMOUNT_PATTERN, formatEuros, normalize, parseAmount } from '../lib/format'
 import { NEW_ITEM, parseItemForm, toItemForm, type ItemForm } from '../lib/inventory'
 import { usePermissions } from '../lib/permissions'
 import { useI18n } from '../i18n'
-import { FileIcon, PlusIcon } from '../components/icons'
+import { FileIcon, PlusIcon, TrashIcon } from '../components/icons'
 import { storedPhotos, type Building, type InventoryItem, type InventoryRoom, type InventoryRoomInput, type PhotoEntry } from '../api/types'
 import type { GeneratedPdf } from '../lib/pdf'
 
@@ -43,6 +44,10 @@ interface Draft {
 /** Sums are rounded to cents, as 33.33 + 66.67 is not exactly 100 in floating point */
 const sum = (values: number[]) => Math.round(values.reduce((all, value) => all + value, 0) * 100) / 100
 
+/** What a room holds in the inventory, besides its name: then it is listed */
+const hasContent = (room: InventoryRoom) =>
+  room.items.length > 0 || room.pictures.length > 0 || room.comments !== null || room.pdfTitle !== null
+
 /** A line is dragged up and down only */
 const vertical: Modifier = ({ transform }) => ({ ...transform, x: 0 })
 
@@ -69,6 +74,10 @@ export default function InventoryView() {
   const [lineError, setLineError] = useState<{ key: string; message: string } | null>(null)
   // Rooms of the house chosen to add items to, listed even while they have none
   const [chosen, setChosen] = useState<string[]>([])
+  // The room picked in the dropdown, added with the button next to it
+  const [picked, setPicked] = useState('')
+  // A room to take out of the inventory, once its removal is confirmed
+  const [removing, setRemoving] = useState<InventoryRoom | null>(null)
   // Photos of a room while they are saved, the new ones shown from their files
   const [savingPhotos, setSavingPhotos] = useState<Record<string, PhotoEntry[]>>({})
   const serial = useRef(0)
@@ -122,6 +131,8 @@ export default function InventoryView() {
     setDraft(null)
     setLineError(null)
     setChosen([])
+    setPicked('')
+    setRemoving(null)
     setSavingPhotos({})
     reload()
   }, [reload, showRooms])
@@ -157,10 +168,10 @@ export default function InventoryView() {
       items: shown(otherItems, has(t.otherItems)) })
     list.push({ key: 'missing', room: null, list: 'missing', title: t.missingItems, all: missingItems,
       items: shown(missingItems, has(t.missingItems)) })
-    // A room is listed once it has items or is chosen to add items to. What is missing is always
-    // listed, unless a search finds nothing in it.
+    // A room is listed once it has items, photos or comments, or is chosen to add items to. What
+    // is missing is always listed, unless a search finds nothing in it.
     return list.filter((section) => section.items.length > 0 || section.key === adding || chosen.includes(section.key)
-      || (section.list === 'missing' && query === ''))
+      || (query === '' && (section.list === 'missing' || (section.room !== null && hasContent(section.room)))))
   }, [rooms, otherItems, missingItems, query, adding, chosen, t])
 
   const visibleCount = sections.reduce((count, section) => count + section.items.length, 0)
@@ -259,12 +270,47 @@ export default function InventoryView() {
   const available = [
     ...(rooms ?? []).map((room) => ({ key: room.id, title: room.title })),
     { key: 'other', title: t.otherItems },
-  ].filter(({ key }) => itemsOf(key).length === 0 && !chosen.includes(key))
+  ].filter(({ key }) => {
+    const room = rooms?.find((candidate) => candidate.id === key)
+    return !(room ? hasContent(room) : itemsOf(key).length > 0) && !chosen.includes(key)
+  })
+  const pick = available.some(({ key }) => key === picked) ? picked : ''
 
   /** List a room chosen from the house, and open its first line */
   function chooseRoom(key: string) {
+    setPicked('')
     setChosen((list) => [...list, key])
     addLine(key)
+  }
+
+  /** Take a room off the page; what it holds in the inventory is deleted first, once confirmed */
+  function removeRoom(room: InventoryRoom) {
+    if (hasContent(room)) {
+      setRemoving(room)
+    } else {
+      dropRoom(room.id)
+    }
+  }
+
+  /** The room is no longer listed, and goes back into the dropdown. It stays on the house. */
+  function dropRoom(id: string) {
+    setChosen((list) => list.filter((key) => key !== id))
+    if (draft?.key === id) {
+      setDraft(null)
+    }
+    if (lineError?.key === id) {
+      setLineError(null)
+    }
+  }
+
+  /** Its items, PDF title, comments and photos are deleted from the inventory */
+  function emptyRoom(room: InventoryRoom) {
+    dropRoom(room.id)
+    changeRoom(room.id, { items: [], pdfTitle: null, comments: null })
+    if (room.pictures.length > 0) {
+      savePhotos(room.id, [])
+    }
+    setRemoving(null)
   }
 
   /** Move an item within its room, dropped by its grip on the place of another */
@@ -383,11 +429,14 @@ export default function InventoryView() {
 
         {canEdit && house && rooms !== null && (
           <div className="toolbar inventory-add">
-            <select value="" onChange={(e) => chooseRoom(e.target.value)} disabled={available.length === 0}
-              aria-label={t.addRoom} title={t.addRoom}>
-              <option value="" disabled>{t.addRoom}…</option>
+            <select value={pick} onChange={(e) => setPicked(e.target.value)} disabled={available.length === 0}
+              aria-label={t.chooseRoom} title={t.chooseRoom}>
+              <option value="" disabled>{t.chooseRoom}</option>
               {available.map(({ key, title }) => <option key={key} value={key}>{title}</option>)}
             </select>
+            <button type="button" className="button button-primary" onClick={() => chooseRoom(pick)} disabled={!pick}>
+              <PlusIcon width={18} height={18} /> {t.addRoom}
+            </button>
           </div>
         )}
 
@@ -437,6 +486,12 @@ export default function InventoryView() {
                       rows={1} defaultValue={room.comments ?? ''} placeholder={t.comments} aria-label={t.comments}
                       onBlur={(e) => saveRoomText(room, 'comments', e.target.value)} />
                   </>
+                )}
+                {room && canEdit && (
+                  <button type="button" className="icon-button inventory-room-remove" onClick={() => removeRoom(room)}
+                    aria-label={`${t.removeRoom}: ${room.title}`} title={t.removeRoom}>
+                    <TrashIcon width={18} height={18} />
+                  </button>
                 )}
               </div>
               {room?.description && <p className="inventory-room-description">{room.description}</p>}
@@ -502,6 +557,15 @@ export default function InventoryView() {
         })}
       </main>
 
+      {removing && (
+        <ConfirmDialog
+          title={t.removeRoomTitle(removing.title)}
+          message={t.removeRoomMessage}
+          confirmLabel={t.removeRoom}
+          onConfirm={async () => emptyRoom(removing)}
+          onCancel={() => setRemoving(null)}
+        />
+      )}
       {preview && (
         <PdfViewer source={preview.blob} title={preview.title} fileName={preview.fileName}
           onClose={() => setPreview(null)} />

@@ -57,6 +57,7 @@ const PARAMS = {
   photoOf: ['n', 'total'],
   pdfPageCount: ['count'],
   addItemIn: ['room'],
+  removeRoomTitle: ['room'],
   openPhoto: ['n'],
   photoCount: ['count'],
   errorPhotoUpload: ['file', 'reason'],

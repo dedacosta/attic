@@ -1351,6 +1351,11 @@ form > .dialog-actions {
   color: var(--accent);
 }
 
+/* Takes the room out of the inventory, at the end of its line */
+.inventory-room-remove {
+  margin-left: auto;
+}
+
 /* Lists a room of the house, to add items to it */
 .inventory-add select {
   min-width: 0;
