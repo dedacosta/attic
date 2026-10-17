@@ -53,6 +53,17 @@ export const ImageIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+/** A photo with a plus in an accent-coloured badge at its corner, the frame left open behind it */
+export const AddPhotoIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    <path d="M13 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+    <circle cx="9" cy="10" r="2" />
+    <path d="m19 16-3-3-9 7" />
+    <circle cx="19" cy="5" r="4.5" fill="var(--accent)" stroke="none" />
+    <path d="M19 3v4M17 5h4" stroke="var(--accent-text)" strokeWidth={1.75} />
+  </svg>
+)
+
 export const FileIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...base} {...props}>
     <path d="M14 3H6v18h12V7z" />
