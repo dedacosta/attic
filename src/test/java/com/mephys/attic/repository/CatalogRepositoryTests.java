@@ -122,7 +122,7 @@ class CatalogRepositoryTests {
 	}
 
 	@Test
-	void savesPictureAsFileNamedByPictureId() throws Exception {
+	void savesPictureAsFileNamedByPictureId() {
 		CatalogItem item = repository.save(CatalogItem.of("Painting"));
 		byte[] png = { (byte) 0x89, 'P', 'N', 'G', 1, 2, 3 };
 
