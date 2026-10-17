@@ -48,12 +48,12 @@ export interface InventoryRoomExport {
   missing: boolean
 }
 
-/** What the footer says of the inventory after the copyright: the house, when, how many and the filters */
-export function inventoryNote(rooms: InventoryRoomExport[], totalCount: number, filters: string[], house: string,
-  now: Date, t: Messages) {
+/** What the footer says of the inventory after the copyright: when, how many and the filters */
+export function inventoryNote(rooms: InventoryRoomExport[], totalCount: number, filters: string[], now: Date,
+  t: Messages) {
   const shown = rooms.reduce((sum, { items }) => sum + items.length, 0)
   const count = shown === totalCount ? t.itemCount(totalCount) : t.filteredCount(shown, totalCount)
-  return [...(house ? [house] : []), generatedOn(now, t), count, ...filters].join('  ·  ')
+  return [generatedOn(now, t), count, ...filters].join('  ·  ')
 }
 
 /** Sums in cents, as 33.33 + 66.67 is not exactly 100 in floating point */

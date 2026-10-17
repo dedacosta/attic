@@ -76,7 +76,7 @@ export default function CatalogView() {
       presence !== 'all' && (presence === 'present' ? t.present : t.missing),
     ].filter((f): f is string => Boolean(f))
     if (format === 'latex') {
-      exportCatalogLatex(visible, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog')
+      await exportCatalogLatex(visible, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog')
       return
     }
     // Loaded on demand: the PDF library is large

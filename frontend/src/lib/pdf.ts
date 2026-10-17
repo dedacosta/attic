@@ -5,6 +5,7 @@ import {
   heirsNote, inventoryNote, inventorySum, isoDay, type InventoryRoomExport,
 } from './export'
 import { formatEuros } from './format'
+import { THUMBNAIL_SIZE, loadThumbnails } from './thumbnails'
 import type { Messages } from '../i18n'
 import type { ContributionYear, CatalogItem, Heir } from '../api/types'
 
@@ -33,11 +34,30 @@ function finish(doc: jsPDF, title: string, fileName: string): GeneratedPdf {
   return { blob: doc.output('blob'), title, fileName }
 }
 
-/** The table speaks for itself: the title is only in the document's properties, for the viewer's title bar */
+/** The title of the document, for the viewer's title bar */
 const setTitle = (doc: jsPDF, title: string) => doc.setProperties({ title })
 
 /** Where the table starts, at the top of the page */
 const TABLE_TOP = MARGIN
+
+/**
+ * The title at the top of the first page, and below it what the document is about, e.g. the house.
+ * Returns where the table starts below them.
+ */
+function drawTitle(doc: jsPDF, title: string, subject: string[]): number {
+  doc.setTextColor(...TEXT)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
+  doc.text(pdfText(title), MARGIN, 20)
+  if (subject.length === 0) {
+    return 27
+  }
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.setTextColor(...MUTED)
+  doc.text(pdfText(subject.join('  ·  ')), MARGIN, 26)
+  return 32
+}
 
 /** Between the lines of the footer, in mm */
 const FOOTER_LINE_HEIGHT = 3.5
@@ -64,7 +84,8 @@ function drawFooter(doc: jsPDF, pageNumber: number, note: string, now: Date, t: 
 }
 
 /**
- * A PDF table of the given items, one line per item, to show and download. Comments are left out.
+ * A PDF table of the given items under a title, one line per item with its cover photo small next to its ID, to
+ * show and download. Comments are left out.
  * `fileName` is without date and extension, e.g. "attic-catalog".
  */
 export async function exportPdf(items: CatalogItem[], totalCount: number, filters: string[], t: Messages, title: string,
@@ -73,17 +94,21 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
   const now = new Date()
   const note = catalogNote(items, totalCount, filters, now, t)
   setTitle(doc, title)
+  const top = drawTitle(doc, title, [])
+  // The cover of each item, small, next to its ID
+  const thumbnails = await loadThumbnails(items)
+  const withPhotos = thumbnails.some((thumbnail) => thumbnail !== null)
 
   autoTable(doc, {
-    startY: TABLE_TOP,
-    margin: { left: MARGIN, right: MARGIN, bottom: 18 },
+    startY: top,
+    margin: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: 18 },
     head: [catalogHead(t)],
     body: items.map((item) => catalogCells(item, t).map(pdfText)),
     styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: TEXT },
     headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: STRIPE },
     columnStyles: {
-      0: { font: 'courier', cellWidth: 20 },
+      0: { font: 'courier', cellWidth: withPhotos ? 20 + THUMBNAIL_SIZE + 2 : 20 },
       1: { cellWidth: 'auto' },
       2: { halign: 'right', cellWidth: 14 },
       3: { cellWidth: 32 },
@@ -97,6 +122,20 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
       if (data.section === 'head') {
         data.cell.styles.halign = data.column.index === 2 || data.column.index === 6 ? 'right'
           : data.column.index === 5 ? 'center' : 'left'
+      } else if (withPhotos) {
+        // Lines high enough for the photos, their texts in the middle, and room for the photo left of the ID
+        data.cell.styles.minCellHeight = THUMBNAIL_SIZE + 2
+        data.cell.styles.valign = 'middle'
+        if (data.column.index === 0) {
+          data.cell.styles.cellPadding = { top: 2, right: 2, bottom: 2, left: 2 + THUMBNAIL_SIZE + 2 }
+        }
+      }
+    },
+    didDrawCell: (data) => {
+      const thumbnail = data.section === 'body' && data.column.index === 0 ? thumbnails[data.row.index] : null
+      if (thumbnail) {
+        doc.addImage(thumbnail, 'JPEG', data.cell.x + 2, data.cell.y + (data.cell.height - THUMBNAIL_SIZE) / 2,
+          THUMBNAIL_SIZE, THUMBNAIL_SIZE)
       }
     },
     didDrawPage: (data) => drawFooter(doc, data.pageNumber, note, now, t),
@@ -108,15 +147,17 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
  * The inventory of a house as a PDF, to show and download, room by room: a line with the title of the room, its
  * comments and, below, a line per item with its quantity, its description and its value, then the
  * total of the room, as an amount without a label. The total of the house follows what the house holds; the missing items come
- * after it, with a total of their own. Photos are left out.
+ * after it, with a total of their own. The first page has the title and the house with its address. Photos are left out.
  */
 export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCount: number, filters: string[],
-  t: Messages, house: string): Promise<GeneratedPdf> {
+  t: Messages, house: string, address: string | null): Promise<GeneratedPdf> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const now = new Date()
-  const note = inventoryNote(rooms, totalCount, filters, house, now, t)
+  const note = inventoryNote(rooms, totalCount, filters, now, t)
   const title = house ? `${t.pdfTitleInventory} — ${house}` : t.pdfTitleInventory
   setTitle(doc, title)
+  // What the inventory is of: the house and where it is
+  const top = drawTitle(doc, t.pdfTitleInventory, [house, address ?? ''].filter(Boolean))
 
   const euros = (value: number) => pdfText(formatEuros(value, t.locale))
 
@@ -139,8 +180,8 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
   const missing = rooms.filter((room) => room.missing)
 
   autoTable(doc, {
-    startY: TABLE_TOP,
-    margin: { left: MARGIN, right: MARGIN, bottom: 18 },
+    startY: top,
+    margin: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: 18 },
     head: [[t.quantityShort, t.description, t.value]],
     body: [
       ...held.flatMap(section),
