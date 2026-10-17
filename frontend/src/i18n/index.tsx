@@ -56,6 +56,7 @@ const PARAMS = {
   invitationExpires: ['when'],
   photoOf: ['n', 'total'],
   pdfPageCount: ['count'],
+  addItemIn: ['room'],
   openPhoto: ['n'],
   photoCount: ['count'],
   errorPhotoUpload: ['file', 'reason'],
