@@ -4,8 +4,12 @@ import com.mephys.attic.dto.CatalogItemRequest;
 import com.mephys.attic.dto.CatalogItemResponse;
 import com.mephys.attic.dto.PictureResponse;
 import com.mephys.attic.model.CatalogItem;
+import com.mephys.attic.model.InventoryRoom;
 import com.mephys.attic.model.PictureInfo;
+import com.mephys.attic.model.PropertyKind;
 import com.mephys.attic.repository.CatalogRepository;
+import com.mephys.attic.repository.InventoryRepository;
+import com.mephys.attic.repository.PropertyRepository;
 import com.mephys.attic.service.PictureUploads;
 
 import java.net.URI;
@@ -13,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,10 +38,17 @@ class CatalogController {
 
 	private final CatalogRepository repository;
 
+	private final InventoryRepository rooms;
+
+	private final PropertyRepository properties;
+
 	private final PictureUploads uploads;
 
-	CatalogController(CatalogRepository repository, PictureUploads uploads) {
+	CatalogController(CatalogRepository repository, InventoryRepository rooms, PropertyRepository properties,
+			PictureUploads uploads) {
 		this.repository = repository;
+		this.rooms = rooms;
+		this.properties = properties;
 		this.uploads = uploads;
 	}
 
@@ -56,7 +68,7 @@ class CatalogController {
 
 	@PostMapping
 	ResponseEntity<CatalogItemResponse> create(@RequestBody CatalogItemRequest request) {
-		CatalogItem item = repository.save(request.toItem(null));
+		CatalogItem item = repository.save(toItem(request, null));
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").build(item.id());
 		return ResponseEntity.created(location).body(CatalogItemResponse.of(item, List.of()));
 	}
@@ -66,7 +78,7 @@ class CatalogController {
 		if (repository.findById(id).isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
-		return ResponseEntity.ok(toResponse(repository.save(request.toItem(id))));
+		return ResponseEntity.ok(toResponse(repository.save(toItem(request, id))));
 	}
 
 	@DeleteMapping("/{id}")
@@ -111,6 +123,29 @@ class CatalogController {
 		}
 		repository.reorderPictures(id, pictureIds);
 		return ResponseEntity.noContent().build();
+	}
+
+	/**
+	 * The item of the request. Its room is a room of its building, which is that of the room when
+	 * none is given, and its building is a building, not a land parcel.
+	 */
+	private CatalogItem toItem(CatalogItemRequest request, @Nullable UUID id) {
+		UUID propertyId = request.propertyId();
+		UUID roomId = request.roomId();
+		if (roomId != null) {
+			InventoryRoom room = rooms.findById(roomId)
+				.orElseThrow(() -> new IllegalArgumentException("room does not exist"));
+			if (propertyId != null && !propertyId.equals(room.propertyId())) {
+				throw new IllegalArgumentException("room is not a room of the building");
+			}
+			propertyId = room.propertyId();
+		}
+		else if (propertyId != null && properties.findById(propertyId)
+			.filter((property) -> property.kind() == PropertyKind.BUILDING)
+			.isEmpty()) {
+			throw new IllegalArgumentException("an item is in a building");
+		}
+		return request.toItem(id, propertyId, roomId);
 	}
 
 	private CatalogItemResponse toResponse(CatalogItem item) {

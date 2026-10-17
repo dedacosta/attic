@@ -44,7 +44,9 @@ export interface CatalogItem {
   name: string
   quantity: number
   date: string | null
-  location: string | null
+  /** The building the item is in, and its room there */
+  propertyId: string | null
+  roomId: string | null
   existent: boolean
   valueEur: number
   owner: string

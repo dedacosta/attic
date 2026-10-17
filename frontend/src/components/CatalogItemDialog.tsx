@@ -1,40 +1,53 @@
 import { useState, type FormEvent } from 'react'
 import { apiErrorMessage } from '../api/api'
-import { AMOUNT_PATTERN, decimalSeparator, locationLabel, shortId } from '../lib/format'
+import { AMOUNT_PATTERN, decimalSeparator, shortId } from '../lib/format'
 import { useI18n } from '../i18n'
 import { usePermissions } from '../lib/permissions'
 import { CloseIcon, TrashIcon } from './icons'
 import PhotosField from './PhotosField'
 import { PhotoUploadError } from '../lib/photos'
 import { useModal } from '../lib/useModal'
-import { storedPhotos, type CatalogItem, type CatalogItemInput, type PhotoEntry } from '../api/types'
+import { storedPhotos, type Building, type CatalogItem, type CatalogItemInput, type InventoryRoom,
+  type PhotoEntry } from '../api/types'
 
 
 interface Props {
   item: CatalogItem | null
-  locations: string[]
+  /** The houses an item can be in, and their rooms */
+  houses: Building[]
+  rooms: InventoryRoom[]
+  /** Where a new item is put at first */
+  place: Place
   onSave: (input: CatalogItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) => Promise<void>
   onDelete: () => void
   onClose: () => void
+}
+
+/** The house and the room of an item, empty for none */
+export interface Place {
+  propertyId: string
+  roomId: string
 }
 
 interface FormState {
   name: string
   quantity: string
   date: string
-  location: string
+  propertyId: string
+  roomId: string
   existent: boolean
   valueEur: string
   owner: string
   comments: string
 }
 
-function initialState(item: CatalogItem | null, locale: string): FormState {
+function initialState(item: CatalogItem | null, place: Place, locale: string): FormState {
   return {
     name: item?.name ?? '',
     quantity: String(item?.quantity ?? 1),
     date: item?.date ?? '',
-    location: item?.location ?? '',
+    propertyId: item ? (item.propertyId ?? '') : place.propertyId,
+    roomId: item ? (item.roomId ?? '') : place.roomId,
     existent: item?.existent ?? true,
     valueEur: (item?.valueEur ?? 0).toFixed(2).replace('.', decimalSeparator(locale)),
     owner: item?.owner ?? '',
@@ -42,11 +55,11 @@ function initialState(item: CatalogItem | null, locale: string): FormState {
   }
 }
 
-export default function CatalogItemDialog({ item, locations, onSave, onDelete, onClose }: Props) {
+export default function CatalogItemDialog({ item, houses, rooms, place, onSave, onDelete, onClose }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
   const ref = useModal()
-  const [form, setForm] = useState(() => initialState(item, t.locale))
+  const [form, setForm] = useState(() => initialState(item, place, t.locale))
   const [photos, setPhotos] = useState<PhotoEntry[]>(() => storedPhotos(item?.pictures ?? []))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +88,8 @@ export default function CatalogItemDialog({ item, locations, onSave, onDelete, o
           name,
           quantity,
           date: form.date || null,
-          location: form.location || null,
+          propertyId: form.propertyId || null,
+          roomId: form.roomId || null,
           existent: form.existent,
           valueEur: Number(value.replace(',', '.')),
           owner: form.owner.trim(),
@@ -124,11 +138,19 @@ export default function CatalogItemDialog({ item, locations, onSave, onDelete, o
                 placeholder={`0${decimalSeparator(t.locale)}00`} />
             </label>
             <label className="field">
-              <span>{t.location} <small>{t.optional}</small></span>
-              <select value={form.location} onChange={(e) => set('location', e.target.value)}>
+              <span>{t.inventoryHouse} <small>{t.optional}</small></span>
+              <select value={form.propertyId}
+                onChange={(e) => setForm((f) => ({ ...f, propertyId: e.target.value, roomId: '' }))}>
                 <option value="">—</option>
-                {locations.map((location) => (
-                  <option key={location} value={location}>{locationLabel(location, t)}</option>
+                {houses.map((house) => <option key={house.id} value={house.id}>{house.name}</option>)}
+              </select>
+            </label>
+            <label className="field">
+              <span>{t.location} <small>{t.optional}</small></span>
+              <select value={form.roomId} onChange={(e) => set('roomId', e.target.value)} disabled={!form.propertyId}>
+                <option value="">—</option>
+                {rooms.filter((room) => room.propertyId === form.propertyId).map((room) => (
+                  <option key={room.id} value={room.id}>{room.title}</option>
                 ))}
               </select>
             </label>

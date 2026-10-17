@@ -1,12 +1,12 @@
 import {
   catalogCells, catalogHead, catalogNote, contributionPages, copyrightLine, generatedOn, heirCells, heirsHead,
-  heirsNote, inventoryNote, inventorySum, isoDay, type InventoryRoomExport,
+  heirsNote, inventoryNote, inventorySum, isoDay, type CatalogItemExport, type InventoryRoomExport,
 } from './export'
 import { formatEuros } from './format'
 import { THUMBNAIL_SIZE, loadThumbnails } from './thumbnails'
 import { zip } from './zip'
 import type { Messages } from '../i18n'
-import type { CatalogItem, ContributionYear, Heir } from '../api/types'
+import type { ContributionYear, Heir } from '../api/types'
 
 /*
  * The exports as LaTeX sources, next to the PDFs: the same tables, colours and footer, to be
@@ -124,7 +124,7 @@ function save(source: string | Blob, fileName: string) {
  * next to its ID. With photos it is a ZIP of the source and a folder of the photos, to be unpacked
  * and compiled there. `fileName` is without date and extension.
  */
-export async function exportCatalogLatex(items: CatalogItem[], totalCount: number, filters: string[], t: Messages,
+export async function exportCatalogLatex(items: CatalogItemExport[], totalCount: number, filters: string[], t: Messages,
   title: string, fileName: string) {
   const now = new Date()
   const thumbnails = await loadThumbnails(items)

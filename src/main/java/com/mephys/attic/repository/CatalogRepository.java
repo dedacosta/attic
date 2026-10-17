@@ -1,7 +1,6 @@
 package com.mephys.attic.repository;
 
 import com.mephys.attic.model.CatalogItem;
-import com.mephys.attic.model.Location;
 import com.mephys.attic.model.Picture;
 import com.mephys.attic.model.PictureInfo;
 import com.mephys.attic.service.PictureStorage;
@@ -15,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -32,13 +32,14 @@ public class CatalogRepository {
 
 	public CatalogItem save(CatalogItem item) {
 		jdbc.sql("""
-				INSERT INTO catalog_item (id, name, quantity, date, location, existent, value_cents, owner, comments,
-					created_at, updated_at)
-				VALUES (:id, :name, :quantity, :date, :location, :existent, :valueCents, :owner, :comments,
+				INSERT INTO catalog_item (id, name, quantity, date, property_id, room_id, existent, value_cents, owner,
+					comments, created_at, updated_at)
+				VALUES (:id, :name, :quantity, :date, :propertyId, :roomId, :existent, :valueCents, :owner, :comments,
 					strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 				ON CONFLICT (id) DO UPDATE SET
 					name = excluded.name, quantity = excluded.quantity, date = excluded.date,
-					location = excluded.location, existent = excluded.existent,
+					property_id = excluded.property_id, room_id = excluded.room_id,
+					existent = excluded.existent,
 					value_cents = excluded.value_cents, owner = excluded.owner, comments = excluded.comments,
 					updated_at = excluded.updated_at
 				""")
@@ -46,7 +47,8 @@ public class CatalogRepository {
 			.param("name", item.name())
 			.param("quantity", item.quantity())
 			.param("date", (item.date() != null) ? item.date().toString() : null)
-			.param("location", (item.location() != null) ? item.location().name() : null)
+			.param("propertyId", (item.propertyId() != null) ? item.propertyId().toString() : null)
+			.param("roomId", (item.roomId() != null) ? item.roomId().toString() : null)
 			.param("existent", item.existent())
 			.param("valueCents", item.valueEur().movePointRight(2).longValueExact())
 			.param("owner", item.owner())
@@ -97,11 +99,14 @@ public class CatalogRepository {
 
 	private CatalogItem map(ResultSet rs, int rowNum) throws SQLException {
 		String date = rs.getString("date");
-		String location = rs.getString("location");
 		return new CatalogItem(UUID.fromString(rs.getString("id")), rs.getString("name"), rs.getInt("quantity"),
-				(date != null) ? LocalDate.parse(date) : null, (location != null) ? Location.valueOf(location) : null,
-				rs.getBoolean("existent"), BigDecimal.valueOf(rs.getLong("value_cents"), 2), rs.getString("owner"),
+				(date != null) ? LocalDate.parse(date) : null, uuid(rs.getString("property_id")),
+				uuid(rs.getString("room_id")), rs.getBoolean("existent"), BigDecimal.valueOf(rs.getLong("value_cents"), 2), rs.getString("owner"),
 				rs.getString("comments"));
+	}
+
+	private static @Nullable UUID uuid(@Nullable String id) {
+		return (id != null) ? UUID.fromString(id) : null;
 	}
 
 }

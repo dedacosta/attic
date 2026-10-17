@@ -1,6 +1,5 @@
 package com.mephys.attic.controller;
 
-import com.mephys.attic.model.Location;
 import com.mephys.attic.support.TestImages;
 
 import java.nio.file.Files;
@@ -60,7 +59,8 @@ class CatalogControllerTests {
 			.andExpect(jsonPath("$.name").value("Lamp"))
 			.andExpect(jsonPath("$.quantity").value(1))
 			.andExpect(jsonPath("$.date").doesNotExist())
-			.andExpect(jsonPath("$.location").doesNotExist())
+			.andExpect(jsonPath("$.propertyId").doesNotExist())
+			.andExpect(jsonPath("$.roomId").doesNotExist())
 			.andExpect(jsonPath("$.existent").value(true))
 			.andExpect(jsonPath("$.valueEur").value(0.0))
 			.andExpect(jsonPath("$.owner").value("Heritage"))
@@ -71,14 +71,13 @@ class CatalogControllerTests {
 	@Test
 	void createGetReplaceDelete() throws Exception {
 		String id = create("""
-				{"name":"Clock","quantity":2,"date":"1985-05-17","location":"ATTIC","valueEur":120.5,"owner":"David",
+				{"name":"Clock","quantity":2,"date":"1985-05-17","valueEur":120.5,"owner":"David",
 				 "comments":"Wind every Sunday"}
 				""");
 
 		mvc.perform(get("/api/catalog/{id}", id))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.date").value("1985-05-17"))
-			.andExpect(jsonPath("$.location").value("ATTIC"))
 			.andExpect(jsonPath("$.valueEur").value(120.5))
 			.andExpect(jsonPath("$.comments").value("Wind every Sunday"));
 
@@ -86,8 +85,7 @@ class CatalogControllerTests {
 			.content("{\"name\":\"Clock\",\"existent\":false}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.id").value(id))
-			.andExpect(jsonPath("$.existent").value(false))
-			.andExpect(jsonPath("$.location").doesNotExist());
+			.andExpect(jsonPath("$.existent").value(false));
 
 		mvc.perform(get("/api/catalog")).andExpect(status().isOk()).andExpect(jsonPath("$[?(@.id == '" + id + "')]").exists());
 
@@ -108,7 +106,7 @@ class CatalogControllerTests {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.detail").value("name must not be blank"));
 		mvc.perform(post("/api/catalog").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"name\":\"Box\",\"location\":\"MOON\"}")).andExpect(status().isBadRequest());
+			.content("{\"name\":\"Box\",\"roomId\":\"kitchen\"}")).andExpect(status().isBadRequest());
 	}
 
 	@Autowired
@@ -238,11 +236,71 @@ class CatalogControllerTests {
 	}
 
 	@Test
-	void listsLocations() throws Exception {
-		mvc.perform(get("/api/locations"))
+	void itemIsInARoomOfABuilding() throws Exception {
+		String house = createProperty("BUILDING", "House");
+		String cottage = createProperty("BUILDING", "Cottage");
+		String land = createProperty("LAND", "Field");
+		String rooms = mvc.perform(put("/api/inventory/rooms").param("propertyId", house)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("[{\"title\":\"Kitchen\"},{\"title\":\"Attic\"}]"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[0]").value("LIVING_ROOM"))
-			.andExpect(jsonPath("$.length()").value(Location.values().length));
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		String kitchen = JsonPath.read(rooms, "$[0].id");
+		String attic = JsonPath.read(rooms, "$[1].id");
+
+		// Without a building, the item is in that of its room
+		String id = create("{\"name\":\"Pan\",\"roomId\":\"" + kitchen + "\"}");
+		mvc.perform(get("/api/catalog/{id}", id))
+			.andExpect(jsonPath("$.propertyId").value(house))
+			.andExpect(jsonPath("$.roomId").value(kitchen));
+
+		mvc.perform(put("/api/catalog/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Pan\",\"propertyId\":\"" + house + "\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.propertyId").value(house))
+			.andExpect(jsonPath("$.roomId").doesNotExist());
+
+		mvc.perform(put("/api/catalog/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Pan\",\"propertyId\":\"" + cottage + "\",\"roomId\":\"" + kitchen + "\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("room is not a room of the building"));
+		mvc.perform(put("/api/catalog/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Pan\",\"propertyId\":\"" + land + "\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("an item is in a building"));
+		mvc.perform(put("/api/catalog/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Pan\",\"roomId\":\"00000000-0000-0000-0000-000000000000\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("room does not exist"));
+
+		// A room taken off its building leaves the item in the building
+		mvc.perform(put("/api/catalog/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Pan\",\"roomId\":\"" + attic + "\"}"))
+			.andExpect(status().isOk());
+		mvc.perform(put("/api/inventory/rooms").param("propertyId", house).contentType(MediaType.APPLICATION_JSON)
+			.content("[{\"id\":\"" + kitchen + "\",\"title\":\"Kitchen\"}]"))
+			.andExpect(status().isOk());
+		mvc.perform(get("/api/catalog/{id}", id))
+			.andExpect(jsonPath("$.propertyId").value(house))
+			.andExpect(jsonPath("$.roomId").doesNotExist());
+
+		// A building that is deleted leaves the item without building
+		mvc.perform(delete("/api/properties/{id}", house)).andExpect(status().isNoContent());
+		mvc.perform(get("/api/catalog/{id}", id))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.propertyId").doesNotExist());
+	}
+
+	private String createProperty(String kind, String name) throws Exception {
+		String body = mvc.perform(post("/api/properties").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"kind\":\"" + kind + "\",\"name\":\"" + name + "\"}"))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		return JsonPath.read(body, "$.id");
 	}
 
 	private String addPhoto(String itemId, byte[] image) throws Exception {

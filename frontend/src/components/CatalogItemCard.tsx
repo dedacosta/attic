@@ -1,4 +1,4 @@
-import { formatDate, formatEuros, locationLabel } from '../lib/format'
+import { formatDate, formatEuros } from '../lib/format'
 import { useI18n } from '../i18n'
 import { usePermissions } from '../lib/permissions'
 import { ImageIcon, TrashIcon } from './icons'
@@ -6,11 +6,13 @@ import type { CatalogItem } from '../api/types'
 
 interface Props {
   item: CatalogItem
+  /** Where the item is: its room and house */
+  place: string
   onEdit: () => void
   onDelete: () => void
 }
 
-export default function CatalogItemCard({ item, onEdit, onDelete }: Props) {
+export default function CatalogItemCard({ item, place, onEdit, onDelete }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
   return (
@@ -32,7 +34,7 @@ export default function CatalogItemCard({ item, onEdit, onDelete }: Props) {
         <div className="card-body">
           <h3 className="card-title">{item.name}</h3>
           <div className="card-tags">
-            {item.location && <span className="tag">{locationLabel(item.location, t)}</span>}
+            {place && <span className="tag">{place}</span>}
             {!item.existent && <span className="tag tag-missing">{t.missing}</span>}
           </div>
           <dl className="card-facts">
