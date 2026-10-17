@@ -333,12 +333,12 @@ export default function InventoryView() {
       missing: section.list === 'missing',
     }))
     if (format === 'latex') {
-      exportInventoryLatex(rooms, totalCount, filters, t, house?.name ?? '')
+      exportInventoryLatex(rooms, totalCount, filters, t, house?.name ?? '', house?.address ?? null)
       return
     }
     // Loaded on demand: the PDF library is large
     const { exportInventoryPdf } = await import('../lib/pdf')
-    setPreview(await exportInventoryPdf(rooms, totalCount, filters, t, house?.name ?? ''))
+    setPreview(await exportInventoryPdf(rooms, totalCount, filters, t, house?.name ?? '', house?.address ?? null))
   }
 
   return (
