@@ -20,7 +20,7 @@ public record CatalogItemRequest(String name, @Nullable Integer quantity, @Nulla
 	 */
 	public CatalogItem toItem(@Nullable UUID id, @Nullable UUID propertyId, @Nullable UUID roomId) {
 		return new CatalogItem(id, name, (quantity != null) ? quantity : CatalogItem.DEFAULT_QUANTITY, date,
-				propertyId, roomId, (existent != null) ? existent : true, valueEur, owner, comments);
+				propertyId, roomId, existent == null || existent, valueEur, owner, comments);
 	}
 
 }
