@@ -64,6 +64,13 @@ export const AddPhotoIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+/** Two columns of dots: a handle to drag something by */
+export const GripIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...props}>
+    {[6, 12, 18].flatMap((y) => [9, 15].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1" fill="currentColor" />))}
+  </svg>
+)
+
 export const FileIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...base} {...props}>
     <path d="M14 3H6v18h12V7z" />

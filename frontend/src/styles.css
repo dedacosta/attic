@@ -1295,12 +1295,42 @@ form > .dialog-actions {
   text-align: right;
 }
 
+/* A line that can be moved: its grip first. Pressed on a phone it drags the line, not the page. */
+.inventory-line-sortable {
+  grid-template-columns: auto 64px minmax(0, 1fr) 120px auto;
+}
+
+.inventory-line-grip {
+  cursor: grab;
+  touch-action: none;
+  color: var(--text-muted);
+}
+
+/* As wide as an icon button */
+.inventory-line-grip-space {
+  width: 36px;
+}
+
+.inventory-line-dragging {
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-lifted);
+}
+
+.inventory-line-dragging .inventory-line-grip {
+  cursor: grabbing;
+}
+
 @media (max-width: 640px) {
   .inventory-line-edit {
     grid-template-columns: 64px minmax(0, 1fr) auto;
   }
 
-  .inventory-line-edit > input:nth-child(2) {
+  .inventory-line-sortable {
+    grid-template-columns: auto 64px minmax(0, 1fr) auto;
+  }
+
+  .inventory-line-edit > .inventory-line-description-field {
     grid-column: 1 / -1;
     grid-row: 1;
   }
@@ -1308,15 +1338,6 @@ form > .dialog-actions {
   .inventory-line-edit > .inventory-item-value {
     max-width: 160px;
   }
-}
-
-.inventory-line-buttons {
-  display: flex;
-  align-items: center;
-}
-
-.chevron-up {
-  transform: rotate(180deg);
 }
 
 /* Adds an item to the room, at the end of its list */

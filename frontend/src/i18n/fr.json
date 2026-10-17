@@ -24,6 +24,7 @@
   "addItem": "Ajouter un objet",
   "addItemIn": "Ajouter un objet à {room}",
   "removeItem": "Retirer l’objet",
+  "moveItem": "Glisser pour déplacer",
   "inventorySearchPlaceholder": "Rechercher pièces et objets…",
   "inventorySearchLabel": "Rechercher dans l’inventaire",
   "filterByPresence": "Filtrer par présence",
