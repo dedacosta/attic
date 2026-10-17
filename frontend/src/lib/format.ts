@@ -44,10 +44,6 @@ export function decimalSeparator(locale: string): string {
   return (1.5).toLocaleString(locale).charAt(1)
 }
 
-export function locationLabel(location: string, t: Messages): string {
-  return t.rooms[location] ?? location
-}
-
 const FIRST_YEAR = 2026
 
 /** "2026", or "2026–2028" in later years */

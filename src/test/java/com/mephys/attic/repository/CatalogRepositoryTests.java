@@ -1,7 +1,6 @@
 package com.mephys.attic.repository;
 
 import com.mephys.attic.model.CatalogItem;
-import com.mephys.attic.model.Location;
 import com.mephys.attic.model.Picture;
 import com.mephys.attic.model.PictureInfo;
 import com.mephys.attic.support.TestImages;
@@ -48,7 +47,8 @@ class CatalogRepositoryTests {
 		assertThat(item.id()).isNotNull();
 		assertThat(item.quantity()).isEqualTo(1);
 		assertThat(item.date()).isNull();
-		assertThat(item.location()).isNull();
+		assertThat(item.propertyId()).isNull();
+		assertThat(item.roomId()).isNull();
 		assertThat(item.existent()).isTrue();
 		assertThat(item.valueEur()).isEqualTo(new BigDecimal("0.00"));
 		assertThat(item.owner()).isEqualTo("Heritage");
@@ -57,14 +57,14 @@ class CatalogRepositoryTests {
 
 	@Test
 	void blankCommentsBecomeNull() {
-		assertThat(new CatalogItem(null, "Box", 1, null, null, true, null, null, "  \n ").comments()).isNull();
-		assertThat(new CatalogItem(null, "Box", 1, null, null, true, null, null, " Fragile ").comments())
+		assertThat(new CatalogItem(null, "Box", 1, null, null, null, true, null, null, "  \n ").comments()).isNull();
+		assertThat(new CatalogItem(null, "Box", 1, null, null, null, true, null, null, " Fragile ").comments())
 			.isEqualTo("Fragile");
 	}
 
 	@Test
 	void savesAndLoadsAllFields() {
-		CatalogItem item = new CatalogItem(null, "Grandfather clock", 2, LocalDate.of(1985, 5, 17), Location.ATTIC,
+		CatalogItem item = new CatalogItem(null, "Grandfather clock", 2, LocalDate.of(1985, 5, 17), null, null,
 				false, new BigDecimal("1234.5"), "David", "Inherited from grandmother.\nNeeds a new key.");
 
 		repository.save(item);
@@ -76,7 +76,7 @@ class CatalogRepositoryTests {
 	@Test
 	void saveUpdatesExistingItem() {
 		CatalogItem item = repository.save(CatalogItem.of("Chair"));
-		CatalogItem updated = new CatalogItem(item.id(), "Chair", 4, null, Location.KITCHEN, true, null, null,
+		CatalogItem updated = new CatalogItem(item.id(), "Chair", 4, null, null, null, true, null, null,
 				"Wobbly leg");
 
 		repository.save(updated);
@@ -92,7 +92,7 @@ class CatalogRepositoryTests {
 		assertThat(timestamp(item, "updated_at")).isEqualTo(created);
 
 		Thread.sleep(5);
-		repository.save(new CatalogItem(item.id(), "Desk lamp", 1, null, null, true, null, null, null));
+		repository.save(new CatalogItem(item.id(), "Desk lamp", 1, null, null, null, true, null, null, null));
 		assertThat(timestamp(item, "created_at")).isEqualTo(created);
 		assertThat(timestamp(item, "updated_at")).isGreaterThan(created);
 	}
@@ -116,9 +116,9 @@ class CatalogRepositoryTests {
 	void rejectsInvalidValues() {
 		assertThatIllegalArgumentException().isThrownBy(() -> CatalogItem.of(" "));
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new CatalogItem(null, "Box", -1, null, null, true, null, null, null));
+			.isThrownBy(() -> new CatalogItem(null, "Box", -1, null, null, null, true, null, null, null));
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new CatalogItem(null, "Box", 1, null, null, true, new BigDecimal("-1"), null, null));
+			.isThrownBy(() -> new CatalogItem(null, "Box", 1, null, null, null, true, new BigDecimal("-1"), null, null));
 	}
 
 	@Test

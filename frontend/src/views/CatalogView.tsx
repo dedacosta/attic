@@ -5,25 +5,25 @@ import { saveWithPhotos } from '../lib/photos'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PdfViewer from '../components/PdfViewer'
 import CatalogItemCard from '../components/CatalogItemCard'
-import CatalogItemDialog from '../components/CatalogItemDialog'
+import CatalogItemDialog, { type Place } from '../components/CatalogItemDialog'
 import SearchBar from '../components/SearchBar'
-import { formatDate, locationLabel, normalize } from '../lib/format'
+import { formatDate, normalize } from '../lib/format'
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
 import { FileIcon, PlusIcon } from '../components/icons'
-import type { CatalogItem, CatalogItemInput, PhotoEntry } from '../api/types'
+import type { Building, CatalogItem, CatalogItemInput, InventoryRoom, PhotoEntry } from '../api/types'
 import type { GeneratedPdf } from '../lib/pdf'
 
 type Presence = 'all' | 'present' | 'missing'
 
-function matches(item: CatalogItem, words: string[], t: Messages): boolean {
+function matches(item: CatalogItem, place: string, words: string[], t: Messages): boolean {
   const text = normalize(
     [
       item.name,
       item.owner,
       item.comments ?? '',
       item.id,
-      item.location ? locationLabel(item.location, t) : '',
+      place,
       item.date ? formatDate(item.date, t.locale) : '',
     ].join(' '),
   )
@@ -34,10 +34,13 @@ export default function CatalogView() {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
   const [items, setItems] = useState<CatalogItem[] | null>(null)
-  const [locations, setLocations] = useState<string[]>([])
+  // The houses of the estate and their rooms, as in the inventory
+  const [houses, setHouses] = useState<Building[]>([])
+  const [rooms, setRooms] = useState<InventoryRoom[]>([])
   const [loadError, setLoadError] = useState<unknown>(null)
   const [query, setQuery] = useState('')
-  const [locationFilter, setLocationFilter] = useState('')
+  const [houseFilter, setHouseFilter] = useState('')
+  const [roomFilter, setRoomFilter] = useState('')
   const [presence, setPresence] = useState<Presence>('all')
   const [editing, setEditing] = useState<CatalogItem | 'new' | null>(null)
   const [deleting, setDeleting] = useState<CatalogItem | null>(null)
@@ -54,34 +57,66 @@ export default function CatalogView() {
 
   useEffect(() => {
     reload()
-    api.listLocations().then(setLocations, () => setLocations([]))
+    api.estate().then(({ buildings }) => setHouses(buildings), () => setHouses([]))
+    api.listInventory().then(setRooms, () => setRooms([]))
   }, [reload])
+
+  /** Where an item is, in words: its room, and its house when there are several to tell apart */
+  const placeOf = useCallback((item: CatalogItem) => {
+    const room = rooms.find((candidate) => candidate.id === item.roomId)
+    const house = houses.find((candidate) => candidate.id === item.propertyId)
+    return [room?.title, (!room || houses.length > 1) && house?.name].filter(Boolean).join(' · ')
+  }, [houses, rooms])
 
   const visible = useMemo(() => {
     const words = normalize(query).split(/\s+/).filter(Boolean)
     return (items ?? []).filter(
       (item) =>
-        (!locationFilter || item.location === locationFilter) &&
+        (!houseFilter || item.propertyId === houseFilter) &&
+        (!roomFilter || item.roomId === roomFilter) &&
         (presence === 'all' || item.existent === (presence === 'present')) &&
-        matches(item, words, t),
+        matches(item, placeOf(item), words, t),
     )
-  }, [items, query, locationFilter, presence, t])
+  }, [items, query, houseFilter, roomFilter, presence, placeOf, t])
 
-  const filtered = query !== '' || locationFilter !== '' || presence !== 'all'
+  const filtered = query !== '' || houseFilter !== '' || roomFilter !== '' || presence !== 'all'
+  const filterHouse = houses.find((house) => house.id === houseFilter)
+  const filterRoom = rooms.find((room) => room.id === roomFilter)
+  // Rooms to filter by: those of the house chosen, or of every house under its name
+  const roomGroups = houses
+    .filter((house) => !houseFilter || house.id === houseFilter)
+    .map((house) => ({ house, rooms: rooms.filter((room) => room.propertyId === house.id) }))
+    .filter((group) => group.rooms.length > 0)
+
+  /** Another house: a room of another house is no longer filtered by */
+  function chooseHouse(id: string) {
+    setHouseFilter(id)
+    if (id && filterRoom && filterRoom.propertyId !== id) {
+      setRoomFilter('')
+    }
+  }
+
+  // A new item is put where the catalog is filtered, or in the only house there is
+  const newPlace: Place = {
+    propertyId: filterRoom?.propertyId ?? (houseFilter || (houses.length === 1 ? houses[0].id : '')),
+    roomId: roomFilter,
+  }
 
   async function download(format: 'pdf' | 'latex') {
     const filters = [
       query.trim() && t.searchFilter(query.trim()),
-      locationFilter && `${t.location}: ${locationLabel(locationFilter, t)}`,
+      filterHouse && `${t.inventoryHouse}: ${filterHouse.name}`,
+      filterRoom && `${t.location}: ${filterRoom.title}`,
       presence !== 'all' && (presence === 'present' ? t.present : t.missing),
     ].filter((f): f is string => Boolean(f))
+    const exported = visible.map((item) => ({ ...item, place: placeOf(item) }))
     if (format === 'latex') {
-      await exportCatalogLatex(visible, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog')
+      await exportCatalogLatex(exported, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog')
       return
     }
     // Loaded on demand: the PDF library is large
     const { exportPdf } = await import('../lib/pdf')
-    setPreview(await exportPdf(visible, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog'))
+    setPreview(await exportPdf(exported, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog'))
   }
 
   async function save(input: CatalogItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) {
@@ -122,13 +157,25 @@ export default function CatalogView() {
         </SearchBar>
 
         <div className="toolbar">
-          <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}
-            aria-label={t.filterByRoom}>
-            <option value="">{t.allRooms}</option>
-            {locations.map((location) => (
-              <option key={location} value={location}>{locationLabel(location, t)}</option>
-            ))}
-          </select>
+          {houses.length > 0 && (
+            <select value={houseFilter} onChange={(e) => chooseHouse(e.target.value)} aria-label={t.filterByHouse}
+              title={t.filterByHouse}>
+              <option value="">{t.allHouses}</option>
+              {houses.map((house) => <option key={house.id} value={house.id}>{house.name}</option>)}
+            </select>
+          )}
+          {roomGroups.length > 0 && (
+            <select value={roomFilter} onChange={(e) => setRoomFilter(e.target.value)} aria-label={t.filterByRoom}
+              title={t.filterByRoom}>
+              <option value="">{t.allRooms}</option>
+              {houseFilter ? roomGroups[0].rooms.map((room) => <option key={room.id} value={room.id}>{room.title}</option>)
+                : roomGroups.map(({ house, rooms }) => (
+                  <optgroup key={house.id} label={house.name}>
+                    {rooms.map((room) => <option key={room.id} value={room.id}>{room.title}</option>)}
+                  </optgroup>
+                ))}
+            </select>
+          )}
           <div className="segmented" role="group" aria-label={t.filterByPresence}>
             {(['all', 'present', 'missing'] as const).map((value) => (
               <button key={value} type="button" aria-pressed={presence === value} onClick={() => setPresence(value)}>
@@ -175,7 +222,7 @@ export default function CatalogView() {
 
         <div className="grid">
           {visible.map((item) => (
-            <CatalogItemCard key={item.id} item={item} onEdit={() => setEditing(item)} onDelete={() => setDeleting(item)} />
+            <CatalogItemCard key={item.id} item={item} place={placeOf(item)} onEdit={() => setEditing(item)} onDelete={() => setDeleting(item)} />
           ))}
         </div>
       </main>
@@ -184,7 +231,9 @@ export default function CatalogView() {
         <CatalogItemDialog
           key="catalog-item-dialog"
           item={editing === 'new' ? null : editing}
-          locations={locations}
+          houses={houses}
+          rooms={rooms}
+          place={newPlace}
           onSave={save}
           onDelete={() => editing !== 'new' && setDeleting(editing)}
           onClose={closeEditor}

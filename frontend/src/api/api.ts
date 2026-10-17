@@ -102,12 +102,12 @@ const json = (method: string, body: unknown): RequestInit => ({
 
 export const api = {
   listCatalog: () => request<CatalogItem[]>('/api/catalog'),
-  listLocations: () => request<string[]>('/api/locations'),
   createCatalogItem: (input: CatalogItemInput) => request<CatalogItem>('/api/catalog', json('POST', input)),
   updateCatalogItem: (id: string, input: CatalogItemInput) => request<CatalogItem>(`/api/catalog/${id}`, json('PUT', input)),
   deleteCatalogItem: (id: string) => request<void>(`/api/catalog/${id}`, { method: 'DELETE' }),
-  /** The rooms of a building, in the order of its list */
-  listInventory: (propertyId: string) => request<InventoryRoom[]>(`/api/inventory?propertyId=${propertyId}`),
+  /** The rooms of a building, in the order of its list; of every building without one */
+  listInventory: (propertyId?: string) =>
+    request<InventoryRoom[]>(propertyId ? `/api/inventory?propertyId=${propertyId}` : '/api/inventory'),
   updateInventoryRoom: (id: string, input: InventoryRoomInput) =>
     request<InventoryRoom>(`/api/inventory/${id}`, json('PUT', input)),
   /** Make the rooms of a building those of the list, in its order; rooms left out are deleted with their inventory */

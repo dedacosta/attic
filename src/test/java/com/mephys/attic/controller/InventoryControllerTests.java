@@ -1,6 +1,5 @@
 package com.mephys.attic.controller;
 
-import com.mephys.attic.model.Location;
 import com.mephys.attic.support.TestImages;
 
 import java.nio.file.Files;
@@ -423,14 +422,6 @@ class InventoryControllerTests {
 		mvc.perform(post("/api/inventory/{id}/pictures", "00000000-0000-0000-0000-000000000000").contentType(MediaType.IMAGE_PNG)
 			.content(new byte[] { 1 })).andExpect(status().isNotFound());
 		mvc.perform(get("/api/inventory/{id}", id)).andExpect(jsonPath("$.pictures").isEmpty());
-	}
-
-	@Test
-	void listsLocations() throws Exception {
-		mvc.perform(get("/api/locations"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[0]").value("LIVING_ROOM"))
-			.andExpect(jsonPath("$.length()").value(Location.values().length));
 	}
 
 	@Test

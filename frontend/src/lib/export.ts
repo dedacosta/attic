@@ -1,5 +1,5 @@
 import { age, localDate } from './age'
-import { copyrightYears, formatDate, formatEuros, locationLabel, shortId, shortName } from './format'
+import { copyrightYears, formatDate, formatEuros, shortId, shortName } from './format'
 import type { Messages } from '../i18n'
 import type { CatalogItem, ContributionYear, Heir, InventoryItem } from '../api/types'
 
@@ -21,7 +21,7 @@ export const generatedOn = (now: Date, t: Messages) =>
 export const copyrightLine = (now: Date) => `© ${copyrightYears(now)} David Da Costa · Attic v${__APP_VERSION__}`
 
 /** What the footer says of the catalog after the copyright: when, how many and the filters */
-export function catalogNote(items: CatalogItem[], totalCount: number, filters: string[], now: Date, t: Messages) {
+export function catalogNote(items: CatalogItemExport[], totalCount: number, filters: string[], now: Date, t: Messages) {
   const count = items.length === totalCount ? t.itemCount(totalCount) : t.filteredCount(items.length, totalCount)
   return [generatedOn(now, t), count, ...filters].join('  ·  ')
 }
@@ -29,11 +29,14 @@ export function catalogNote(items: CatalogItem[], totalCount: number, filters: s
 export const catalogHead = (t: Messages) =>
   [t.idColumn, t.name, t.quantityShort, t.location, t.date, t.present, t.value, t.owner]
 
-export const catalogCells = (item: CatalogItem, t: Messages) => [
+/** An item of the catalog as exported, with where it is in words */
+export type CatalogItemExport = CatalogItem & { place: string }
+
+export const catalogCells = (item: CatalogItemExport, t: Messages) => [
   shortId(item.id),
   item.name,
   String(item.quantity),
-  item.location ? locationLabel(item.location, t) : '',
+  item.place,
   item.date ? formatDate(item.date, t.locale) : '',
   item.existent ? t.yes : t.no,
   formatEuros(item.valueEur, t.locale),

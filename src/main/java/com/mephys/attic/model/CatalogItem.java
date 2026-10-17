@@ -7,8 +7,11 @@ import java.util.UUID;
 
 import org.jspecify.annotations.Nullable;
 
-public record CatalogItem(UUID id, String name, int quantity, @Nullable LocalDate date, @Nullable Location location,
-		boolean existent, BigDecimal valueEur, String owner, @Nullable String comments) {
+/**
+ * An item of the catalog. It can be in a building, and then in one of its rooms.
+ */
+public record CatalogItem(UUID id, String name, int quantity, @Nullable LocalDate date, @Nullable UUID propertyId,
+		@Nullable UUID roomId, boolean existent, BigDecimal valueEur, String owner, @Nullable String comments) {
 
 	public static final int DEFAULT_QUANTITY = 1;
 
@@ -36,7 +39,7 @@ public record CatalogItem(UUID id, String name, int quantity, @Nullable LocalDat
 	 * Create a new item with a random id and all defaults applied.
 	 */
 	public static CatalogItem of(String name) {
-		return new CatalogItem(null, name, DEFAULT_QUANTITY, null, null, true, null, null, null);
+		return new CatalogItem(null, name, DEFAULT_QUANTITY, null, null, null, true, null, null, null);
 	}
 
 }

@@ -2,12 +2,12 @@ import { jsPDF } from 'jspdf'
 import { autoTable, type RowInput, type Styles } from 'jspdf-autotable'
 import {
   catalogCells, catalogHead, catalogNote, contributionPages, copyrightLine, generatedOn, heirCells, heirsHead,
-  heirsNote, inventoryNote, inventorySum, isoDay, type InventoryRoomExport,
+  heirsNote, inventoryNote, inventorySum, isoDay, type CatalogItemExport, type InventoryRoomExport,
 } from './export'
 import { formatEuros } from './format'
 import { THUMBNAIL_SIZE, loadThumbnails } from './thumbnails'
 import type { Messages } from '../i18n'
-import type { ContributionYear, CatalogItem, Heir } from '../api/types'
+import type { ContributionYear, Heir } from '../api/types'
 
 const ACCENT: [number, number, number] = [181, 101, 29]
 const MUTED: [number, number, number] = [115, 106, 96]
@@ -88,7 +88,7 @@ function drawFooter(doc: jsPDF, pageNumber: number, note: string, now: Date, t: 
  * show and download. Comments are left out.
  * `fileName` is without date and extension, e.g. "attic-catalog".
  */
-export async function exportPdf(items: CatalogItem[], totalCount: number, filters: string[], t: Messages, title: string,
+export async function exportPdf(items: CatalogItemExport[], totalCount: number, filters: string[], t: Messages, title: string,
   fileName: string): Promise<GeneratedPdf> {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
