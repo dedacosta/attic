@@ -24,6 +24,7 @@
   "addItem": "Adicionar objeto",
   "addItemIn": "Adicionar um objeto a {room}",
   "removeItem": "Remover objeto",
+  "moveItem": "Arrastar para mover",
   "inventorySearchPlaceholder": "Pesquisar divisões e objetos…",
   "inventorySearchLabel": "Pesquisar no inventário",
   "filterByPresence": "Filtrar por presença",

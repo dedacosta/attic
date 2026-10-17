@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type Modifier } from '@dnd-kit/core'
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { api, apiErrorMessage } from '../api/api'
 import { exportInventoryLatex } from '../lib/latex'
 import { PhotoUploadError, saveWithPhotos } from '../lib/photos'
@@ -40,6 +42,9 @@ interface Draft {
 
 /** Sums are rounded to cents, as 33.33 + 66.67 is not exactly 100 in floating point */
 const sum = (values: number[]) => Math.round(values.reduce((all, value) => all + value, 0) * 100) / 100
+
+/** A line is dragged up and down only */
+const vertical: Modifier = ({ transform }) => ({ ...transform, x: 0 })
 
 /** What a line is worth while it is typed: the saved value until the typed one is an amount */
 function typedValue(form: ItemForm, saved: number): number {
@@ -124,6 +129,12 @@ export default function InventoryView() {
   const house = houses?.find((candidate) => candidate.id === houseId) ?? null
   const totalCount = (rooms ?? []).reduce((count, room) => count + room.items.length, 0) + otherItems.length
     + missingItems.length
+
+  // Items are dragged by their grip, with a mouse, a finger or the keyboard
+  const sensors = useSensors(useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))
+  // While searching only some items of a room are shown: they are not moved then
+  const sortable = canEdit && query === ''
 
   // The section a new line is typed in, which is listed even while empty
   const adding = draft?.index === null ? draft.key : null
@@ -256,7 +267,8 @@ export default function InventoryView() {
     addLine(key)
   }
 
-  function moveLine(key: string, index: number, step: number) {
+  /** Move an item within its room, dropped by its grip on the place of another */
+  function moveLine(key: string, from: number, to: number) {
     const items = [...itemsOf(key)]
     // What is typed in the line moved goes with it
     if (draft?.key === key && draft.index !== null) {
@@ -266,8 +278,7 @@ export default function InventoryView() {
       }
       setDraft(null)
     }
-    ;[items[index], items[index + step]] = [items[index + step], items[index]]
-    saveItems(key, items)
+    saveItems(key, arrayMove(items, from, to))
   }
 
   function addLine(key: string) {
@@ -432,48 +443,58 @@ export default function InventoryView() {
               {!canEdit && room?.comments && <p className="inventory-room-comments">{room.comments}</p>}
               {items.length === 0 && !newLine && <p className="hint">{list === 'missing' ? t.nothingMissing : t.emptyRoom}</p>}
               {(items.length > 0 || newLine || canEdit) && (
-                <ul className="document-list">
-                  {items.map((item) => {
-                    const index = all.indexOf(item)
-                    return canEdit ? (
-                      <InventoryLine key={index} autoFocus={false}
-                        form={draft?.key === key && draft.index === index ? draft.form : toItemForm(item, t.locale)}
-                        onChange={(form) => changeLine(key, index, form)}
-                        onCommit={(next) => commitLine(key, index, next)}
-                        onCancel={() => { setDraft(null); setLineError(null) }}
-                        onRemove={() => removeLine(key, index)}
-                        onMove={(step) => moveLine(key, index, step)} first={index === 0} last={index === all.length - 1} />
-                    ) : (
-                      <li key={index} className="inventory-line">
-                        <span className="inventory-line-quantity">×{item.quantity}</span>
-                        <span className="inventory-line-description">{item.description}</span>
-                        <span className="inventory-line-value">{formatEuros(item.valueEur, t.locale)}</span>
-                      </li>
-                    )
-                  })}
-                  {newLine && (
-                    <InventoryLine key={`new-${newLine.serial}`} autoFocus form={newLine.form}
-                      onChange={(form) => changeLine(key, null, form)}
-                      onCommit={(next) => commitLine(key, null, next)}
-                      onCancel={() => { setDraft(null); setLineError(null) }}
-                      onRemove={() => removeLine(key, null)} />
-                  )}
-                  {canEdit && (
-                    <li className="inventory-line-add">
-                      <button type="button" className="icon-button" onClick={() => addLine(key)}
-                        aria-label={t.addItemIn(title)} title={t.addItemIn(title)}>
-                        <PlusIcon width={20} height={20} />
-                      </button>
-                    </li>
-                  )}
-                  {(items.length > 0 || newLine) && (
-                    <li className="inventory-line inventory-line-total">
-                      <span />
-                      <span>{t.total}</span>
-                      <span className="inventory-line-value">{formatEuros(sectionTotal(section), t.locale)}</span>
-                    </li>
-                  )}
-                </ul>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[vertical]}
+                  onDragEnd={({ active, over }) => {
+                    if (over && active.id !== over.id) {
+                      moveLine(key, all.findIndex((_, i) => `${key}:${i}` === active.id),
+                        all.findIndex((_, i) => `${key}:${i}` === over.id))
+                    }
+                  }}>
+                  <SortableContext items={sortable ? all.map((_, i) => `${key}:${i}`) : []} strategy={verticalListSortingStrategy}>
+                    <ul className="document-list">
+                      {items.map((item) => {
+                        const index = all.indexOf(item)
+                        return canEdit ? (
+                          <InventoryLine key={index} autoFocus={false}
+                            form={draft?.key === key && draft.index === index ? draft.form : toItemForm(item, t.locale)}
+                            onChange={(form) => changeLine(key, index, form)}
+                            onCommit={(next) => commitLine(key, index, next)}
+                            onCancel={() => { setDraft(null); setLineError(null) }}
+                            onRemove={() => removeLine(key, index)}
+                            sortId={sortable ? `${key}:${index}` : undefined} />
+                        ) : (
+                          <li key={index} className="inventory-line">
+                            <span className="inventory-line-quantity">×{item.quantity}</span>
+                            <span className="inventory-line-description">{item.description}</span>
+                            <span className="inventory-line-value">{formatEuros(item.valueEur, t.locale)}</span>
+                          </li>
+                        )
+                      })}
+                      {newLine && (
+                        <InventoryLine key={`new-${newLine.serial}`} autoFocus form={newLine.form} inSortable={sortable}
+                          onChange={(form) => changeLine(key, null, form)}
+                          onCommit={(next) => commitLine(key, null, next)}
+                          onCancel={() => { setDraft(null); setLineError(null) }}
+                          onRemove={() => removeLine(key, null)} />
+                      )}
+                      {canEdit && (
+                        <li className="inventory-line-add">
+                          <button type="button" className="icon-button" onClick={() => addLine(key)}
+                            aria-label={t.addItemIn(title)} title={t.addItemIn(title)}>
+                            <PlusIcon width={20} height={20} />
+                          </button>
+                        </li>
+                      )}
+                      {(items.length > 0 || newLine) && (
+                        <li className="inventory-line inventory-line-total">
+                          <span />
+                          <span>{t.total}</span>
+                          <span className="inventory-line-value">{formatEuros(sectionTotal(section), t.locale)}</span>
+                        </li>
+                      )}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
               )}
               {lineError?.key === key && <p className="form-error" role="alert">{lineError.message}</p>}
             </section>
