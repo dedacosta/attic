@@ -31,6 +31,7 @@ const builtWith = [
   `React v${installed('react')}`,
   `Vite v${viteVersion}`,
   `jsPDF v${installed('jspdf')}`,
+  `PDF.js v${installed('pdfjs-dist')}`,
 ].join(' · ')
 
 export default defineConfig({

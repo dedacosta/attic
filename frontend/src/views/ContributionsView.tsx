@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { api, apiErrorMessage } from '../api/api'
 import { exportContributionsLatex } from '../lib/latex'
 import ConfirmDialog from '../components/ConfirmDialog'
+import PdfViewer from '../components/PdfViewer'
 import { ChevronLeftIcon, ChevronRightIcon, FileIcon, PencilIcon } from '../components/icons'
 import { AMOUNT_PATTERN, amountText, formatEuros, parseAmount, shortName } from '../lib/format'
 import { useModal } from '../lib/useModal'
 import { usePermissions } from '../lib/permissions'
 import { useI18n } from '../i18n'
 import type { ContributionYear } from '../api/types'
+import type { GeneratedPdf } from '../lib/pdf'
 
 /** Years shown at a time, and moved by an arrow */
 const SPAN = 10
@@ -53,6 +55,7 @@ export default function ContributionsView() {
   const [error, setError] = useState<string | null>(null)
   const [commenting, setCommenting] = useState<number | null>(null)
   const [deleting, setDeleting] = useState<number | null>(null)
+  const [preview, setPreview] = useState<GeneratedPdf | null>(null)
   const start = end - SPAN + 1
 
   const reload = useCallback(async () => {
@@ -85,7 +88,7 @@ export default function ContributionsView() {
   async function downloadPdf() {
     // Loaded on demand: the PDF library is large. The PDF has every year with something entered
     const [{ exportContributionsPdf }, all] = await Promise.all([import('../lib/pdf'), api.listContributions()])
-    await exportContributionsPdf(all, t)
+    setPreview(await exportContributionsPdf(all, t))
   }
 
   async function downloadLatex() {
@@ -255,6 +258,10 @@ export default function ContributionsView() {
             await reload()
             setDeleting(null)
           }} />
+      )}
+      {preview && (
+        <PdfViewer source={preview.blob} title={preview.title} fileName={preview.fileName}
+          onClose={() => setPreview(null)} />
       )}
     </main>
   )

@@ -3,6 +3,7 @@ import { api, apiErrorMessage } from '../api/api'
 import { exportCatalogLatex } from '../lib/latex'
 import { saveWithPhotos } from '../lib/photos'
 import ConfirmDialog from '../components/ConfirmDialog'
+import PdfViewer from '../components/PdfViewer'
 import CatalogItemCard from '../components/CatalogItemCard'
 import CatalogItemDialog from '../components/CatalogItemDialog'
 import SearchBar from '../components/SearchBar'
@@ -11,6 +12,7 @@ import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
 import { FileIcon, PlusIcon } from '../components/icons'
 import type { CatalogItem, CatalogItemInput, PhotoEntry } from '../api/types'
+import type { GeneratedPdf } from '../lib/pdf'
 
 type Presence = 'all' | 'present' | 'missing'
 
@@ -39,6 +41,7 @@ export default function CatalogView() {
   const [presence, setPresence] = useState<Presence>('all')
   const [editing, setEditing] = useState<CatalogItem | 'new' | null>(null)
   const [deleting, setDeleting] = useState<CatalogItem | null>(null)
+  const [preview, setPreview] = useState<GeneratedPdf | null>(null)
 
   const reload = useCallback(async () => {
     try {
@@ -78,7 +81,7 @@ export default function CatalogView() {
     }
     // Loaded on demand: the PDF library is large
     const { exportPdf } = await import('../lib/pdf')
-    await exportPdf(visible, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog')
+    setPreview(await exportPdf(visible, items?.length ?? 0, filters, t, t.pdfTitleCatalog, 'attic-catalog'))
   }
 
   async function save(input: CatalogItemInput, photos: PhotoEntry[], onPhotos: (photos: PhotoEntry[]) => void) {
@@ -196,6 +199,10 @@ export default function CatalogView() {
           onConfirm={confirmDelete}
           onCancel={() => setDeleting(null)}
         />
+      )}
+      {preview && (
+        <PdfViewer source={preview.blob} title={preview.title} fileName={preview.fileName}
+          onClose={() => setPreview(null)} />
       )}
     </>
   )

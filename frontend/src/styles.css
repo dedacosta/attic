@@ -2100,6 +2100,100 @@ fieldset.fields:disabled .checkbox {
   font-size: 0.9rem;
 }
 
+/* Full-screen PDF: a bar at the top, the pages below it */
+
+.pdf-viewer {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgb(40 38 36);
+  color: #fff;
+}
+
+.pdf-viewer[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-viewer::backdrop {
+  background: rgb(0 0 0 / 0.92);
+}
+
+.pdf-viewer-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 6px 16px;
+  background: rgb(0 0 0 / 0.5);
+}
+
+.pdf-viewer-bar .icon-button {
+  color: #fff;
+}
+
+.pdf-viewer-bar .icon-button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.15);
+  color: #fff;
+}
+
+.pdf-viewer-bar .icon-button:disabled {
+  opacity: 0.4;
+  background: transparent;
+}
+
+.pdf-viewer-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-viewer-pages {
+  color: rgb(255 255 255 / 0.7);
+}
+
+.pdf-viewer-zoom {
+  min-width: 3.5em;
+  text-align: center;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-viewer-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  overflow: auto;
+}
+
+.pdf-viewer-page {
+  /* Zoomed in, a page wider than the screen scrolls instead of being centred off its left edge */
+  flex-shrink: 0;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.5);
+}
+
+.pdf-viewer-message {
+  margin: auto;
+}
+
+@media (max-width: 520px) {
+  /* The name gives way to the buttons */
+  .pdf-viewer-pages,
+  .pdf-viewer-zoom {
+    display: none;
+  }
+}
+
 /* Photos of an item or document */
 
 .photos-field {

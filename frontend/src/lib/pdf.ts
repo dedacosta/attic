@@ -18,6 +18,21 @@ const TOTAL_PAGES = '{total_pages}'
 /** The built-in PDF fonts have no narrow or no-break spaces, which Intl uses in "1 234,50 €". */
 const pdfText = (text: string) => text.replace(/[  ]/g, ' ')
 
+/** A PDF made in the browser, to show before it is downloaded */
+export interface GeneratedPdf {
+  blob: Blob
+  /** Shown above the pages, e.g. "Heirs" */
+  title: string
+  /** e.g. "attic-heirs-2026-10-17.pdf" */
+  fileName: string
+}
+
+/** The PDF, once its pages are all drawn */
+function finish(doc: jsPDF, title: string, fileName: string): GeneratedPdf {
+  doc.putTotalPages(TOTAL_PAGES)
+  return { blob: doc.output('blob'), title, fileName }
+}
+
 /** The table speaks for itself: the title is only in the document's properties, for the viewer's title bar */
 const setTitle = (doc: jsPDF, title: string) => doc.setProperties({ title })
 
@@ -49,11 +64,11 @@ function drawFooter(doc: jsPDF, pageNumber: number, note: string, now: Date, t: 
 }
 
 /**
- * Download the given items as a PDF table, one line per item. Comments are left out.
+ * A PDF table of the given items, one line per item, to show and download. Comments are left out.
  * `fileName` is without date and extension, e.g. "attic-catalog".
  */
 export async function exportPdf(items: CatalogItem[], totalCount: number, filters: string[], t: Messages, title: string,
-  fileName: string) {
+  fileName: string): Promise<GeneratedPdf> {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
   const note = catalogNote(items, totalCount, filters, now, t)
@@ -86,22 +101,22 @@ export async function exportPdf(items: CatalogItem[], totalCount: number, filter
     },
     didDrawPage: (data) => drawFooter(doc, data.pageNumber, note, now, t),
   })
-  doc.putTotalPages(TOTAL_PAGES)
-  doc.save(`${fileName}-${isoDay(now)}.pdf`)
+  return finish(doc, title, `${fileName}-${isoDay(now)}.pdf`)
 }
 
 /**
- * Download the inventory of a house as a PDF, room by room: a line with the title of the room, its
+ * The inventory of a house as a PDF, to show and download, room by room: a line with the title of the room, its
  * comments and, below, a line per item with its quantity, its description and its value, then the
  * total of the room, as an amount without a label. The total of the house follows what the house holds; the missing items come
  * after it, with a total of their own. Photos are left out.
  */
 export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCount: number, filters: string[],
-  t: Messages, house: string) {
+  t: Messages, house: string): Promise<GeneratedPdf> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const now = new Date()
   const note = inventoryNote(rooms, totalCount, filters, house, now, t)
-  setTitle(doc, house ? `${t.pdfTitleInventory} — ${house}` : t.pdfTitleInventory)
+  const title = house ? `${t.pdfTitleInventory} — ${house}` : t.pdfTitleInventory
+  setTitle(doc, title)
 
   const euros = (value: number) => pdfText(formatEuros(value, t.locale))
 
@@ -153,20 +168,19 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
     },
     didDrawPage: (data) => drawFooter(doc, data.pageNumber, note, now, t),
   })
-  doc.putTotalPages(TOTAL_PAGES)
-  doc.save(`attic-inventory-${isoDay(now)}.pdf`)
+  return finish(doc, title, `attic-inventory-${isoDay(now)}.pdf`)
 }
 
 /** How far a child's name is set in from their parent's, in mm */
 const CHILD_INDENT = 4
 
 /**
- * Download the given heirs as a PDF table, one line per heir, in the order given. `depth` is how
+ * A PDF table of the given heirs, to show and download, one line per heir, in the order given. `depth` is how
  * many ancestors are listed above the heir, whose name is set in by as much. `everybody` is for
  * the names of the parents. Sex, filiation, comments and documents are left out.
  */
 export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], everybody: Heir[], filters: string[],
-  t: Messages) {
+  t: Messages): Promise<GeneratedPdf> {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const now = new Date()
   const note = heirsNote(rows, everybody, filters, now, t)
@@ -201,15 +215,14 @@ export async function exportHeirsPdf(rows: { heir: Heir; depth: number }[], ever
     },
     didDrawPage: (data) => drawFooter(doc, data.pageNumber, note, now, t),
   })
-  doc.putTotalPages(TOTAL_PAGES)
-  doc.save(`attic-heirs-${isoDay(now)}.pdf`)
+  return finish(doc, t.tabHeirs, `attic-heirs-${isoDay(now)}.pdf`)
 }
 
 /**
- * Download every year of the annual contribution, ten years per page, the oldest first: a line
+ * A PDF of every year of the annual contribution, to show and download, ten years per page, the oldest first: a line
  * per heir and a column per year (see contributionPages).
  */
-export async function exportContributionsPdf(years: ContributionYear[], t: Messages) {
+export async function exportContributionsPdf(years: ContributionYear[], t: Messages): Promise<GeneratedPdf> {
   const doc = new jsPDF({ orientation: years.length > 5 ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
   const now = new Date()
   setTitle(doc, t.tabContributions)
@@ -248,6 +261,5 @@ export async function exportContributionsPdf(years: ContributionYear[], t: Messa
     doc.setPage(number)
     drawFooter(doc, number, generatedOn(now, t), now, t)
   }
-  doc.putTotalPages(TOTAL_PAGES)
-  doc.save(`attic-contributions-${isoDay(now)}.pdf`)
+  return finish(doc, t.tabContributions, `attic-contributions-${isoDay(now)}.pdf`)
 }

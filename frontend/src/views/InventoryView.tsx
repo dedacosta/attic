@@ -3,12 +3,14 @@ import { api, apiErrorMessage } from '../api/api'
 import { exportInventoryLatex } from '../lib/latex'
 import { saveWithPhotos } from '../lib/photos'
 import InventoryRoomDialog from '../components/InventoryRoomDialog'
+import PdfViewer from '../components/PdfViewer'
 import SearchBar from '../components/SearchBar'
 import { formatEuros, normalize } from '../lib/format'
 import { usePermissions } from '../lib/permissions'
 import { useI18n } from '../i18n'
 import { FileIcon, PencilIcon } from '../components/icons'
 import type { Building, InventoryItem, InventoryRoom, InventoryRoomInput, PhotoEntry } from '../api/types'
+import type { GeneratedPdf } from '../lib/pdf'
 
 /** The lists of a house that are not rooms */
 type HouseList = 'other' | 'missing'
@@ -38,6 +40,7 @@ export default function InventoryView() {
   const [query, setQuery] = useState('')
   // A room or a list of the house. The rooms themselves are entered on the house.
   const [editing, setEditing] = useState<InventoryRoom | HouseList | null>(null)
+  const [preview, setPreview] = useState<GeneratedPdf | null>(null)
 
   const loadHouses = useCallback(async () => {
     try {
@@ -124,7 +127,7 @@ export default function InventoryView() {
     }
     // Loaded on demand: the PDF library is large
     const { exportInventoryPdf } = await import('../lib/pdf')
-    await exportInventoryPdf(rooms, totalCount, filters, t, house?.name ?? '')
+    setPreview(await exportInventoryPdf(rooms, totalCount, filters, t, house?.name ?? ''))
   }
 
   async function saveRoom(input: Pick<InventoryRoomInput, 'pdfTitle' | 'comments' | 'items'>, photos: PhotoEntry[],
@@ -261,6 +264,10 @@ export default function InventoryView() {
           onSaveList={saveList}
           onClose={closeEditor}
         />
+      )}
+      {preview && (
+        <PdfViewer source={preview.blob} title={preview.title} fileName={preview.fileName}
+          onClose={() => setPreview(null)} />
       )}
     </>
   )
