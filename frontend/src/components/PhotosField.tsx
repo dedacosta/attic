@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
-import { FileIcon, ImageIcon, PlusIcon, TrashIcon } from './icons'
+import { AddPhotoIcon, FileIcon, ImageIcon, PlusIcon, TrashIcon } from './icons'
 import PdfViewer from './PdfViewer'
 import PhotoViewer from './PhotoViewer'
 import type { PhotoEntry } from '../api/types'
@@ -23,6 +23,8 @@ interface Props {
   allowPdf?: boolean
   /** Mark the first photo as the cover and let another be chosen; by default unless PDFs are accepted */
   cover?: boolean
+  /** Small photos on a line with other things: they are made cover or removed when shown large */
+  compact?: boolean
 }
 
 // Keys for photos not uploaded yet. Not crypto.randomUUID(): browsers only offer it on HTTPS
@@ -37,7 +39,7 @@ export const isPdf = (entry: PhotoEntry) =>
 
 /** A row of photos with add / remove / make cover, used by the item, document and property forms. */
 export default function PhotosField(props: Props) {
-  const { photos, onChange, onError, readOnly = false, allowPdf = false, cover = !allowPdf } = props
+  const { photos, onChange, onError, readOnly = false, allowPdf = false, cover = !allowPdf, compact = false } = props
   const { t } = useI18n()
   const [viewing, setViewing] = useState<number | null>(null)
   const [viewingPdf, setViewingPdf] = useState<PhotoEntry | null>(null)
@@ -86,7 +88,7 @@ export default function PhotosField(props: Props) {
   }
 
   return (
-    <div className="photos-field">
+    <div className={compact ? 'photos-field photos-field-compact' : 'photos-field'}>
       <ul className="photos-list">
         {photos.map((entry, index) => {
           const src = thumbnail(entry)
@@ -98,8 +100,8 @@ export default function PhotosField(props: Props) {
                   <span className="photo-pdf"><FileIcon width={32} height={32} /> PDF</span>
                 ) : <ImageIcon width={32} height={32} />}
               </button>
-              {index === 0 && cover && <span className="photo-cover">{t.cover}</span>}
-              {!readOnly && (
+              {index === 0 && cover && !compact && <span className="photo-cover">{t.cover}</span>}
+              {!readOnly && !compact && (
                 <div className="photo-actions">
                   {index > 0 && cover && (
                     <button type="button" className="button button-small" onClick={() => makeCover(index)}>
@@ -118,9 +120,9 @@ export default function PhotosField(props: Props) {
         })}
         {!readOnly && (
           <li className="photo photo-add">
-            <label className="photo-add-button">
-              <PlusIcon width={20} height={20} />
-              <span>{allowPdf ? t.addFiles : t.addPhotos}</span>
+            <label className="photo-add-button" title={compact ? t.addPhotos : undefined}>
+              {compact ? <AddPhotoIcon width={26} height={26} /> : <PlusIcon width={20} height={20} />}
+              {!compact && <span>{allowPdf ? t.addFiles : t.addPhotos}</span>}
               <input type="file" accept={[...OFFERED_PICTURE_TYPES, ...(allowPdf ? [PDF_TYPE] : [])].join(',')} multiple hidden
                 onChange={(e) => { add(e.target.files); e.target.value = '' }} />
             </label>
@@ -128,7 +130,24 @@ export default function PhotosField(props: Props) {
         )}
       </ul>
       {viewing !== null && (
-        <PhotoViewer sources={images.map(full)} start={viewing} onClose={() => setViewing(null)} />
+        <PhotoViewer sources={images.map(full)} start={viewing} onClose={() => setViewing(null)}
+          actions={compact && !readOnly ? (index) => (
+            <>
+              {index > 0 && cover && (
+                <button type="button" className="button" onClick={() => makeCover(photos.indexOf(images[index]))}>
+                  {t.makeCover}
+                </button>
+              )}
+              <button type="button" className="button" onClick={() => {
+                remove(photos.indexOf(images[index]))
+                if (images.length === 1) {
+                  setViewing(null)
+                }
+              }}>
+                <TrashIcon width={16} height={16} /> {t.removePhoto}
+              </button>
+            </>
+          ) : undefined} />
       )}
       {viewingPdf !== null && (
         // A PDF not uploaded yet is shown from its file, and keeps its name when downloaded

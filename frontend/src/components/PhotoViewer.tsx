@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { useModal } from '../lib/useModal'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from './icons'
@@ -9,16 +9,20 @@ interface Props {
   /** Index of the photo to show first */
   start: number
   onClose: () => void
+  /** Buttons for the photo shown, below it */
+  actions?: (index: number) => ReactNode
 }
 
 /** Minimum horizontal finger movement, in pixels, that counts as a swipe */
 const SWIPE_DISTANCE = 50
 
 /** Full-screen photos with previous / next buttons, arrow keys and swipe. */
-export default function PhotoViewer({ sources, start, onClose }: Props) {
+export default function PhotoViewer({ sources, start, onClose, actions }: Props) {
   const { t } = useI18n()
   const ref = useModal()
-  const [index, setIndex] = useState(start)
+  const [chosen, setIndex] = useState(start)
+  // Photos can be removed while they are shown
+  const index = Math.min(chosen, sources.length - 1)
   const swipeStart = useRef<number | null>(null)
   const many = sources.length > 1
 
@@ -53,6 +57,7 @@ export default function PhotoViewer({ sources, start, onClose }: Props) {
         onPointerCancel={() => { swipeStart.current = null }}>
         <img src={sources[index]} alt={t.photoOf(index + 1, sources.length)} draggable={false} />
       </div>
+      {actions && <div className="photo-viewer-actions">{actions(index)}</div>}
       <button type="button" className="icon-button photo-viewer-close" onClick={onClose} aria-label={t.close}>
         <CloseIcon />
       </button>

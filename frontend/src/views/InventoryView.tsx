@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, apiErrorMessage } from '../api/api'
 import { exportInventoryLatex } from '../lib/latex'
-import { saveWithPhotos } from '../lib/photos'
-import InventoryRoomDialog from '../components/InventoryRoomDialog'
+import { PhotoUploadError, saveWithPhotos } from '../lib/photos'
+import InventoryLine from '../components/InventoryLine'
 import PdfViewer from '../components/PdfViewer'
+import PhotosField from '../components/PhotosField'
 import SearchBar from '../components/SearchBar'
-import { formatEuros, normalize } from '../lib/format'
+import { AMOUNT_PATTERN, formatEuros, normalize, parseAmount } from '../lib/format'
+import { NEW_ITEM, parseItemForm, toItemForm, type ItemForm } from '../lib/inventory'
 import { usePermissions } from '../lib/permissions'
 import { useI18n } from '../i18n'
-import { FileIcon, PencilIcon } from '../components/icons'
-import type { Building, InventoryItem, InventoryRoom, InventoryRoomInput, PhotoEntry } from '../api/types'
+import { FileIcon, PlusIcon } from '../components/icons'
+import { storedPhotos, type Building, type InventoryItem, type InventoryRoom, type InventoryRoomInput, type PhotoEntry } from '../api/types'
 import type { GeneratedPdf } from '../lib/pdf'
 
 /** The lists of a house that are not rooms */
@@ -21,11 +23,29 @@ interface Section {
   room: InventoryRoom | null
   list: HouseList | null
   title: string
+  /** All its items, and those the search finds */
+  all: InventoryItem[]
   items: InventoryItem[]
 }
 
+/** The line being typed in: an item of a section, or a new one at its end */
+interface Draft {
+  key: string
+  /** Null for a new line */
+  index: number | null
+  form: ItemForm
+  /** Tells new lines apart, so each one takes the focus */
+  serial: number
+}
+
 /** Sums are rounded to cents, as 33.33 + 66.67 is not exactly 100 in floating point */
-const total = (items: InventoryItem[]) => Math.round(items.reduce((sum, item) => sum + item.valueEur, 0) * 100) / 100
+const sum = (values: number[]) => Math.round(values.reduce((all, value) => all + value, 0) * 100) / 100
+
+/** What a line is worth while it is typed: the saved value until the typed one is an amount */
+function typedValue(form: ItemForm, saved: number): number {
+  const value = form.value.trim()
+  return value === '' ? 0 : AMOUNT_PATTERN.test(value) ? parseAmount(value) : saved
+}
 
 export default function InventoryView() {
   const { t } = useI18n()
@@ -38,9 +58,22 @@ export default function InventoryView() {
   const [missingItems, setMissingItems] = useState<InventoryItem[]>([])
   const [loadError, setLoadError] = useState<unknown>(null)
   const [query, setQuery] = useState('')
-  // A room or a list of the house. The rooms themselves are entered on the house.
-  const [editing, setEditing] = useState<InventoryRoom | HouseList | null>(null)
   const [preview, setPreview] = useState<GeneratedPdf | null>(null)
+  // Items are added and changed in place, a line at a time, into the room chosen to add to
+  const [draft, setDraft] = useState<Draft | null>(null)
+  const [lineError, setLineError] = useState<{ key: string; message: string } | null>(null)
+  const [addTo, setAddTo] = useState('')
+  // Photos of a room while they are saved, the new ones shown from their files
+  const [savingPhotos, setSavingPhotos] = useState<Record<string, PhotoEntry[]>>({})
+  const serial = useRef(0)
+  const saving = useRef(Promise.resolve())
+  // The rooms as last changed here: a save runs after those before it, and sends the room as it is then
+  const latestRooms = useRef<InventoryRoom[] | null>(null)
+
+  const showRooms = useCallback((list: InventoryRoom[] | null) => {
+    latestRooms.current = list
+    setRooms(list)
+  }, [])
 
   const loadHouses = useCallback(async () => {
     try {
@@ -62,14 +95,14 @@ export default function InventoryView() {
       const [loadedRooms, loadedOtherItems, loadedMissingItems] = await Promise.all([
         api.listInventory(houseId), api.listOtherInventoryItems(houseId), api.listMissingInventoryItems(houseId),
       ])
-      setRooms(loadedRooms)
+      showRooms(loadedRooms)
       setOtherItems(loadedOtherItems)
       setMissingItems(loadedMissingItems)
       setLoadError(null)
     } catch (e) {
       setLoadError(e)
     }
-  }, [houseId])
+  }, [houseId, showRooms])
 
   useEffect(() => {
     loadHouses()
@@ -77,15 +110,22 @@ export default function InventoryView() {
 
   useEffect(() => {
     // Another house: its inventory replaces the one shown
-    setRooms(null)
+    showRooms(null)
     setOtherItems([])
     setMissingItems([])
+    setDraft(null)
+    setLineError(null)
+    setAddTo('')
+    setSavingPhotos({})
     reload()
-  }, [reload])
+  }, [reload, showRooms])
 
   const house = houses?.find((candidate) => candidate.id === houseId) ?? null
-  const totalCount = (rooms ?? []).reduce((sum, room) => sum + room.items.length, 0) + otherItems.length
+  const totalCount = (rooms ?? []).reduce((count, room) => count + room.items.length, 0) + otherItems.length
     + missingItems.length
+
+  // The section a new line is typed in, which is listed even while empty
+  const adding = draft?.index === null ? draft.key : null
 
   // The rooms in the order of the house, then its other items and its missing items. A search finds
   // a room by what is said of it, with all its items, or single items by their description.
@@ -98,19 +138,180 @@ export default function InventoryView() {
       room,
       list: null,
       title: room.title,
+      all: room.items,
       items: shown(room.items, has([room.title, room.description, room.pdfTitle, room.comments].join(' '))),
     }))
-    list.push({ key: 'other', room: null, list: 'other', title: t.otherItems, items: shown(otherItems, has(t.otherItems)) })
-    list.push({ key: 'missing', room: null, list: 'missing', title: t.missingItems,
+    list.push({ key: 'other', room: null, list: 'other', title: t.otherItems, all: otherItems,
+      items: shown(otherItems, has(t.otherItems)) })
+    list.push({ key: 'missing', room: null, list: 'missing', title: t.missingItems, all: missingItems,
       items: shown(missingItems, has(t.missingItems)) })
-    // Without a search every room is listed, also an empty one; the lists of the house only when
-    // they have items or can be filled
-    return list.filter((section) => section.items.length > 0 || (query === '' && (section.room !== null || canEdit)))
-  }, [rooms, otherItems, missingItems, query, canEdit, t])
+    // A room is listed once it has items, or a new line is typed in it. What is missing is always
+    // listed, unless a search finds nothing in it.
+    return list.filter((section) => section.items.length > 0 || section.key === adding
+      || (section.list === 'missing' && query === ''))
+  }, [rooms, otherItems, missingItems, query, adding, t])
 
-  const visibleCount = sections.reduce((sum, section) => sum + section.items.length, 0)
+  const visibleCount = sections.reduce((count, section) => count + section.items.length, 0)
+
+  /** The total of a section with the line being typed in as it is typed */
+  function sectionTotal(section: Section): number {
+    const values = section.items.map((item) => {
+      const index = section.all.indexOf(item)
+      return draft?.key === section.key && draft.index === index ? typedValue(draft.form, item.valueEur) : item.valueEur
+    })
+    if (draft?.key === section.key && draft.index === null) {
+      values.push(typedValue(draft.form, 0))
+    }
+    return sum(values)
+  }
+
   // What is missing is not part of what the house holds
-  const houseTotal = total(sections.filter((section) => section.list !== 'missing').flatMap((section) => section.items))
+  const houseTotal = sum(sections.filter((section) => section.list !== 'missing').map(sectionTotal))
+  // Where a new item goes: the room chosen, else the first room of the house
+  const addTargets = [...(rooms ?? []).map((room) => room.id), 'other']
+  const addTarget = addTargets.includes(addTo) ? addTo : addTargets[0]
+
+  const itemsOf = (key: string) =>
+    key === 'other' ? otherItems : key === 'missing' ? missingItems : (rooms?.find((room) => room.id === key)?.items ?? [])
+
+  /** Save after what is saved already. On an error what the server has is shown again. */
+  function queueSave(key: string, save: () => Promise<unknown>) {
+    saving.current = saving.current.then(async () => { await save() }).catch(async (e) => {
+      setLineError({ key, message: e instanceof PhotoUploadError
+        ? t.errorPhotoUpload(e.fileName, apiErrorMessage(e.reason, t)) : apiErrorMessage(e, t) })
+      await reload()
+    })
+  }
+
+  const roomInput = (room: InventoryRoom): InventoryRoomInput => ({
+    title: room.title, propertyId: room.propertyId, pdfTitle: room.pdfTitle, comments: room.comments, items: room.items,
+  })
+
+  /** Show a change of a room at once, and save the room */
+  function changeRoom(id: string, change: Partial<InventoryRoom>) {
+    showRooms(latestRooms.current?.map((room) => (room.id === id ? { ...room, ...change } : room)) ?? null)
+    queueSave(id, async () => {
+      const room = latestRooms.current?.find((candidate) => candidate.id === id)
+      if (room) {
+        await api.updateInventoryRoom(id, roomInput(room))
+      }
+    })
+  }
+
+  /** Show the items of a section at once, and save them */
+  function saveItems(key: string, items: InventoryItem[]) {
+    const propertyId = houseId
+    if (key === 'other') {
+      setOtherItems(items)
+      queueSave(key, () => api.saveOtherInventoryItems(propertyId, items))
+    } else if (key === 'missing') {
+      setMissingItems(items)
+      queueSave(key, () => api.saveMissingInventoryItems(propertyId, items))
+    } else {
+      changeRoom(key, { items })
+    }
+  }
+
+  /** A text of a room, saved when its field is left */
+  function saveRoomText(room: InventoryRoom, field: 'pdfTitle' | 'comments', text: string) {
+    const value = text.trim() || null
+    if (value !== room[field]) {
+      changeRoom(room.id, { [field]: value })
+    }
+  }
+
+  /** The photos of a room as they should be: new ones are uploaded, those left out removed */
+  function savePhotos(id: string, photos: PhotoEntry[]) {
+    setSavingPhotos((all) => ({ ...all, [id]: photos }))
+    queueSave(id, async () => {
+      const room = latestRooms.current?.find((candidate) => candidate.id === id)
+      let current = photos
+      try {
+        if (room) {
+          await saveWithPhotos(() => api.updateInventoryRoom(id, roomInput(room)), '/api/inventory', photos, () => {},
+            (uploaded) => {
+              current = uploaded
+              setSavingPhotos((all) => ({ ...all, [id]: uploaded }))
+            })
+          const pictures = current.flatMap((entry) => (entry.kind === 'stored' ? [entry.picture] : []))
+          showRooms(latestRooms.current?.map((other) => (other.id === id ? { ...other, pictures } : other)) ?? null)
+        }
+      } finally {
+        setSavingPhotos((all) => {
+          const others = { ...all }
+          delete others[id]
+          return others
+        })
+      }
+    })
+  }
+
+  function moveLine(key: string, index: number, step: number) {
+    const items = [...itemsOf(key)]
+    // What is typed in the line moved goes with it
+    if (draft?.key === key && draft.index !== null) {
+      const item = parseItemForm(draft.form)
+      if (typeof item !== 'string' && item.description) {
+        items[draft.index] = item
+      }
+      setDraft(null)
+    }
+    ;[items[index], items[index + step]] = [items[index + step], items[index]]
+    saveItems(key, items)
+  }
+
+  function addLine(key: string) {
+    serial.current += 1
+    setLineError(null)
+    setDraft({ key, index: null, form: NEW_ITEM, serial: serial.current })
+  }
+
+  function changeLine(key: string, index: number | null, form: ItemForm) {
+    if (draft?.key !== key || draft.index !== index) {
+      setLineError(null)
+    }
+    setDraft((current) => ({ key, index, form, serial: current?.serial ?? 0 }))
+  }
+
+  /** Save the line left, if it is the one typed in. Without a description, it is not kept. */
+  function commitLine(key: string, index: number | null, next: boolean) {
+    if (draft?.key !== key || draft.index !== index) {
+      return
+    }
+    const items = itemsOf(key)
+    if (!draft.form.description.trim()) {
+      setDraft(null)
+      setLineError(null)
+      if (index !== null) {
+        saveItems(key, items.filter((_, i) => i !== index))
+      }
+      return
+    }
+    const item = parseItemForm(draft.form)
+    if (typeof item === 'string') {
+      return setLineError({ key, message: item === 'quantity' ? t.errorQuantity : t.errorValue })
+    }
+    setLineError(null)
+    if (next && index === null) {
+      addLine(key)
+    } else {
+      setDraft(null)
+    }
+    const old = index === null ? null : items[index]
+    if (old?.description !== item.description || old.quantity !== item.quantity || old.valueEur !== item.valueEur) {
+      saveItems(key, index === null ? [...items, item] : items.map((other, i) => (i === index ? item : other)))
+    }
+  }
+
+  function removeLine(key: string, index: number | null) {
+    if (draft?.key === key) {
+      setDraft(null)
+    }
+    setLineError(null)
+    if (index !== null) {
+      saveItems(key, itemsOf(key).filter((_, i) => i !== index))
+    }
+  }
 
   async function download(format: 'pdf' | 'latex') {
     const filters = query.trim() ? [t.searchFilter(query.trim())] : []
@@ -128,35 +329,6 @@ export default function InventoryView() {
     // Loaded on demand: the PDF library is large
     const { exportInventoryPdf } = await import('../lib/pdf')
     setPreview(await exportInventoryPdf(rooms, totalCount, filters, t, house?.name ?? ''))
-  }
-
-  async function saveRoom(input: Pick<InventoryRoomInput, 'pdfTitle' | 'comments' | 'items'>, photos: PhotoEntry[],
-    onPhotos: (photos: PhotoEntry[]) => void) {
-    if (editing === null || editing === 'other' || editing === 'missing') {
-      return
-    }
-    const room = editing
-    await saveWithPhotos(
-      () => api.updateInventoryRoom(room.id, { ...input, title: room.title, propertyId: room.propertyId }),
-      '/api/inventory', photos, setEditing, onPhotos,
-    )
-    await reload()
-    setEditing(null)
-  }
-
-  async function saveList(items: InventoryItem[]) {
-    if (editing === 'missing') {
-      await api.saveMissingInventoryItems(houseId, items)
-    } else {
-      await api.saveOtherInventoryItems(houseId, items)
-    }
-    await reload()
-    setEditing(null)
-  }
-
-  function closeEditor() {
-    setEditing(null)
-    reload()
   }
 
   return (
@@ -188,6 +360,19 @@ export default function InventoryView() {
           </button>
         </div>
 
+        {canEdit && house && rooms !== null && (
+          <div className="toolbar inventory-add">
+            <select value={addTarget} onChange={(e) => setAddTo(e.target.value)} aria-label={t.inventoryAddTo}
+              title={t.inventoryAddTo}>
+              {rooms.map((room) => <option key={room.id} value={room.id}>{room.title}</option>)}
+              <option value="other">{t.otherItems}</option>
+            </select>
+            <button type="button" className="button button-primary" onClick={() => addLine(addTarget)}>
+              <PlusIcon width={18} height={18} /> {t.addItem}
+            </button>
+          </div>
+        )}
+
         {loadError !== null && (
           <div className="banner" role="alert">
             {apiErrorMessage(loadError, t)}{' '}
@@ -210,61 +395,81 @@ export default function InventoryView() {
           <p className="empty">{t.noMatches}</p>
         )}
 
-        {rooms !== null && sections.map(({ key, room, list, title, items }) => (
-          <section key={key} className="group inventory-room" aria-label={title}>
-            <div className="inventory-room-header">
-              {room?.pictures[0]?.thumbnailUrl && (
-                <button type="button" className="inventory-room-photo" onClick={() => setEditing(room)}
-                  aria-label={t.showNamed(title)}>
-                  <img src={room.pictures[0].thumbnailUrl} alt="" loading="lazy" />
-                </button>
-              )}
-              <div>
+        {rooms !== null && sections.map((section) => {
+          const { key, room, list, title, all, items } = section
+          const newLine = draft?.key === key && draft.index === null ? draft : null
+          return (
+            <section key={key} className="group inventory-room" aria-label={title}>
+              <div className="inventory-room-header">
+                {room && (canEdit || room.pictures.length > 0) && (
+                  <PhotosField compact readOnly={!canEdit} photos={savingPhotos[room.id] ?? storedPhotos(room.pictures)}
+                    onChange={(photos) => savePhotos(room.id, photos)}
+                    onError={(message) => setLineError(message === null ? null : { key, message })} />
+                )}
                 <h2 className="group-title">
                   {title} <span className="group-count">{items.length}</span>
-                  {(canEdit || room) && (
-                    <button type="button" className="icon-button" onClick={() => setEditing(room ?? list)}
-                      aria-label={canEdit ? t.editNamed(title) : t.showNamed(title)}
-                      title={!canEdit ? t.viewRoom : room ? t.editRoom : list === 'missing' ? t.editMissingItems : t.editOtherItems}>
-                      <PencilIcon width={18} height={18} />
+                  {canEdit && list === 'missing' && (
+                    <button type="button" className="icon-button" onClick={() => addLine('missing')}
+                      aria-label={t.addMissingItem} title={t.addMissingItem}>
+                      <PlusIcon width={18} height={18} />
                     </button>
                   )}
                 </h2>
-                {room?.description && <p className="inventory-room-description">{room.description}</p>}
-                {room?.comments && <p className="inventory-room-comments">{room.comments}</p>}
+                {room && canEdit && (
+                  <>
+                    {/* Keyed by what is saved, so they show it again after a failed save */}
+                    <input key={`pdf-title-${room.pdfTitle}`} className="inventory-room-field" defaultValue={room.pdfTitle ?? ''}
+                      placeholder={t.pdfRoomTitle} aria-label={t.pdfRoomTitle} title={t.pdfRoomTitleHint}
+                      onBlur={(e) => saveRoomText(room, 'pdfTitle', e.target.value)} />
+                    <textarea key={`comments-${room.comments}`} className="inventory-room-field inventory-room-comments-field"
+                      rows={1} defaultValue={room.comments ?? ''} placeholder={t.comments} aria-label={t.comments}
+                      onBlur={(e) => saveRoomText(room, 'comments', e.target.value)} />
+                  </>
+                )}
               </div>
-            </div>
-            {items.length === 0 && <p className="hint">{t.emptyRoom}</p>}
-            {items.length > 0 && (
-              <ul className="document-list">
-                {items.map((item, index) => (
-                  <li key={index} className="inventory-line">
-                    <span className="inventory-line-quantity">×{item.quantity}</span>
-                    <span className="inventory-line-description">{item.description}</span>
-                    <span className="inventory-line-value">{formatEuros(item.valueEur, t.locale)}</span>
+              {room?.description && <p className="inventory-room-description">{room.description}</p>}
+              {!canEdit && room?.comments && <p className="inventory-room-comments">{room.comments}</p>}
+              {items.length === 0 && !newLine && <p className="hint">{list === 'missing' ? t.nothingMissing : t.emptyRoom}</p>}
+              {(items.length > 0 || newLine) && (
+                <ul className="document-list">
+                  {items.map((item) => {
+                    const index = all.indexOf(item)
+                    return canEdit ? (
+                      <InventoryLine key={index} autoFocus={false}
+                        form={draft?.key === key && draft.index === index ? draft.form : toItemForm(item, t.locale)}
+                        onChange={(form) => changeLine(key, index, form)}
+                        onCommit={(next) => commitLine(key, index, next)}
+                        onCancel={() => { setDraft(null); setLineError(null) }}
+                        onRemove={() => removeLine(key, index)}
+                        onMove={(step) => moveLine(key, index, step)} first={index === 0} last={index === all.length - 1} />
+                    ) : (
+                      <li key={index} className="inventory-line">
+                        <span className="inventory-line-quantity">×{item.quantity}</span>
+                        <span className="inventory-line-description">{item.description}</span>
+                        <span className="inventory-line-value">{formatEuros(item.valueEur, t.locale)}</span>
+                      </li>
+                    )
+                  })}
+                  {newLine && (
+                    <InventoryLine key={`new-${newLine.serial}`} autoFocus form={newLine.form}
+                      onChange={(form) => changeLine(key, null, form)}
+                      onCommit={(next) => commitLine(key, null, next)}
+                      onCancel={() => { setDraft(null); setLineError(null) }}
+                      onRemove={() => removeLine(key, null)} />
+                  )}
+                  <li className="inventory-line inventory-line-total">
+                    <span />
+                    <span>{t.total}</span>
+                    <span className="inventory-line-value">{formatEuros(sectionTotal(section), t.locale)}</span>
                   </li>
-                ))}
-                <li className="inventory-line inventory-line-total">
-                  <span />
-                  <span>{t.total}</span>
-                  <span className="inventory-line-value">{formatEuros(total(items), t.locale)}</span>
-                </li>
-              </ul>
-            )}
-          </section>
-        ))}
+                </ul>
+              )}
+              {lineError?.key === key && <p className="form-error" role="alert">{lineError.message}</p>}
+            </section>
+          )
+        })}
       </main>
 
-      {editing !== null && (
-        <InventoryRoomDialog
-          key="inventory-room-dialog"
-          room={editing}
-          listItems={editing === 'missing' ? missingItems : otherItems}
-          onSaveRoom={saveRoom}
-          onSaveList={saveList}
-          onClose={closeEditor}
-        />
-      )}
       {preview && (
         <PdfViewer source={preview.blob} title={preview.title} fileName={preview.fileName}
           onClose={() => setPreview(null)} />
