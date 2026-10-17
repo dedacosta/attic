@@ -1319,10 +1319,21 @@ form > .dialog-actions {
   transform: rotate(180deg);
 }
 
-/* Where a new item goes, and the button that adds it */
+/* Adds an item to the room, at the end of its list */
+.inventory-line-add {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 6px;
+}
+
+.inventory-line-add .icon-button {
+  color: var(--accent);
+}
+
+/* Lists a room of the house, to add items to it */
 .inventory-add select {
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 0 1 260px;
 }
 
 /* The rooms of a house while they are entered: a name and its buttons */

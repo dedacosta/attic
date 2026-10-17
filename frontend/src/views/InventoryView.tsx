@@ -62,7 +62,8 @@ export default function InventoryView() {
   // Items are added and changed in place, a line at a time, into the room chosen to add to
   const [draft, setDraft] = useState<Draft | null>(null)
   const [lineError, setLineError] = useState<{ key: string; message: string } | null>(null)
-  const [addTo, setAddTo] = useState('')
+  // Rooms of the house chosen to add items to, listed even while they have none
+  const [chosen, setChosen] = useState<string[]>([])
   // Photos of a room while they are saved, the new ones shown from their files
   const [savingPhotos, setSavingPhotos] = useState<Record<string, PhotoEntry[]>>({})
   const serial = useRef(0)
@@ -115,7 +116,7 @@ export default function InventoryView() {
     setMissingItems([])
     setDraft(null)
     setLineError(null)
-    setAddTo('')
+    setChosen([])
     setSavingPhotos({})
     reload()
   }, [reload, showRooms])
@@ -145,11 +146,11 @@ export default function InventoryView() {
       items: shown(otherItems, has(t.otherItems)) })
     list.push({ key: 'missing', room: null, list: 'missing', title: t.missingItems, all: missingItems,
       items: shown(missingItems, has(t.missingItems)) })
-    // A room is listed once it has items, or a new line is typed in it. What is missing is always
+    // A room is listed once it has items or is chosen to add items to. What is missing is always
     // listed, unless a search finds nothing in it.
-    return list.filter((section) => section.items.length > 0 || section.key === adding
+    return list.filter((section) => section.items.length > 0 || section.key === adding || chosen.includes(section.key)
       || (section.list === 'missing' && query === ''))
-  }, [rooms, otherItems, missingItems, query, adding, t])
+  }, [rooms, otherItems, missingItems, query, adding, chosen, t])
 
   const visibleCount = sections.reduce((count, section) => count + section.items.length, 0)
 
@@ -167,9 +168,6 @@ export default function InventoryView() {
 
   // What is missing is not part of what the house holds
   const houseTotal = sum(sections.filter((section) => section.list !== 'missing').map(sectionTotal))
-  // Where a new item goes: the room chosen, else the first room of the house
-  const addTargets = [...(rooms ?? []).map((room) => room.id), 'other']
-  const addTarget = addTargets.includes(addTo) ? addTo : addTargets[0]
 
   const itemsOf = (key: string) =>
     key === 'other' ? otherItems : key === 'missing' ? missingItems : (rooms?.find((room) => room.id === key)?.items ?? [])
@@ -244,6 +242,18 @@ export default function InventoryView() {
         })
       }
     })
+  }
+
+  // The rooms of the house not listed yet, and the other items, to choose from to add items to
+  const available = [
+    ...(rooms ?? []).map((room) => ({ key: room.id, title: room.title })),
+    { key: 'other', title: t.otherItems },
+  ].filter(({ key }) => itemsOf(key).length === 0 && !chosen.includes(key))
+
+  /** List a room chosen from the house, and open its first line */
+  function chooseRoom(key: string) {
+    setChosen((list) => [...list, key])
+    addLine(key)
   }
 
   function moveLine(key: string, index: number, step: number) {
@@ -362,14 +372,11 @@ export default function InventoryView() {
 
         {canEdit && house && rooms !== null && (
           <div className="toolbar inventory-add">
-            <select value={addTarget} onChange={(e) => setAddTo(e.target.value)} aria-label={t.inventoryAddTo}
-              title={t.inventoryAddTo}>
-              {rooms.map((room) => <option key={room.id} value={room.id}>{room.title}</option>)}
-              <option value="other">{t.otherItems}</option>
+            <select value="" onChange={(e) => chooseRoom(e.target.value)} disabled={available.length === 0}
+              aria-label={t.addRoom} title={t.addRoom}>
+              <option value="" disabled>{t.addRoom}…</option>
+              {available.map(({ key, title }) => <option key={key} value={key}>{title}</option>)}
             </select>
-            <button type="button" className="button button-primary" onClick={() => addLine(addTarget)}>
-              <PlusIcon width={18} height={18} /> {t.addItem}
-            </button>
           </div>
         )}
 
@@ -408,12 +415,6 @@ export default function InventoryView() {
                 )}
                 <h2 className="group-title">
                   {title} <span className="group-count">{items.length}</span>
-                  {canEdit && list === 'missing' && (
-                    <button type="button" className="icon-button" onClick={() => addLine('missing')}
-                      aria-label={t.addMissingItem} title={t.addMissingItem}>
-                      <PlusIcon width={18} height={18} />
-                    </button>
-                  )}
                 </h2>
                 {room && canEdit && (
                   <>
@@ -430,7 +431,7 @@ export default function InventoryView() {
               {room?.description && <p className="inventory-room-description">{room.description}</p>}
               {!canEdit && room?.comments && <p className="inventory-room-comments">{room.comments}</p>}
               {items.length === 0 && !newLine && <p className="hint">{list === 'missing' ? t.nothingMissing : t.emptyRoom}</p>}
-              {(items.length > 0 || newLine) && (
+              {(items.length > 0 || newLine || canEdit) && (
                 <ul className="document-list">
                   {items.map((item) => {
                     const index = all.indexOf(item)
@@ -457,11 +458,21 @@ export default function InventoryView() {
                       onCancel={() => { setDraft(null); setLineError(null) }}
                       onRemove={() => removeLine(key, null)} />
                   )}
-                  <li className="inventory-line inventory-line-total">
-                    <span />
-                    <span>{t.total}</span>
-                    <span className="inventory-line-value">{formatEuros(sectionTotal(section), t.locale)}</span>
-                  </li>
+                  {canEdit && (
+                    <li className="inventory-line-add">
+                      <button type="button" className="icon-button" onClick={() => addLine(key)}
+                        aria-label={t.addItemIn(title)} title={t.addItemIn(title)}>
+                        <PlusIcon width={20} height={20} />
+                      </button>
+                    </li>
+                  )}
+                  {(items.length > 0 || newLine) && (
+                    <li className="inventory-line inventory-line-total">
+                      <span />
+                      <span>{t.total}</span>
+                      <span className="inventory-line-value">{formatEuros(sectionTotal(section), t.locale)}</span>
+                    </li>
+                  )}
                 </ul>
               )}
               {lineError?.key === key && <p className="form-error" role="alert">{lineError.message}</p>}
