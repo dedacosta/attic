@@ -151,7 +151,7 @@ export function contributionPages(years: ContributionYear[], t: Messages): Contr
   return pages
 }
 
-/** A renovation as exported: its heading, its expenses with their total, and the heirs with what they gave */
+/** A renovation as exported: its heading, its expenses with their total, and the heirs with what they gave. Its comment is left out. */
 export interface RenovationExport {
   heading: string
   description: string | null
@@ -163,7 +163,6 @@ export interface RenovationExport {
   heirs: string[][]
   /** Below the heirs: what is paid and what is missing */
   summary: string
-  comment: string | null
 }
 
 export function renovationExport(renovation: Renovation, t: Messages): RenovationExport {
@@ -184,6 +183,5 @@ export function renovationExport(renovation: Renovation, t: Messages): Renovatio
       tick(line.workmanship),
     ]),
     summary: `${t.amountPaid}${t.colon} ${euros(renovation.paidEur)}  ·  ${t.amountMissing}${t.colon} ${euros(renovation.missingEur)}`,
-    comment: renovation.comment,
   }
 }

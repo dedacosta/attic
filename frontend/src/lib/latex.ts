@@ -271,7 +271,7 @@ export function exportRenovationsLatex(renovations: Renovation[], t: Messages) {
     return `\\vspace{4mm}\\Needspace{50mm}
 {\\fontsize{13}{16}\\selectfont\\bfseries\\color{accent}${tex(parts.heading)}\\par}\\nopagebreak\\vspace{2mm}
 ${parts.description ? muted(parts.description) : ''}${expenses}\\vspace{2mm}
-${heirs}${parts.comment ? `\\vspace{2mm}${muted(parts.comment)}` : ''}`
+${heirs}`
   })
   const body = titleBlock(t.tabRenovations, []) + (sections.length > 0 ? sections.join('\n') : '\\mbox{}')
   save(texDocument(t.tabRenovations, body, generatedOn(now, t), false, now, t), `attic-renovations-${isoDay(now)}.tex`)

@@ -311,7 +311,7 @@ const RENOVATION_COLUMNS = [34, 20, 34]
 /**
  * A PDF of every renovation, to show and download, the latest first: under its year and title, its
  * expenses with their total, then the heirs with their part and whether they paid it or did
- * workmanship, and its comment.
+ * workmanship. Comments are left out.
  */
 export async function exportRenovationsPdf(renovations: Renovation[], t: Messages): Promise<GeneratedPdf> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
@@ -385,9 +385,6 @@ export async function exportRenovationsPdf(renovations: Renovation[], t: Message
         [{ content: pdfText(parts.summary), colSpan: 4, styles: { halign: 'right' } }], [1])
     } else {
       muted(t.nobodyPays, 9)
-    }
-    if (parts.comment) {
-      muted(parts.comment, 9)
     }
   })
 
