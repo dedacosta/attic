@@ -147,7 +147,7 @@ export async function exportPdf(items: CatalogItemExport[], totalCount: number, 
  * The inventory of a house as a PDF, to show and download, room by room: a line with the title of the room, its
  * comments and, below, a line per item with its quantity, its description and its value, then the
  * total of the room, as an amount without a label. The total of the house follows what the house holds; the missing items come
- * after it, with a total of their own. The first page has the title and the house with its address. Photos are left out.
+ * after it, with a total of their own. The first page has the title, the house with its address and the column headings. Photos are left out.
  */
 export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCount: number, filters: string[],
   t: Messages, house: string, address: string | null): Promise<GeneratedPdf> {
@@ -183,6 +183,8 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
     startY: top,
     margin: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: 18 },
     head: [[t.quantityShort, t.description, t.value]],
+    // The column headings once, at the top of the first page
+    showHead: 'firstPage',
     body: [
       ...held.flatMap(section),
       ...(held.length > 0
