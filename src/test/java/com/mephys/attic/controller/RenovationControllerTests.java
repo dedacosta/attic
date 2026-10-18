@@ -72,10 +72,9 @@ class RenovationControllerTests {
 			.andExpect(jsonPath("$.paidEur").value(0))
 			.andExpect(jsonPath("$.missingEur").value(1000.0));
 
-		// Every heir alive that year is listed, with a part or without
+		// While their mother is alive, her children do not pay and are not listed
 		create("{\"year\":2025,\"title\":\"Windows\"}")
-			.andExpect(jsonPath("$.lines[*].heir").value(containsInAnyOrder("Maria", "Ana", "Rui", "João")))
-			.andExpect(jsonPath("$.lines[?(@.heir == 'Ana')].dueEur").value(contains((Object) null)));
+			.andExpect(jsonPath("$.lines[*].heir").value(containsInAnyOrder("Maria", "João")));
 	}
 
 	@Test
@@ -93,12 +92,11 @@ class RenovationControllerTests {
 			.andExpect(jsonPath("$[0].lines[?(@.heir == 'Sara')].dueEur").value(contains(37.5)))
 			.andExpect(jsonPath("$[0].lines[?(@.heir == 'Vasco')].dueEur").value(contains(37.5)));
 
-		// In the year of her death she pays, and her children do not yet
+		// In the year of her death she pays, and her children are not listed yet
 		String old = id(create("{\"year\":2023,\"title\":\"Well\"}"));
 		expenses(old, "[{\"description\":\"Digging\",\"amountEur\":400}]")
-			.andExpect(jsonPath("$.lines[*].heir").value(contains("Carlos", "Ana", "Manuela", "Sara", "Vasco", "Nobody knows")))
-			.andExpect(jsonPath("$.lines[?(@.heir == 'Manuela')].dueEur").value(contains(100.0)))
-			.andExpect(jsonPath("$.lines[?(@.heir == 'Sara')].dueEur").value(contains((Object) null)));
+			.andExpect(jsonPath("$.lines[*].heir").value(contains("Carlos", "Ana", "Manuela", "Nobody knows")))
+			.andExpect(jsonPath("$.lines[?(@.heir == 'Manuela')].dueEur").value(contains(100.0)));
 	}
 
 	@Test

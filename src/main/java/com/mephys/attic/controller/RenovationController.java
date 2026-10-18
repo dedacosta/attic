@@ -40,6 +40,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 class RenovationController {
 
+	/** The oldest first, those whose birth date is unknown last, otherwise in the order of the Heirs tab */
+	private static final Comparator<Heir> BY_BIRTH = Comparator.comparing(Heir::birthDate,
+			Comparator.nullsLast(Comparator.naturalOrder()));
+
 	private final RenovationRepository renovations;
 
 	private final HeirRepository heirs;
@@ -128,9 +132,10 @@ class RenovationController {
 	}
 
 	/**
-	 * The expenses, then a line for each heir alive in the renovation's year, who pays their part,
-	 * did workmanship or can do it, and anyone else ticked off, the oldest first. A part
-	 * is settled when it is paid or the heir did workmanship.
+	 * The expenses, then a line for each heir who pays a part in the renovation's year, as for the
+	 * contribution, and anyone else ticked off, the oldest first. So the children of an heir who is
+	 * alive that year are not listed: they pay from the year after the death. A part is settled when
+	 * it is paid or the heir did workmanship.
 	 */
 	private static RenovationResponse response(Renovation renovation, List<Heir> all,
 			Map<UUID, RenovationPayment> payments, List<RenovationExpense> expenses) {
@@ -144,7 +149,7 @@ class RenovationController {
 		for (Heir heir : all.stream().sorted(BY_BIRTH).toList()) {
 			BigDecimal due = dues.get(heir.id());
 			RenovationPayment payment = payments.getOrDefault(heir.id(), RenovationPayment.NONE);
-			if (due == null && !payment.any() && !alive(heir, renovation.year())) {
+			if (due == null && !payment.any()) {
 				continue;
 			}
 			lines.add(new RenovationResponse.Line(heir.id(), heir.name(), heir.deceased(), due, payment.paid(),
@@ -158,17 +163,6 @@ class RenovationController {
 		}
 		return new RenovationResponse(renovation.id(), renovation.year(), renovation.title(), renovation.description(),
 				cost, renovation.comment(), expenses, lines, paidEur, missingEur);
-	}
-
-	/** The oldest first, those whose birth date is unknown last, otherwise in the order of the Heirs tab */
-	private static final Comparator<Heir> BY_BIRTH = Comparator.comparing(Heir::birthDate,
-			Comparator.nullsLast(Comparator.naturalOrder()));
-
-	/** Whether the heir is born by the year and has not died before it, as far as is known */
-	private static boolean alive(Heir heir, int year) {
-		boolean born = heir.birthDate() == null || heir.birthDate().getYear() <= year;
-		boolean living = (heir.deathDate() != null) ? heir.deathDate().getYear() >= year : !heir.deceased();
-		return born && living;
 	}
 
 }
