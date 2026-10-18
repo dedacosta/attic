@@ -79,6 +79,29 @@ class RenovationControllerTests {
 	}
 
 	@Test
+	void anHeirDeadBeforeTheYearMakesWayForTheirChildrenAndHeirsAreOldestFirst() throws Exception {
+		createHeir("{\"name\":\"Carlos\",\"birthDate\":\"1944-02-05\"}");
+		createHeir("{\"name\":\"Nobody knows\"}");
+		String manuela = createHeir("{\"name\":\"Manuela\",\"birthDate\":\"1954-08-11\",\"deathDate\":\"2023-11-03\"}");
+		createHeir("{\"name\":\"Vasco\",\"birthDate\":\"1988-10-18\",\"parentId\":\"" + manuela + "\"}");
+		createHeir("{\"name\":\"Sara\",\"birthDate\":\"1978-02-26\",\"parentId\":\"" + manuela + "\"}");
+		createHeir("{\"name\":\"Ana\",\"birthDate\":\"1947-08-02\"}");
+
+		roof(300);
+		mvc.perform(get("/api/renovations"))
+			.andExpect(jsonPath("$[0].lines[*].heir").value(contains("Carlos", "Ana", "Sara", "Vasco", "Nobody knows")))
+			.andExpect(jsonPath("$[0].lines[?(@.heir == 'Sara')].dueEur").value(contains(37.5)))
+			.andExpect(jsonPath("$[0].lines[?(@.heir == 'Vasco')].dueEur").value(contains(37.5)));
+
+		// In the year of her death she pays, and her children do not yet
+		String old = id(create("{\"year\":2023,\"title\":\"Well\"}"));
+		expenses(old, "[{\"description\":\"Digging\",\"amountEur\":400}]")
+			.andExpect(jsonPath("$.lines[*].heir").value(contains("Carlos", "Ana", "Manuela", "Sara", "Vasco", "Nobody knows")))
+			.andExpect(jsonPath("$.lines[?(@.heir == 'Manuela')].dueEur").value(contains(100.0)))
+			.andExpect(jsonPath("$.lines[?(@.heir == 'Sara')].dueEur").value(contains((Object) null)));
+	}
+
+	@Test
 	void paymentsAreTickedOff() throws Exception {
 		String joao = createHeir("{\"name\":\"João\"}");
 		createHeir("{\"name\":\"Rui\"}");

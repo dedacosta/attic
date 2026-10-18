@@ -16,6 +16,7 @@ import com.mephys.attic.repository.RenovationRepository;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -128,7 +129,7 @@ class RenovationController {
 
 	/**
 	 * The expenses, then a line for each heir alive in the renovation's year, who pays their part,
-	 * did workmanship or can do it, and anyone else ticked off, in the order of the Heirs tab. A part
+	 * did workmanship or can do it, and anyone else ticked off, the oldest first. A part
 	 * is settled when it is paid or the heir did workmanship.
 	 */
 	private static RenovationResponse response(Renovation renovation, List<Heir> all,
@@ -140,7 +141,7 @@ class RenovationController {
 		List<RenovationResponse.Line> lines = new ArrayList<>();
 		BigDecimal paidEur = BigDecimal.valueOf(0, 2);
 		BigDecimal missingEur = BigDecimal.valueOf(0, 2);
-		for (Heir heir : all) {
+		for (Heir heir : all.stream().sorted(BY_BIRTH).toList()) {
 			BigDecimal due = dues.get(heir.id());
 			RenovationPayment payment = payments.getOrDefault(heir.id(), RenovationPayment.NONE);
 			if (due == null && !payment.any() && !alive(heir, renovation.year())) {
@@ -158,6 +159,10 @@ class RenovationController {
 		return new RenovationResponse(renovation.id(), renovation.year(), renovation.title(), renovation.description(),
 				cost, renovation.comment(), expenses, lines, paidEur, missingEur);
 	}
+
+	/** The oldest first, those whose birth date is unknown last, otherwise in the order of the Heirs tab */
+	private static final Comparator<Heir> BY_BIRTH = Comparator.comparing(Heir::birthDate,
+			Comparator.nullsLast(Comparator.naturalOrder()));
 
 	/** Whether the heir is born by the year and has not died before it, as far as is known */
 	private static boolean alive(Heir heir, int year) {
