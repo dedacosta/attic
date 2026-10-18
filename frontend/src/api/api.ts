@@ -1,6 +1,6 @@
 import type { Messages } from '../i18n'
 import type {
-  ContributionYear, DocumentInput, FolderEntry, Renovation, RenovationInput, Invitation, CatalogItem, CatalogItemInput, OwnAccount, Heir, HeirDocument,
+  ContributionYear, DocumentInput, FolderEntry, Renovation, RenovationExpense, RenovationInput, Invitation, CatalogItem, CatalogItemInput, OwnAccount, Heir, HeirDocument,
   HeirInput, Estate, InventoryItem, InventoryRoom, InventoryRoomInput, Picture, Property, PropertyDocument, PropertyDocumentInput, PropertyInput, Role, Session, UserAccount,
 } from './types'
 
@@ -163,8 +163,12 @@ export const api = {
   setRenovationComment: (id: string, comment: string) =>
     request<Renovation>(`/api/renovations/${id}/comment`, json('PUT', { comment })),
   /** Tick off, or untick, that the heir has paid their part */
-  setRenovationPaid: (id: string, heirId: string, paid: boolean) =>
-    request<Renovation>(`/api/renovations/${id}/payments/${heirId}`, json('PUT', { paid })),
+  /** Make the expenses of the renovation those of the list, in its order */
+  setRenovationExpenses: (id: string, expenses: RenovationExpense[]) =>
+    request<Renovation>(`/api/renovations/${id}/expenses`, json('PUT', expenses)),
+  /** Tick off whether the heir paid their part or did workmanship; what is left out stays */
+  setRenovationPayment: (id: string, heirId: string, payment: { paid?: boolean; workmanship?: boolean }) =>
+    request<Renovation>(`/api/renovations/${id}/payments/${heirId}`, json('PUT', payment)),
 
   /** The buildings and the land parcels, each by name */
   estate: () => request<Estate>('/api/estate'),
