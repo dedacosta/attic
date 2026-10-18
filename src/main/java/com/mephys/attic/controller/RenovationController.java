@@ -1,21 +1,24 @@
 package com.mephys.attic.controller;
 
 import com.mephys.attic.dto.CommentRequest;
-import com.mephys.attic.dto.PaymentRequest;
+import com.mephys.attic.dto.RenovationExpenseRequest;
+import com.mephys.attic.dto.RenovationPaymentRequest;
 import com.mephys.attic.dto.RenovationRequest;
 import com.mephys.attic.dto.RenovationResponse;
 import com.mephys.attic.model.Contributors;
 import com.mephys.attic.model.Heir;
 import com.mephys.attic.model.Renovation;
+import com.mephys.attic.model.RenovationExpense;
+import com.mephys.attic.model.RenovationPayment;
 import com.mephys.attic.repository.HeirRepository;
 import com.mephys.attic.repository.RenovationRepository;
 
 import java.math.BigDecimal;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -29,12 +32,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Renovations of the house. The cost of each is divided among those who pay the contribution in its
- * year, in proportion to their {@linkplain Contributors#portions portion}, and administrators tick
- * off who has paid. Everybody signed in sees them; administrators change them.
+ * Renovations of the house, each a list of expenses. The cost of each, the total of its expenses, is
+ * divided among those who pay the contribution in its year, in proportion to their
+ * {@linkplain Contributors#portions portion}, and administrators tick off who has paid. Everybody
+ * signed in sees them; administrators change them.
  */
 @RestController
 class RenovationController {
+
+	/** The oldest first, those whose birth date is unknown last, otherwise in the order of the Heirs tab */
+	private static final Comparator<Heir> BY_BIRTH = Comparator.comparing(Heir::birthDate,
+			Comparator.nullsLast(Comparator.naturalOrder()));
 
 	private final RenovationRepository renovations;
 
@@ -48,10 +56,12 @@ class RenovationController {
 	@GetMapping("/renovations")
 	List<RenovationResponse> list() {
 		List<Heir> all = heirs.findAll();
-		Map<UUID, Set<UUID>> payments = renovations.findPayments();
+		Map<UUID, Map<UUID, RenovationPayment>> payments = renovations.findPayments();
+		Map<UUID, List<RenovationExpense>> expenses = renovations.findExpenses();
 		return renovations.findAll()
 			.stream()
-			.map((renovation) -> response(renovation, all, payments.getOrDefault(renovation.id(), Set.of())))
+			.map((renovation) -> response(renovation, all, payments.getOrDefault(renovation.id(), Map.of()),
+					expenses.getOrDefault(renovation.id(), List.of())))
 			.toList();
 	}
 
@@ -62,7 +72,7 @@ class RenovationController {
 		return ResponseEntity.created(URI.create("/api/renovations/" + renovation.id())).body(response(renovation.id()));
 	}
 
-	/** Change the year, title, description or cost; the comment and payments stay */
+	/** Change the year, title or description; the comment, expenses and payments stay */
 	@PutMapping("/renovations/{id}")
 	@Transactional
 	ResponseEntity<RenovationResponse> replace(@PathVariable UUID id, @RequestBody RenovationRequest request) {
@@ -83,18 +93,34 @@ class RenovationController {
 		return ResponseEntity.ok(response(id));
 	}
 
-	/** Tick off, or untick, that the heir has paid their part */
-	@PutMapping("/renovations/{id}/payments/{heirId}")
-	ResponseEntity<RenovationResponse> setPaid(@PathVariable UUID id, @PathVariable UUID heirId,
-			@RequestBody PaymentRequest request) {
-		if (renovations.findById(id).isEmpty() || heirs.findById(heirId).isEmpty()) {
+	/** Make the expenses of the renovation those of the list, in its order */
+	@PutMapping("/renovations/{id}/expenses")
+	@Transactional
+	ResponseEntity<RenovationResponse> setExpenses(@PathVariable UUID id,
+			@RequestBody List<RenovationExpenseRequest> request) {
+		if (renovations.findById(id).isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
-		renovations.setPaid(id, heirId, request.paid());
+		renovations.replaceExpenses(id, request.stream().map(RenovationExpenseRequest::toExpense).toList());
 		return ResponseEntity.ok(response(id));
 	}
 
-	/** Delete the renovation with its payments */
+	/** Tick off, or untick, that the heir has paid their part or did workmanship */
+	@PutMapping("/renovations/{id}/payments/{heirId}")
+	@Transactional
+	ResponseEntity<RenovationResponse> setPayment(@PathVariable UUID id, @PathVariable UUID heirId,
+			@RequestBody RenovationPaymentRequest request) {
+		if (renovations.findById(id).isEmpty() || heirs.findById(heirId).isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		RenovationPayment current = renovations.findPayments()
+			.getOrDefault(id, Map.of())
+			.getOrDefault(heirId, RenovationPayment.NONE);
+		renovations.setPayment(id, heirId, request.applyTo(current));
+		return ResponseEntity.ok(response(id));
+	}
+
+	/** Delete the renovation with its expenses and payments */
 	@DeleteMapping("/renovations/{id}")
 	ResponseEntity<Void> delete(@PathVariable UUID id) {
 		return renovations.deleteById(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
@@ -102,24 +128,33 @@ class RenovationController {
 
 	private RenovationResponse response(UUID id) {
 		return response(renovations.findById(id).orElseThrow(), heirs.findAll(),
-				renovations.findPayments().getOrDefault(id, Set.of()));
+				renovations.findPayments().getOrDefault(id, Map.of()), renovations.findExpenses(id));
 	}
 
-	/** Those who pay in the renovation's year, and anyone else ticked off, in the order of the Heirs tab */
-	private static RenovationResponse response(Renovation renovation, List<Heir> all, Set<UUID> paid) {
-		Map<UUID, BigDecimal> dues = Contributors.shares(renovation.costEur(),
-				Contributors.portions(all, renovation.year()));
+	/**
+	 * The expenses, then a line for each heir who pays a part in the renovation's year, as for the
+	 * contribution, and anyone else ticked off, the oldest first. So the children of an heir who is
+	 * alive that year are not listed: they pay from the year after the death. A part is settled when
+	 * it is paid or the heir did workmanship.
+	 */
+	private static RenovationResponse response(Renovation renovation, List<Heir> all,
+			Map<UUID, RenovationPayment> payments, List<RenovationExpense> expenses) {
+		BigDecimal cost = expenses.stream()
+			.map(RenovationExpense::amountEur)
+			.reduce(BigDecimal.valueOf(0, 2), BigDecimal::add);
+		Map<UUID, BigDecimal> dues = Contributors.shares(cost, Contributors.portions(all, renovation.year()));
 		List<RenovationResponse.Line> lines = new ArrayList<>();
-		BigDecimal paidEur = BigDecimal.ZERO.setScale(2);
-		BigDecimal missingEur = BigDecimal.ZERO.setScale(2);
-		for (Heir heir : all) {
+		BigDecimal paidEur = BigDecimal.valueOf(0, 2);
+		BigDecimal missingEur = BigDecimal.valueOf(0, 2);
+		for (Heir heir : all.stream().sorted(BY_BIRTH).toList()) {
 			BigDecimal due = dues.get(heir.id());
-			boolean hasPaid = paid.contains(heir.id());
-			if (due == null && !hasPaid) {
+			RenovationPayment payment = payments.getOrDefault(heir.id(), RenovationPayment.NONE);
+			if (due == null && !payment.any()) {
 				continue;
 			}
-			lines.add(new RenovationResponse.Line(heir.id(), heir.name(), heir.deceased(), due, hasPaid));
-			if (due != null && hasPaid) {
+			lines.add(new RenovationResponse.Line(heir.id(), heir.name(), heir.deceased(), due, payment.paid(),
+					payment.workmanship()));
+			if (due != null && payment.any()) {
 				paidEur = paidEur.add(due);
 			}
 			else if (due != null) {
@@ -127,7 +162,7 @@ class RenovationController {
 			}
 		}
 		return new RenovationResponse(renovation.id(), renovation.year(), renovation.title(), renovation.description(),
-				renovation.costEur(), renovation.comment(), lines, paidEur, missingEur);
+				cost, renovation.comment(), expenses, lines, paidEur, missingEur);
 	}
 
 }

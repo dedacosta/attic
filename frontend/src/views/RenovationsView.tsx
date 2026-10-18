@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { api, apiErrorMessage } from '../api/api'
 import CommentBox from '../components/CommentBox'
+import RenovationExpenses from '../components/RenovationExpenses'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { ChevronIcon, CloseIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons'
-import { AMOUNT_PATTERN, amountText, formatEuros, parseAmount } from '../lib/format'
+import PdfViewer from '../components/PdfViewer'
+import { ChevronIcon, CloseIcon, FileIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons'
+import { formatEuros } from '../lib/format'
+import { exportRenovationsLatex } from '../lib/latex'
 import { usePermissions } from '../lib/permissions'
 import { useModal } from '../lib/useModal'
 import { useI18n } from '../i18n'
 import type { Renovation, RenovationInput } from '../api/types'
+import type { GeneratedPdf } from '../lib/pdf'
 
 /**
- * The Renovations tab: a small card per renovation that opens to show who pays what in its year,
- * shared like the contribution, with a box to tick off each payment. Everybody sees it;
- * administrators add, change and delete renovations and tick off payments.
+ * The Renovations tab: a small card per renovation that opens to show its expenses, which make its
+ * cost, and who pays what of it in its year, shared like the contribution, with a box to tick off
+ * each payment. Workmanship can be done by an heir. Everybody sees it; administrators add, change
+ * and delete renovations and their expenses and tick off payments.
  */
 export default function RenovationsView() {
   const { t } = useI18n()
@@ -22,6 +27,7 @@ export default function RenovationsView() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [editing, setEditing] = useState<Renovation | 'new' | null>(null)
   const [deleting, setDeleting] = useState<Renovation | null>(null)
+  const [preview, setPreview] = useState<GeneratedPdf | null>(null)
 
   const reload = useCallback(async () => {
     try {
@@ -60,52 +66,72 @@ export default function RenovationsView() {
     setEditing(null)
   }
 
-  return (
-    <main className="content">
-      <h1 className="page-title">{t.tabRenovations}</h1>
+  async function downloadPdf() {
+    // Loaded on demand: the PDF library is large
+    const { exportRenovationsPdf } = await import('../lib/pdf')
+    setPreview(await exportRenovationsPdf(renovations ?? [], t))
+  }
 
-      {canEdit && (
+  return (
+    <>
+      <main className="content">
+        <h1 className="page-title">{t.tabRenovations}</h1>
+
         <div className="toolbar">
-          <button type="button" className="button button-primary" onClick={() => setEditing('new')}>
-            <PlusIcon width={18} height={18} /> {t.newRenovation}
+          {canEdit && (
+            <button type="button" className="button button-primary" onClick={() => setEditing('new')}>
+              <PlusIcon width={18} height={18} /> {t.newRenovation}
+            </button>
+          )}
+          <button type="button" className="button" onClick={downloadPdf} disabled={!renovations?.length}
+            aria-label={t.exportRenovationsPdf} title={t.exportRenovationsPdf}>
+            <FileIcon width={18} height={18} /> PDF
+          </button>
+          <button type="button" className="button" onClick={() => exportRenovationsLatex(renovations ?? [], t)}
+            disabled={!renovations?.length} aria-label={t.exportRenovationsLatex} title={t.exportRenovationsLatex}>
+            <FileIcon width={18} height={18} /> LaTeX
           </button>
         </div>
-      )}
 
-      {loadError !== null && (
-        <div className="banner" role="alert">
-          {apiErrorMessage(loadError, t)}{' '}
-          <button type="button" className="link" onClick={reload}>{t.tryAgain}</button>
+        {loadError !== null && (
+          <div className="banner" role="alert">
+            {apiErrorMessage(loadError, t)}{' '}
+            <button type="button" className="link" onClick={reload}>{t.tryAgain}</button>
+          </div>
+        )}
+
+        {renovations === null && loadError === null && <p className="empty">{t.loading}</p>}
+        {renovations !== null && renovations.length === 0 && <p className="empty">{t.noRenovations}</p>}
+
+        <div className="contribution-grid">
+          {renovations?.map((renovation) => (
+            <RenovationCard key={renovation.id} renovation={renovation} editable={canEdit}
+              expanded={expanded.has(renovation.id)} onToggle={() => toggle(renovation.id)}
+              onChanged={replace} onEdit={() => setEditing(renovation)} />
+          ))}
         </div>
+
+        {editing !== null && (
+          <RenovationDialog renovation={editing === 'new' ? null : editing} onSave={save}
+            onDelete={() => editing !== 'new' && setDeleting(editing)} onClose={() => setEditing(null)} />
+        )}
+
+        {deleting && (
+          <ConfirmDialog title={t.deleteRenovationTitle} message={t.deleteRenovationMessage(deleting.title)}
+            confirmLabel={t.delete} onCancel={() => setDeleting(null)}
+            onConfirm={async () => {
+              await api.deleteRenovation(deleting.id)
+              await reload()
+              setDeleting(null)
+              setEditing(null)
+            }} />
+        )}
+      </main>
+      {preview && (
+        <PdfViewer source={preview.blob} title={preview.title} fileName={preview.fileName}
+          onClose={() => setPreview(null)} />
       )}
-
-      {renovations === null && loadError === null && <p className="empty">{t.loading}</p>}
-      {renovations !== null && renovations.length === 0 && <p className="empty">{t.noRenovations}</p>}
-
-      <div className="contribution-grid">
-        {renovations?.map((renovation) => (
-          <RenovationCard key={renovation.id} renovation={renovation} editable={canEdit}
-            expanded={expanded.has(renovation.id)} onToggle={() => toggle(renovation.id)}
-            onChanged={replace} onEdit={() => setEditing(renovation)} />
-        ))}
-      </div>
-
-      {editing !== null && (
-        <RenovationDialog renovation={editing === 'new' ? null : editing} onSave={save}
-          onDelete={() => editing !== 'new' && setDeleting(editing)} onClose={() => setEditing(null)} />
-      )}
-
-      {deleting && (
-        <ConfirmDialog title={t.deleteRenovationTitle} message={t.deleteRenovationMessage(deleting.title)}
-          confirmLabel={t.delete} onCancel={() => setDeleting(null)}
-          onConfirm={async () => {
-            await api.deleteRenovation(deleting.id)
-            await reload()
-            setDeleting(null)
-            setEditing(null)
-          }} />
-      )}
-    </main>
+    </>
   )
 }
 
@@ -156,18 +182,34 @@ function RenovationCard(props: {
       {expanded && (
         <div id={`${id}-lines`} className="contribution-body">
           {renovation.description && <p className="renovation-description">{renovation.description}</p>}
-          <p className="renovation-cost">
-            {t.cost}{t.colon} <strong>{formatEuros(renovation.costEur, t.locale)}</strong>
-          </p>
+          <h3 className="renovation-section">{t.expenses}</h3>
+          <RenovationExpenses renovation={renovation} editable={editable} onChanged={onChanged} />
+          <h3 className="renovation-section">
+            {t.tabHeirs}
+            <span className="renovation-cost">
+              {t.cost}{t.colon} <strong>{formatEuros(renovation.costEur, t.locale)}</strong>
+            </span>
+          </h3>
           {renovation.lines.length === 0 && <p className="hint">{t.nobodyPays}</p>}
-          <ul className="contribution-lines">
+          <ul className="renovation-heirs">
             {renovation.lines.map((line) => (
-              <li key={line.heirId}>
+              <li key={line.heirId} className="renovation-heir">
                 <span className="contribution-heir">{line.deceased ? `${line.heir} †` : line.heir}</span>
+                <span className="renovation-heir-due">
+                  {line.dueEur !== null ? formatEuros(line.dueEur, t.locale) : '—'}
+                </span>
                 <label className="renovation-payment">
-                  <span>{line.dueEur !== null ? formatEuros(line.dueEur, t.locale) : '—'}</span>
                   <input type="checkbox" checked={line.paid} disabled={!editable} aria-label={t.paidBy(line.heir)}
-                    onChange={(e) => change(() => api.setRenovationPaid(renovation.id, line.heirId, e.target.checked))} />
+                    onChange={(e) =>
+                      change(() => api.setRenovationPayment(renovation.id, line.heirId, { paid: e.target.checked }))} />
+                  <span>{t.amountPaid}</span>
+                </label>
+                <label className="renovation-payment">
+                  <input type="checkbox" checked={line.workmanship} disabled={!editable}
+                    aria-label={t.workmanshipOf(line.heir)}
+                    onChange={(e) => change(() =>
+                      api.setRenovationPayment(renovation.id, line.heirId, { workmanship: e.target.checked }))} />
+                  <span>⚒ {t.expenseKinds.WORKMANSHIP}</span>
                 </label>
               </li>
             ))}
@@ -210,7 +252,6 @@ function RenovationDialog(props: {
     year: String(renovation?.year ?? new Date().getFullYear()),
     title: renovation?.title ?? '',
     description: renovation?.description ?? '',
-    cost: renovation ? amountText(renovation.costEur, t.locale) : '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -219,15 +260,11 @@ function RenovationDialog(props: {
   async function submit(event: FormEvent) {
     event.preventDefault()
     const year = Number(form.year)
-    const cost = form.cost.trim() === '' ? '0' : form.cost.trim()
     if (!Number.isInteger(year) || year < 1900 || year > 2999) {
       return setError(t.errorYear)
     }
     if (!form.title.trim()) {
       return setError(t.errorTitle)
-    }
-    if (!AMOUNT_PATTERN.test(cost)) {
-      return setError(t.errorAmount)
     }
     setSaving(true)
     setError(null)
@@ -236,7 +273,6 @@ function RenovationDialog(props: {
         year,
         title: form.title.trim(),
         description: form.description.trim() || null,
-        costEur: parseAmount(cost),
       })
     } catch (e) {
       setError(apiErrorMessage(e, t))
@@ -259,11 +295,6 @@ function RenovationDialog(props: {
             <label className="field">
               <span>{t.year}</span>
               <input inputMode="numeric" value={form.year} onChange={(e) => set('year', e.target.value)} />
-            </label>
-            <label className="field">
-              <span>{t.cost} (€)</span>
-              <input inputMode="decimal" value={form.cost} onChange={(e) => set('cost', e.target.value)}
-                placeholder="0,00" />
             </label>
             <label className="field field-wide">
               <span>{t.renovationTitle}</span>

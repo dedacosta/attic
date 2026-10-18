@@ -1,12 +1,12 @@
 import {
   catalogCells, catalogHead, catalogNote, contributionPages, copyrightLine, generatedOn, heirCells, heirsHead,
-  heirsNote, inventoryNote, inventorySum, isoDay, type CatalogItemExport, type InventoryRoomExport,
+  heirsNote, inventoryNote, inventorySum, isoDay, renovationExport, type CatalogItemExport, type InventoryRoomExport,
 } from './export'
 import { formatEuros } from './format'
 import { THUMBNAIL_SIZE, loadThumbnails } from './thumbnails'
 import { zip } from './zip'
 import type { Messages } from '../i18n'
-import type { ContributionYear, Heir } from '../api/types'
+import type { ContributionYear, Heir, Renovation } from '../api/types'
 
 /*
  * The exports as LaTeX sources, next to the PDFs: the same tables, colours and footer, to be
@@ -62,7 +62,7 @@ function texDocument(title: string, body: string, note: string, landscape: boole
 \\renewcommand{\\familydefault}{\\sfdefault}
 \\usepackage[${language}]{babel}
 \\usepackage[table]{xcolor}
-\\usepackage{array,longtable,fancyhdr,lastpage,graphicx}
+\\usepackage{array,longtable,fancyhdr,lastpage,graphicx,needspace}
 
 \\definecolor{accent}{RGB}{181,101,29}
 \\definecolor{muted}{RGB}{115,106,96}
@@ -240,4 +240,39 @@ export function exportContributionsLatex(years: ContributionYear[], t: Messages)
   // Without any year, an empty page all the same, with its footer
   const body = pages.length > 0 ? pages.join('\\newpage\n') : '\\mbox{}'
   save(texDocument(t.tabContributions, body, generatedOn(now, t), years.length > 5, now, t), `attic-contributions-${isoDay(now)}.tex`)
+}
+
+/**
+ * Every renovation as LaTeX, like exportRenovationsPdf: under its year and title, its expenses with
+ * their total, then the heirs with their part and whether they paid it or did workmanship.
+ */
+export function exportRenovationsLatex(renovations: Renovation[], t: Messages) {
+  const now = new Date()
+  // The same widths as in the PDF: 34, 20 and 34 mm, the first column takes what is left
+  const columns = (right: number[]) => ['L', 'L', 'L', 'L']
+    .map((align, index) => (right.includes(index) ? 'R' : align))
+    .map((align, index) => `${align}{${index === 0 ? rest(88, 4) : ['34mm', '20mm', '34mm'][index - 1]}}`)
+    .join('')
+  const muted = (text: string) => `{\\small\\color{muted}${tex(text)}\\par}\\vspace{1.5mm}\n`
+  const sections = renovations.map((renovation) => {
+    const parts = renovationExport(renovation, t)
+    const expenses = parts.expenses.length > 0
+      ? longTable(columns([3]), parts.expensesHead, [
+        ...parts.expenses.map((cells) => row(cells.map(tex))),
+        `\\rowcolor{stripe}${row(parts.cost.map((cell) => (cell ? `\\bfseries ${tex(cell)}` : '')))}`,
+      ], true)
+      : muted(t.noExpenses)
+    const heirs = parts.heirs.length > 0
+      ? longTable(columns([1]), parts.heirsHead, [
+        ...parts.heirs.map((cells) => row(cells.map(tex))),
+        `\\rowcolor{stripe}\\multicolumn{4}{r}{\\bfseries ${footerNote(parts.summary)}} \\\\`,
+      ], true)
+      : muted(t.nobodyPays)
+    return `\\vspace{4mm}\\Needspace{50mm}
+{\\fontsize{13}{16}\\selectfont\\bfseries\\color{accent}${tex(parts.heading)}\\par}\\nopagebreak\\vspace{2mm}
+${parts.description ? muted(parts.description) : ''}${expenses}\\vspace{2mm}
+${heirs}`
+  })
+  const body = titleBlock(t.tabRenovations, []) + (sections.length > 0 ? sections.join('\n') : '\\mbox{}')
+  save(texDocument(t.tabRenovations, body, generatedOn(now, t), false, now, t), `attic-renovations-${isoDay(now)}.tex`)
 }
