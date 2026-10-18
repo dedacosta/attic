@@ -166,7 +166,7 @@ export interface Renovation {
   /** What the renovation costs, in order; their total is its cost */
   expenses: RenovationExpense[]
   /**
-   * The heirs alive that year, one per line, with their part of the cost if they pay one, and
+   * The heirs who pay a part that year, as for the contribution, one per line, oldest first, with
    * whether they paid it or did workmanship; and anyone else ticked off
    */
   lines: {

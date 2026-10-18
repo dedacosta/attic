@@ -9,8 +9,8 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A renovation with its expenses, whose total is its cost, and a line for each heir alive in its
- * year, who pays their part, or is ticked off. {@code dueEur} is the heir's part of the cost,
+ * A renovation with its expenses, whose total is its cost, and a line for each heir who pays a part
+ * in its year, as for the contribution, or is ticked off. {@code dueEur} is the heir's part of the cost,
  * {@code null} for one who does not pay that year; {@code paid} and {@code workmanship} tell whether
  * they paid it or did workmanship. {@code paidEur} adds up the parts settled by either,
  * {@code missingEur} those still to settle.
