@@ -163,13 +163,37 @@ export interface Renovation {
   description: string | null
   costEur: number
   comment: string | null
-  /** Those who pay that year, with their part of the cost, and anyone else ticked off as paid */
-  lines: { heirId: string; heir: string; deceased: boolean; dueEur: number | null; paid: boolean }[]
+  /** What the renovation costs, in order; their total is its cost */
+  expenses: RenovationExpense[]
+  /**
+   * The heirs alive that year, one per line, with their part of the cost if they pay one, and
+   * whether they paid it or did workmanship; and anyone else ticked off
+   */
+  lines: {
+    heirId: string
+    heir: string
+    deceased: boolean
+    dueEur: number | null
+    paid: boolean
+    workmanship: boolean
+  }[]
   paidEur: number
   missingEur: number
 }
 
-export type RenovationInput = Pick<Renovation, 'year' | 'title' | 'description' | 'costEur'>
+export type RenovationInput = Pick<Renovation, 'year' | 'title' | 'description'>
+
+export type ExpenseKind = 'MATERIALS' | 'WORKMANSHIP' | 'OTHER'
+
+export const EXPENSE_KINDS: ExpenseKind[] = ['MATERIALS', 'WORKMANSHIP', 'OTHER']
+
+/** An expense of a renovation, and whether it is paid */
+export interface RenovationExpense {
+  description: string
+  kind: ExpenseKind
+  amountEur: number
+  paid: boolean
+}
 
 
 /** A stored photo of an item or document */

@@ -2,12 +2,12 @@ import { jsPDF } from 'jspdf'
 import { autoTable, type RowInput, type Styles } from 'jspdf-autotable'
 import {
   catalogCells, catalogHead, catalogNote, contributionPages, copyrightLine, generatedOn, heirCells, heirsHead,
-  heirsNote, inventoryNote, inventorySum, isoDay, type CatalogItemExport, type InventoryRoomExport,
+  heirsNote, inventoryNote, inventorySum, isoDay, renovationExport, type CatalogItemExport, type InventoryRoomExport,
 } from './export'
 import { formatEuros } from './format'
 import { THUMBNAIL_SIZE, loadThumbnails } from './thumbnails'
 import type { Messages } from '../i18n'
-import type { ContributionYear, Heir } from '../api/types'
+import type { ContributionYear, Heir, Renovation } from '../api/types'
 
 const ACCENT: [number, number, number] = [181, 101, 29]
 const MUTED: [number, number, number] = [115, 106, 96]
@@ -305,4 +305,98 @@ export async function exportContributionsPdf(years: ContributionYear[], t: Messa
     drawFooter(doc, number, generatedOn(now, t), now, t)
   }
   return finish(doc, t.tabContributions, `attic-contributions-${isoDay(now)}.pdf`)
+}
+
+/** Widths of the narrow columns of the tables of a renovation, in mm; the first takes what is left */
+const RENOVATION_COLUMNS = [34, 20, 34]
+
+/**
+ * A PDF of every renovation, to show and download, the latest first: under its year and title, its
+ * expenses with their total, then the heirs with their part and whether they paid it or did
+ * workmanship, and its comment.
+ */
+export async function exportRenovationsPdf(renovations: Renovation[], t: Messages): Promise<GeneratedPdf> {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const now = new Date()
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const width = pageWidth - 2 * MARGIN
+  setTitle(doc, t.tabRenovations)
+  let y = drawTitle(doc, t.tabRenovations, [])
+  const tableEnd = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
+
+  /** A text in the muted colour, over as many lines as it takes */
+  function muted(text: string, size: number) {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(size)
+    doc.setTextColor(...MUTED)
+    const lines: string[] = doc.splitTextToSize(pdfText(text), width)
+    doc.text(lines, MARGIN, y + size * 0.3)
+    y += lines.length * size * 0.42 + 1.5
+  }
+
+  /** A table of the renovation, the given columns to the right */
+  function table(head: string[], body: string[][], foot: RowInput, right: number[]) {
+    autoTable(doc, {
+      startY: y,
+      margin: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: 18 },
+      head: [head.map(pdfText)],
+      body: body.map((row) => row.map(pdfText)),
+      foot: [foot],
+      showFoot: 'lastPage',
+      styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: TEXT },
+      headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
+      footStyles: { fillColor: STRIPE, textColor: TEXT, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: STRIPE },
+      columnStyles: Object.fromEntries(RENOVATION_COLUMNS.map((cellWidth, index) => [index + 1, { cellWidth }])),
+      didParseCell: (data) => {
+        if (right.includes(data.column.index)) {
+          data.cell.styles.halign = 'right'
+        }
+      },
+    })
+    y = tableEnd() + 4
+  }
+
+  renovations.forEach((renovation, index) => {
+    const parts = renovationExport(renovation, t)
+    // A renovation starts on a new page when its heading and a few lines would not fit
+    if (index > 0) {
+      y += 4
+    }
+    if (y > pageHeight - 70) {
+      doc.addPage()
+      y = MARGIN + 2
+    }
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(13)
+    doc.setTextColor(...ACCENT)
+    doc.text(pdfText(parts.heading), MARGIN, y + 4)
+    y += 8
+    if (parts.description) {
+      muted(parts.description, 9)
+    }
+    y += 1
+    if (parts.expenses.length > 0) {
+      table(parts.expensesHead, parts.expenses, parts.cost.map(pdfText), [3])
+    } else {
+      muted(t.noExpenses, 9)
+    }
+    if (parts.heirs.length > 0) {
+      table(parts.heirsHead, parts.heirs,
+        [{ content: pdfText(parts.summary), colSpan: 4, styles: { halign: 'right' } }], [1])
+    } else {
+      muted(t.nobodyPays, 9)
+    }
+    if (parts.comment) {
+      muted(parts.comment, 9)
+    }
+  })
+
+  // The footer once every page exists, so that each knows its number
+  for (let number = 1; number <= doc.getNumberOfPages(); number++) {
+    doc.setPage(number)
+    drawFooter(doc, number, generatedOn(now, t), now, t)
+  }
+  return finish(doc, t.tabRenovations, `attic-renovations-${isoDay(now)}.pdf`)
 }

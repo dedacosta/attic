@@ -58,6 +58,8 @@ const PARAMS = {
   pdfPageCount: ['count'],
   addItemIn: ['room'],
   removeRoomTitle: ['room'],
+  expensePaid: ['description'],
+  workmanshipOf: ['name'],
   openPhoto: ['n'],
   photoCount: ['count'],
   errorPhotoUpload: ['file', 'reason'],

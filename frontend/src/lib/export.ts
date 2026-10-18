@@ -1,7 +1,7 @@
 import { age, localDate } from './age'
 import { copyrightYears, formatDate, formatEuros, shortId, shortName } from './format'
 import type { Messages } from '../i18n'
-import type { CatalogItem, ContributionYear, Heir, InventoryItem } from '../api/types'
+import type { CatalogItem, ContributionYear, Heir, InventoryItem, Renovation } from '../api/types'
 
 /*
  * What the PDF and the LaTeX exports share: the file names, the lines above and below the tables
@@ -149,4 +149,41 @@ export function contributionPages(years: ContributionYear[], t: Messages): Contr
     })
   }
   return pages
+}
+
+/** A renovation as exported: its heading, its expenses with their total, and the heirs with what they gave */
+export interface RenovationExport {
+  heading: string
+  description: string | null
+  expensesHead: string[]
+  expenses: string[][]
+  /** Under the amounts: the cost */
+  cost: string[]
+  heirsHead: string[]
+  heirs: string[][]
+  /** Below the heirs: what is paid and what is missing */
+  summary: string
+  comment: string | null
+}
+
+export function renovationExport(renovation: Renovation, t: Messages): RenovationExport {
+  const euros = (value: number) => formatEuros(value, t.locale)
+  const tick = (done: boolean) => (done ? t.yes : '—')
+  return {
+    heading: `${renovation.year} — ${renovation.title}`,
+    description: renovation.description,
+    expensesHead: [t.description, t.expenseKind, t.amountPaid, t.amount],
+    expenses: renovation.expenses.map((expense) =>
+      [expense.description, t.expenseKinds[expense.kind], tick(expense.paid), euros(expense.amountEur)]),
+    cost: [t.total, '', '', euros(renovation.costEur)],
+    heirsHead: [t.heir, t.share, t.amountPaid, t.expenseKinds.WORKMANSHIP],
+    heirs: renovation.lines.map((line) => [
+      line.deceased ? `${line.heir} †` : line.heir,
+      line.dueEur !== null ? euros(line.dueEur) : '—',
+      tick(line.paid),
+      tick(line.workmanship),
+    ]),
+    summary: `${t.amountPaid}${t.colon} ${euros(renovation.paidEur)}  ·  ${t.amountMissing}${t.colon} ${euros(renovation.missingEur)}`,
+    comment: renovation.comment,
+  }
 }
