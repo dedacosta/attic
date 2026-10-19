@@ -156,9 +156,6 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
   const note = inventoryNote(rooms, totalCount, filters, now, t)
   const title = house ? `${t.pdfTitleInventory} — ${house}` : t.pdfTitleInventory
   setTitle(doc, title)
-  // What the inventory is of: the house and where it is
-  const top = drawTitle(doc, t.pdfTitleInventory, [house, address ?? ''].filter(Boolean))
-
   const euros = (value: number) => pdfText(formatEuros(value, t.locale))
 
   // A line across the table, above the items of a room
@@ -169,48 +166,109 @@ export async function exportInventoryPdf(rooms: InventoryRoomExport[], totalCoun
     { content: pdfText(label), colSpan: 2, styles: { fillColor: 255, fontStyle: 'bold', halign: 'right', ...styles } },
     { content: euros(value), styles: { fillColor: 255, fontStyle: 'bold', ...styles } },
   ]
-  const section = ({ title, comments, items }: (typeof rooms)[number]): RowInput[] => [
-    across(title, { fontStyle: 'bold', fontSize: 11, textColor: ACCENT, cellPadding: { top: 5, right: 2, bottom: comments ? 0.5 : 2, left: 2 } }),
-    ...(comments ? [across(comments, { textColor: MUTED, cellPadding: { top: 0.5, right: 2, bottom: 2, left: 2 } })] : []),
-    ...items.map((item) => [String(item.quantity), pdfText(item.description), euros(item.valueEur)]),
+  // A line, and whether it stays on the page of the next one: the name and the comments of a room
+  // stay with its first item, its last item with its total, the total of the last room with the
+  // grand total. So a total is never alone at the top of a page.
+  type Line = { row: RowInput; keep: boolean }
+  const section = ({ title, comments, items }: (typeof rooms)[number], last: boolean): Line[] => [
+    { row: across(title, { fontStyle: 'bold', fontSize: 11, textColor: ACCENT, cellPadding: { top: 5, right: 2, bottom: comments ? 0.5 : 2, left: 2 } }), keep: true },
+    ...(comments ? [{ row: across(comments, { textColor: MUTED, cellPadding: { top: 0.5, right: 2, bottom: 2, left: 2 } }), keep: true }] : []),
+    ...items.map((item, index) => ({
+      row: [String(item.quantity), pdfText(item.description), euros(item.valueEur)],
+      keep: index === items.length - 1,
+    })),
     // The amount alone: under the values of a room it is clearly their total
-    totalLine('', inventorySum(items), {}),
+    { row: totalLine('', inventorySum(items), {}), keep: last },
   ]
   const held = rooms.filter((room) => !room.missing)
   const missing = rooms.filter((room) => room.missing)
+  const lines: Line[] = [
+    ...held.flatMap((room, index) => section(room, index === held.length - 1)),
+    ...(held.length > 0
+      ? [{ row: totalLine(t.total, inventorySum(held.flatMap((room) => room.items)),
+        { fontSize: 11, fillColor: STRIPE, cellPadding: { top: 3, right: 2, bottom: 3, left: 2 } }), keep: false }]
+      : []),
+    ...missing.flatMap((room) => section(room, false)),
+  ]
 
-  autoTable(doc, {
-    startY: top,
-    margin: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: 18 },
-    head: [[t.quantityShort, t.description, t.value]],
-    // The column headings once, at the top of the first page
-    showHead: 'firstPage',
-    body: [
-      ...held.flatMap(section),
-      ...(held.length > 0
-        ? [totalLine(t.total, inventorySum(held.flatMap((room) => room.items)),
-          { fontSize: 11, fillColor: STRIPE, cellPadding: { top: 3, right: 2, bottom: 3, left: 2 } })]
-        : []),
-      ...missing.flatMap(section),
-    ],
-    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: TEXT },
-    headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
-    columnStyles: {
-      0: { halign: 'right', cellWidth: 14 },
-      1: { cellWidth: 'auto' },
-      2: { halign: 'right', cellWidth: 32 },
-    },
-    didParseCell: (data) => {
-      // Headers follow their column's alignment: quantity and value right
-      if (data.section === 'head') {
-        data.cell.styles.halign = data.column.index === 1 ? 'left' : 'right'
-      } else if (data.cell.colSpan === 3) {
-        // The lines across the table start at the left
-        data.cell.styles.halign = 'left'
+  /**
+   * The title and the table, a new page before each line of `breaks`. Returns the page each line
+   * is on.
+   */
+  function layout(target: jsPDF, breaks: Set<number>): number[] {
+    // What the inventory is of: the house and where it is
+    const top = drawTitle(target, t.pdfTitleInventory, [house, address ?? ''].filter(Boolean))
+    const pages: number[] = []
+    const starts = [0, ...[...breaks].sort((a, b) => a - b), lines.length]
+    for (let part = 0; part < starts.length - 1; part++) {
+      const offset = starts[part]
+      if (part > 0) {
+        target.addPage()
       }
-    },
-    didDrawPage: (data) => drawFooter(doc, data.pageNumber, note, now, t),
-  })
+      autoTable(target, {
+        startY: part === 0 ? top : MARGIN,
+        margin: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: 18 },
+        head: [[t.quantityShort, t.description, t.value]],
+        // The column headings once, at the top of the first page
+        showHead: part === 0 ? 'firstPage' : 'never',
+        body: lines.slice(offset, starts[part + 1]).map((line) => line.row),
+        // A line is never cut in two by a page
+        rowPageBreak: 'avoid',
+        styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: TEXT },
+        headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold' },
+        columnStyles: {
+          0: { halign: 'right', cellWidth: 14 },
+          1: { cellWidth: 'auto' },
+          2: { halign: 'right', cellWidth: 32 },
+        },
+        didParseCell: (data) => {
+          // Headers follow their column's alignment: quantity and value right
+          if (data.section === 'head') {
+            data.cell.styles.halign = data.column.index === 1 ? 'left' : 'right'
+          } else if (data.cell.colSpan === 3) {
+            // The lines across the table start at the left
+            data.cell.styles.halign = 'left'
+          }
+        },
+        didDrawCell: (data) => {
+          if (data.section === 'body') {
+            pages[offset + data.row.index] ??= target.getCurrentPageInfo().pageNumber
+          }
+        },
+      })
+    }
+    return pages
+  }
+
+  // Laid out on a draft until no line that stays with the next one ends a page: then a new page
+  // starts with the first line of the lines that stay together
+  const breaks = new Set<number>()
+  const tooLong = new Set<number>()
+  for (let attempt = 0; attempt < lines.length; attempt++) {
+    const pages = layout(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }), breaks)
+    const split = lines.findIndex((line, i) => line.keep && i + 1 < lines.length && pages[i + 1] !== pages[i]
+      && !tooLong.has(i))
+    if (split < 0) {
+      break
+    }
+    let first = split
+    while (first > 0 && lines[first - 1].keep) {
+      first--
+    }
+    // Lines that do not fit on one page together, even from its top, are left as they are
+    if (first === 0 || breaks.has(first) || pages[first - 1] !== pages[first]) {
+      tooLong.add(split)
+    } else {
+      breaks.add(first)
+    }
+  }
+  layout(doc, breaks)
+
+  // The footer once every page exists, so that each knows its number
+  for (let number = 1; number <= doc.getNumberOfPages(); number++) {
+    doc.setPage(number)
+    drawFooter(doc, number, note, now, t)
+  }
   return finish(doc, title, `attic-inventory-${isoDay(now)}.pdf`)
 }
 

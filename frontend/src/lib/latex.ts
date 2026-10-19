@@ -94,13 +94,16 @@ ${body}
 `
 }
 
-/** A table that goes on over several pages, its header repeated on each, in a smaller font */
-function longTable(columns: string, head: string[], rows: string[], stripes: boolean): string {
+/**
+ * A table that goes on over several pages, in a smaller font, its header repeated on each or, with
+ * `headOnce`, only on the first
+ */
+function longTable(columns: string, head: string[], rows: string[], stripes: boolean, headOnce = false): string {
   return `\\begingroup
 \\small
 ${stripes ? '\\rowcolors{2}{white}{stripe}\n' : ''}\\begin{longtable}{${columns}}
 \\rowcolor{accent}${head.map((cell) => `\\head{${tex(cell)}}`).join(' & ')} \\\\
-\\endhead
+${headOnce ? '\\endfirsthead\n\\endhead' : '\\endhead'}
 ${rows.join('\n')}
 \\end{longtable}
 \\endgroup
@@ -175,26 +178,37 @@ export function exportInventoryLatex(rooms: InventoryRoomExport[], totalCount: n
   const now = new Date()
   const euros = (value: number) => tex(formatEuros(value, t.locale))
   const across = (content: string) => `\\multicolumn{3}{L{${rest(0, 1)}}}{${content}} \\\\`
-  const section = ({ title, comments, items }: InventoryRoomExport) => [
-    `\\noalign{\\vspace{2mm}}${across(`\\leavevmode\\normalsize\\bfseries\\color{accent}${tex(title)}`)}`,
-    ...(comments ? [across(`\\leavevmode\\color{muted}${tex(comments)}`)] : []),
-    ...items.map((item) => row([String(item.quantity), tex(item.description), euros(item.valueEur)])),
+  // As in the PDF, the name and the comments of a room stay on the page of its first item, its last
+  // item on the page of its total and the total of the last room on the page of the grand total:
+  // their lines end with \\* instead of \\, which longtable never breaks a page after
+  const kept = (line: string) => line.replace(/ \\\\$/, ' \\\\*')
+  const section = ({ title, comments, items }: InventoryRoomExport, last: boolean) => {
     // The amount alone: under the values of a room it is clearly their total
-    row(['\\multicolumn{2}{r}{}', `\\bfseries ${euros(inventorySum(items))}`]),
-  ]
+    const total = row(['\\multicolumn{2}{r}{}', `\\bfseries ${euros(inventorySum(items))}`])
+    return [
+      kept(`\\noalign{\\vspace{2mm}}${across(`\\leavevmode\\normalsize\\bfseries\\color{accent}${tex(title)}`)}`),
+      ...(comments ? [kept(across(`\\leavevmode\\color{muted}${tex(comments)}`))] : []),
+      ...items.map((item, index) => {
+        const line = row([String(item.quantity), tex(item.description), euros(item.valueEur)])
+        return index === items.length - 1 ? kept(line) : line
+      }),
+      last ? kept(total) : total,
+    ]
+  }
   const held = rooms.filter((room) => !room.missing)
   const missing = rooms.filter((room) => room.missing)
   const rows = [
-    ...held.flatMap(section),
+    ...held.flatMap((room, index) => section(room, index === held.length - 1)),
     ...(held.length > 0
       ? [`\\rowcolor{stripe}${row([`\\multicolumn{2}{r}{\\normalsize\\bfseries ${tex(t.total)}}`,
         `\\normalsize\\bfseries ${euros(inventorySum(held.flatMap((room) => room.items)))}`])}`]
       : []),
-    ...missing.flatMap(section),
+    ...missing.flatMap((room) => section(room, false)),
   ]
   // What the inventory is of: the house and where it is
   const body = titleBlock(t.pdfTitleInventory, [house, address ?? ''].filter(Boolean))
-    + longTable(`R{14mm}L{${rest(46, 3)}}R{32mm}`, [t.quantityShort, t.description, t.value], rows, false)
+    // The column headings once, at the top of the first page, as in the PDF
+    + longTable(`R{14mm}L{${rest(46, 3)}}R{32mm}`, [t.quantityShort, t.description, t.value], rows, false, true)
   save(texDocument(house ? `${t.pdfTitleInventory} — ${house}` : t.pdfTitleInventory, body,
     inventoryNote(rooms, totalCount, filters, now, t), false, now, t),
     `attic-inventory-${isoDay(now)}.tex`)
