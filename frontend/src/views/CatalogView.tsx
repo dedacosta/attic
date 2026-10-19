@@ -220,7 +220,7 @@ export default function CatalogView() {
           <p className="empty">{t.noMatches}</p>
         )}
 
-        <div className="grid">
+        <div className="grid grid-compact">
           {visible.map((item) => (
             <CatalogItemCard key={item.id} item={item} place={placeOf(item)} onEdit={() => setEditing(item)} onDelete={() => setDeleting(item)} />
           ))}
