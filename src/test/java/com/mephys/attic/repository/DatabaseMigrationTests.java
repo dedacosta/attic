@@ -23,7 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * A database that already has the schema but no Flyway history (one from before the migrations
- * were squashed, with its history dropped) keeps its data, is marked as V1 and gets the newer migrations.
+ * were squashed, with its history dropped) keeps its data and is marked as V1, which is not run
+ * again.
  */
 @SpringBootTest
 class DatabaseMigrationTests {
@@ -55,15 +56,13 @@ class DatabaseMigrationTests {
 	private JdbcClient jdbc;
 
 	@Test
-	void keepsExistingDataAndAppliesOnlyNewerMigrations() {
+	void keepsExistingDataAndIsMarkedAsV1() {
 		CatalogItem sofa = repository.findById(EXISTING_ID).orElseThrow();
 		assertThat(sofa.name()).isEqualTo("Sofa");
 
-		// V1 is not run again; the migrations after it are
 		assertThat(jdbc.sql("SELECT version || ' ' || type FROM flyway_schema_history ORDER BY installed_rank")
 			.query(String.class)
-			.list()).startsWith("1 BASELINE", "2 SQL", "3 SQL", "4 SQL", "5 SQL", "6 SQL", "7 SQL");
-		assertThat(jdbc.sql("SELECT count(*) FROM inventory_room").query(Integer.class).single()).isZero();
+			.list()).containsExactly("1 BASELINE");
 	}
 
 }

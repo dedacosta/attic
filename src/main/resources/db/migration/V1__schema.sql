@@ -1,5 +1,5 @@
--- The whole schema. It replaces the 24 migrations the database grew with, which are in the
--- history of the repository. Changes from here on go in V2, V3 and so on.
+-- The whole schema. It replaces the migrations the database grew with, which are in the history
+-- of the repository: 24 at first, then 10 more. Changes from here on go in V2, V3 and so on.
 
 -- Heirs, their documents and the accounts
 
@@ -76,88 +76,6 @@ CREATE TABLE app_setting (
 	value TEXT NOT NULL
 );
 
--- Catalog and inventory
-
-CREATE TABLE catalog_item (
-	id          TEXT    PRIMARY KEY,
-	name        TEXT    NOT NULL,
-	quantity    INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0),
-	date        TEXT,
-	location    TEXT,
-	existent    INTEGER NOT NULL DEFAULT 1 CHECK (existent IN (0, 1)),
-	value_cents INTEGER NOT NULL DEFAULT 0 CHECK (value_cents >= 0),
-	owner       TEXT    NOT NULL DEFAULT 'Heritage',
-	comments    TEXT,
-	created_at  TEXT,
-	updated_at  TEXT
-);
-
-CREATE TABLE catalog_picture (
-	id           TEXT PRIMARY KEY,
-	item_id      TEXT NOT NULL REFERENCES catalog_item (id) ON DELETE CASCADE,
-	position     INTEGER NOT NULL,
-	file_name    TEXT NOT NULL,
-	content_type TEXT NOT NULL,
-	thumbnail    BLOB
-);
-
-CREATE INDEX catalog_picture_item_id ON catalog_picture (item_id, position);
-
-CREATE TABLE inventory_item (
-	id          TEXT    PRIMARY KEY,
-	name        TEXT    NOT NULL,
-	quantity    INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0),
-	date        TEXT,
-	location    TEXT,
-	existent    INTEGER NOT NULL DEFAULT 1 CHECK (existent IN (0, 1)),
-	value_cents INTEGER NOT NULL DEFAULT 0 CHECK (value_cents >= 0),
-	owner       TEXT    NOT NULL DEFAULT 'Heritage',
-	comments    TEXT,
-	created_at  TEXT,
-	updated_at  TEXT
-);
-
-CREATE TABLE inventory_picture (
-	id           TEXT PRIMARY KEY,
-	item_id      TEXT NOT NULL REFERENCES inventory_item (id) ON DELETE CASCADE,
-	position     INTEGER NOT NULL,
-	file_name    TEXT NOT NULL,
-	content_type TEXT NOT NULL,
-	thumbnail    BLOB
-);
-
-CREATE INDEX inventory_picture_item_id ON inventory_picture (item_id, position);
-
--- Yearly contributions and renovations
-
-CREATE TABLE contribution_year (
-	year    INTEGER PRIMARY KEY CHECK (year BETWEEN 1900 AND 2999),
-	comment TEXT
-);
-
-CREATE TABLE contribution (
-	year         INTEGER NOT NULL REFERENCES contribution_year (year) ON DELETE CASCADE,
-	heir_id      TEXT NOT NULL REFERENCES heir (id) ON DELETE CASCADE,
-	amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
-	PRIMARY KEY (year, heir_id)
-);
-
-CREATE TABLE renovation (
-	id          TEXT PRIMARY KEY,
-	year        INTEGER NOT NULL CHECK (year BETWEEN 1900 AND 2999),
-	title       TEXT NOT NULL,
-	description TEXT,
-	cost_cents  INTEGER NOT NULL CHECK (cost_cents >= 0),
-	comment     TEXT,
-	created_at  TEXT NOT NULL
-);
-
-CREATE TABLE renovation_payment (
-	renovation_id TEXT NOT NULL REFERENCES renovation (id) ON DELETE CASCADE,
-	heir_id       TEXT NOT NULL REFERENCES heir (id) ON DELETE CASCADE,
-	PRIMARY KEY (renovation_id, heir_id)
-);
-
 -- The estate: buildings and land, with their facts, pictures and documents
 
 CREATE TABLE property (
@@ -214,3 +132,127 @@ CREATE TABLE property_document_file (
 );
 
 CREATE INDEX property_document_file_document_id ON property_document_file (document_id, position);
+
+-- Catalog and inventory. A catalog item can be in a building and one of its rooms; the inventory
+-- is kept per building, as a list of rooms with their items, then the building's other items and
+-- its missing items.
+
+CREATE TABLE catalog_item (
+	id          TEXT    PRIMARY KEY,
+	name        TEXT    NOT NULL,
+	quantity    INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0),
+	date        TEXT,
+	existent    INTEGER NOT NULL DEFAULT 1 CHECK (existent IN (0, 1)),
+	value_cents INTEGER NOT NULL DEFAULT 0 CHECK (value_cents >= 0),
+	owner       TEXT    NOT NULL DEFAULT 'Heritage',
+	comments    TEXT,
+	created_at  TEXT,
+	updated_at  TEXT,
+	-- A room or a building that is deleted leaves its items where they are, without it
+	property_id TEXT REFERENCES property (id) ON DELETE SET NULL,
+	room_id     TEXT REFERENCES inventory_room (id) ON DELETE SET NULL
+);
+
+CREATE INDEX catalog_item_room_id ON catalog_item (room_id);
+CREATE INDEX catalog_item_property_id ON catalog_item (property_id);
+
+CREATE TABLE catalog_picture (
+	id           TEXT PRIMARY KEY,
+	item_id      TEXT NOT NULL REFERENCES catalog_item (id) ON DELETE CASCADE,
+	position     INTEGER NOT NULL,
+	file_name    TEXT NOT NULL,
+	content_type TEXT NOT NULL,
+	thumbnail    BLOB
+);
+
+CREATE INDEX catalog_picture_item_id ON catalog_picture (item_id, position);
+
+-- The rooms of a building, entered on the building in an order of the user's choosing, with a
+-- description to tell them apart and, for the PDF, another title if wanted
+CREATE TABLE inventory_room (
+	id          TEXT PRIMARY KEY,
+	property_id TEXT NOT NULL REFERENCES property (id) ON DELETE CASCADE,
+	title       TEXT NOT NULL,
+	comments    TEXT,
+	created_at  TEXT,
+	updated_at  TEXT,
+	position    INTEGER NOT NULL DEFAULT 0,
+	pdf_title   TEXT,
+	description TEXT
+);
+
+CREATE INDEX inventory_room_property_id ON inventory_room (property_id);
+
+CREATE TABLE inventory_picture (
+	id           TEXT PRIMARY KEY,
+	room_id      TEXT NOT NULL REFERENCES inventory_room (id) ON DELETE CASCADE,
+	position     INTEGER NOT NULL,
+	file_name    TEXT NOT NULL,
+	content_type TEXT NOT NULL,
+	thumbnail    BLOB
+);
+
+CREATE INDEX inventory_picture_room_id ON inventory_picture (room_id, position);
+
+CREATE TABLE inventory_item (
+	id          INTEGER PRIMARY KEY,
+	-- An item is in a room or, as one of the other or missing items, directly in a building
+	room_id     TEXT REFERENCES inventory_room (id) ON DELETE CASCADE,
+	property_id TEXT REFERENCES property (id) ON DELETE CASCADE,
+	position    INTEGER NOT NULL,
+	description TEXT    NOT NULL,
+	quantity    INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0),
+	-- Tells the two lists of a building apart: 1 for its other items, 0 for its missing ones;
+	-- always 1 in a room
+	existent    INTEGER NOT NULL DEFAULT 1 CHECK (existent IN (0, 1)),
+	value_cents INTEGER NOT NULL DEFAULT 0 CHECK (value_cents >= 0),
+	CHECK ((room_id IS NULL) <> (property_id IS NULL))
+);
+
+CREATE INDEX inventory_item_room_id ON inventory_item (room_id, position);
+CREATE INDEX inventory_item_property_id ON inventory_item (property_id, position);
+
+-- Yearly contributions and renovations
+
+CREATE TABLE contribution_year (
+	year    INTEGER PRIMARY KEY CHECK (year BETWEEN 1900 AND 2999),
+	comment TEXT
+);
+
+CREATE TABLE contribution (
+	year         INTEGER NOT NULL REFERENCES contribution_year (year) ON DELETE CASCADE,
+	heir_id      TEXT NOT NULL REFERENCES heir (id) ON DELETE CASCADE,
+	amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+	PRIMARY KEY (year, heir_id)
+);
+
+-- A renovation costs the total of its expenses
+CREATE TABLE renovation (
+	id          TEXT PRIMARY KEY,
+	year        INTEGER NOT NULL CHECK (year BETWEEN 1900 AND 2999),
+	title       TEXT NOT NULL,
+	description TEXT,
+	comment     TEXT,
+	created_at  TEXT NOT NULL
+);
+
+-- What an heir gave to a renovation: they paid their part, did workmanship, or both
+CREATE TABLE renovation_payment (
+	renovation_id TEXT NOT NULL REFERENCES renovation (id) ON DELETE CASCADE,
+	heir_id       TEXT NOT NULL REFERENCES heir (id) ON DELETE CASCADE,
+	paid          INTEGER NOT NULL DEFAULT 1 CHECK (paid IN (0, 1)),
+	workmanship   INTEGER NOT NULL DEFAULT 0 CHECK (workmanship IN (0, 1)),
+	PRIMARY KEY (renovation_id, heir_id)
+);
+
+CREATE TABLE renovation_expense (
+	id            INTEGER PRIMARY KEY,
+	renovation_id TEXT    NOT NULL REFERENCES renovation (id) ON DELETE CASCADE,
+	position      INTEGER NOT NULL,
+	description   TEXT    NOT NULL,
+	kind          TEXT    NOT NULL CHECK (kind IN ('MATERIALS', 'WORKMANSHIP', 'OTHER')),
+	amount_cents  INTEGER NOT NULL CHECK (amount_cents >= 0),
+	paid          INTEGER NOT NULL DEFAULT 0 CHECK (paid IN (0, 1))
+);
+
+CREATE INDEX renovation_expense_renovation_id ON renovation_expense (renovation_id, position);
