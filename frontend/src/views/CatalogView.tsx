@@ -8,19 +8,23 @@ import CatalogItemCard from '../components/CatalogItemCard'
 import CatalogItemDialog, { type Place } from '../components/CatalogItemDialog'
 import SearchBar from '../components/SearchBar'
 import { formatDate, normalize } from '../lib/format'
+import { ownerNames } from '../lib/export'
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
 import { FileIcon, PlusIcon } from '../components/icons'
-import type { Building, CatalogItem, CatalogItemInput, InventoryRoom, PhotoEntry } from '../api/types'
+import type { Building, CatalogItem, CatalogItemInput, Heir, InventoryRoom, PhotoEntry } from '../api/types'
 import type { GeneratedPdf } from '../lib/pdf'
 
 type Presence = 'all' | 'present' | 'missing'
+
+/** The owner filter for the items of no heir */
+const HERITAGE = 'heritage'
 
 function matches(item: CatalogItem, place: string, words: string[], t: Messages): boolean {
   const text = normalize(
     [
       item.name,
-      item.owner,
+      ownerNames(item, t),
       item.comments ?? '',
       item.id,
       place,
@@ -37,10 +41,14 @@ export default function CatalogView() {
   // The houses of the estate and their rooms, as in the inventory
   const [houses, setHouses] = useState<Building[]>([])
   const [rooms, setRooms] = useState<InventoryRoom[]>([])
+  // The heirs, who can own items
+  const [heirs, setHeirs] = useState<Heir[]>([])
   const [loadError, setLoadError] = useState<unknown>(null)
   const [query, setQuery] = useState('')
   const [houseFilter, setHouseFilter] = useState('')
   const [roomFilter, setRoomFilter] = useState('')
+  // An heir's id, HERITAGE for the items of no heir, or '' for every item
+  const [ownerFilter, setOwnerFilter] = useState('')
   const [presence, setPresence] = useState<Presence>('all')
   const [editing, setEditing] = useState<CatalogItem | 'new' | null>(null)
   const [deleting, setDeleting] = useState<CatalogItem | null>(null)
@@ -58,6 +66,7 @@ export default function CatalogView() {
   useEffect(() => {
     reload()
     api.estate().then(({ buildings }) => setHouses(buildings), () => setHouses([]))
+    api.listHeirs().then(setHeirs, () => setHeirs([]))
     api.listInventory().then(setRooms, () => setRooms([]))
   }, [reload])
 
@@ -74,12 +83,14 @@ export default function CatalogView() {
       (item) =>
         (!houseFilter || item.propertyId === houseFilter) &&
         (!roomFilter || item.roomId === roomFilter) &&
+        (!ownerFilter || (ownerFilter === HERITAGE ? item.owners.length === 0
+          : item.owners.some((owner) => owner.heirId === ownerFilter))) &&
         (presence === 'all' || item.existent === (presence === 'present')) &&
         matches(item, placeOf(item), words, t),
     )
-  }, [items, query, houseFilter, roomFilter, presence, placeOf, t])
+  }, [items, query, houseFilter, roomFilter, ownerFilter, presence, placeOf, t])
 
-  const filtered = query !== '' || houseFilter !== '' || roomFilter !== '' || presence !== 'all'
+  const filtered = query !== '' || houseFilter !== '' || roomFilter !== '' || ownerFilter !== '' || presence !== 'all'
   const filterHouse = houses.find((house) => house.id === houseFilter)
   const filterRoom = rooms.find((room) => room.id === roomFilter)
   // Rooms to filter by: those of the house chosen, or of every house under its name
@@ -107,6 +118,8 @@ export default function CatalogView() {
       query.trim() && t.searchFilter(query.trim()),
       filterHouse && `${t.inventoryHouse}: ${filterHouse.name}`,
       filterRoom && `${t.location}: ${filterRoom.title}`,
+      ownerFilter && `${t.owner}: ${ownerFilter === HERITAGE ? t.heritageTitle
+        : (heirs.find((heir) => heir.id === ownerFilter)?.name ?? '')}`,
       presence !== 'all' && (presence === 'present' ? t.present : t.missing),
     ].filter((f): f is string => Boolean(f))
     const exported = visible.map((item) => ({ ...item, place: placeOf(item) }))
@@ -176,6 +189,14 @@ export default function CatalogView() {
                 ))}
             </select>
           )}
+          {heirs.length > 0 && (
+            <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)} aria-label={t.filterByOwner}
+              title={t.filterByOwner}>
+              <option value="">{t.allOwners}</option>
+              <option value={HERITAGE}>{t.heritageTitle}</option>
+              {heirs.map((heir) => <option key={heir.id} value={heir.id}>{heir.name}</option>)}
+            </select>
+          )}
           <div className="segmented" role="group" aria-label={t.filterByPresence}>
             {(['all', 'present', 'missing'] as const).map((value) => (
               <button key={value} type="button" aria-pressed={presence === value} onClick={() => setPresence(value)}>
@@ -231,6 +252,7 @@ export default function CatalogView() {
         <CatalogItemDialog
           key="catalog-item-dialog"
           item={editing === 'new' ? null : editing}
+          heirs={heirs}
           houses={houses}
           rooms={rooms}
           place={newPlace}

@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -51,7 +52,7 @@ class CatalogRepositoryTests {
 		assertThat(item.roomId()).isNull();
 		assertThat(item.existent()).isTrue();
 		assertThat(item.valueEur()).isEqualTo(new BigDecimal("0.00"));
-		assertThat(item.owner()).isEqualTo("Heritage");
+		assertThat(item.ownerIds()).isEmpty();
 		assertThat(item.comments()).isNull();
 	}
 
@@ -65,7 +66,7 @@ class CatalogRepositoryTests {
 	@Test
 	void savesAndLoadsAllFields() {
 		CatalogItem item = new CatalogItem(null, "Grandfather clock", 2, LocalDate.of(1985, 5, 17), null, null,
-				false, new BigDecimal("1234.5"), "David", "Inherited from grandmother.\nNeeds a new key.");
+				false, new BigDecimal("1234.5"), List.of(), "Inherited from grandmother.\nNeeds a new key.");
 
 		repository.save(item);
 

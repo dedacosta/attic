@@ -4,10 +4,12 @@ import com.mephys.attic.dto.CatalogItemRequest;
 import com.mephys.attic.dto.CatalogItemResponse;
 import com.mephys.attic.dto.PictureResponse;
 import com.mephys.attic.model.CatalogItem;
+import com.mephys.attic.model.Heir;
 import com.mephys.attic.model.InventoryRoom;
 import com.mephys.attic.model.PictureInfo;
 import com.mephys.attic.model.PropertyKind;
 import com.mephys.attic.repository.CatalogRepository;
+import com.mephys.attic.repository.HeirRepository;
 import com.mephys.attic.repository.InventoryRepository;
 import com.mephys.attic.repository.PropertyRepository;
 import com.mephys.attic.service.PictureUploads;
@@ -15,7 +17,9 @@ import com.mephys.attic.service.PictureUploads;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
@@ -42,22 +46,26 @@ class CatalogController {
 
 	private final PropertyRepository properties;
 
+	private final HeirRepository heirs;
+
 	private final PictureUploads uploads;
 
 	CatalogController(CatalogRepository repository, InventoryRepository rooms, PropertyRepository properties,
-			PictureUploads uploads) {
+			HeirRepository heirs, PictureUploads uploads) {
 		this.repository = repository;
 		this.rooms = rooms;
 		this.properties = properties;
+		this.heirs = heirs;
 		this.uploads = uploads;
 	}
 
 	@GetMapping
 	List<CatalogItemResponse> list() {
 		Map<UUID, List<PictureInfo>> pictures = repository.listAllPictures();
+		List<Heir> all = heirs.findAll();
 		return repository.findAll()
 			.stream()
-			.map((item) -> CatalogItemResponse.of(item, pictures.getOrDefault(item.id(), List.of())))
+			.map((item) -> CatalogItemResponse.of(item, all, pictures.getOrDefault(item.id(), List.of())))
 			.toList();
 	}
 
@@ -67,13 +75,15 @@ class CatalogController {
 	}
 
 	@PostMapping
+	@Transactional
 	ResponseEntity<CatalogItemResponse> create(@RequestBody CatalogItemRequest request) {
 		CatalogItem item = repository.save(toItem(request, null));
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").build(item.id());
-		return ResponseEntity.created(location).body(CatalogItemResponse.of(item, List.of()));
+		return ResponseEntity.created(location).body(CatalogItemResponse.of(item, heirs.findAll(), List.of()));
 	}
 
 	@PutMapping("/{id}")
+	@Transactional
 	ResponseEntity<CatalogItemResponse> replace(@PathVariable UUID id, @RequestBody CatalogItemRequest request) {
 		if (repository.findById(id).isEmpty()) {
 			return ResponseEntity.notFound().build();
@@ -127,9 +137,15 @@ class CatalogController {
 
 	/**
 	 * The item of the request. Its room is a room of its building, which is that of the room when
-	 * none is given, and its building is a building, not a land parcel.
+	 * none is given, its building is a building, not a land parcel, and its owners are heirs.
 	 */
 	private CatalogItem toItem(CatalogItemRequest request, @Nullable UUID id) {
+		if (request.ownerIds() != null) {
+			Set<UUID> known = heirs.findAll().stream().map(Heir::id).collect(Collectors.toSet());
+			if (!known.containsAll(request.ownerIds())) {
+				throw new IllegalArgumentException("an owner is not an heir");
+			}
+		}
 		UUID propertyId = request.propertyId();
 		UUID roomId = request.roomId();
 		if (roomId != null) {
@@ -149,7 +165,7 @@ class CatalogController {
 	}
 
 	private CatalogItemResponse toResponse(CatalogItem item) {
-		return CatalogItemResponse.of(item, repository.listPictures(item.id()));
+		return CatalogItemResponse.of(item, heirs.findAll(), repository.listPictures(item.id()));
 	}
 
 }

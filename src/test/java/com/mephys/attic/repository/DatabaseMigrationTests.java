@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * A database that already has the schema but no Flyway history (one from before the migrations
  * were squashed, with its history dropped) keeps its data and is marked as V1, which is not run
- * again.
+ * again; the migrations after V1 run.
  */
 @SpringBootTest
 class DatabaseMigrationTests {
@@ -62,7 +62,7 @@ class DatabaseMigrationTests {
 
 		assertThat(jdbc.sql("SELECT version || ' ' || type FROM flyway_schema_history ORDER BY installed_rank")
 			.query(String.class)
-			.list()).containsExactly("1 BASELINE");
+			.list()).startsWith("1 BASELINE", "2 SQL").doesNotContain("1 SQL");
 	}
 
 }

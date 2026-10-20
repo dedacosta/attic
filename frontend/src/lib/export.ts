@@ -40,8 +40,12 @@ export const catalogCells = (item: CatalogItemExport, t: Messages) => [
   item.date ? formatDate(item.date, t.locale) : '',
   item.existent ? t.yes : t.no,
   formatEuros(item.valueEur, t.locale),
-  item.owner,
+  ownerNames(item, t),
 ]
+
+/** Who owns an item: its heirs, or the Heritage */
+export const ownerNames = (item: CatalogItem, t: Messages) =>
+  item.owners.length > 0 ? item.owners.map((owner) => owner.name).join(', ') : t.heritageTitle
 
 /** A room of the inventory, as exported */
 export interface InventoryRoomExport {

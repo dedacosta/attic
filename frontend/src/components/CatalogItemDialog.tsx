@@ -7,12 +7,14 @@ import { CloseIcon, TrashIcon } from './icons'
 import PhotosField from './PhotosField'
 import { PhotoUploadError } from '../lib/photos'
 import { useModal } from '../lib/useModal'
-import { storedPhotos, type Building, type CatalogItem, type CatalogItemInput, type InventoryRoom,
+import { storedPhotos, type Building, type CatalogItem, type CatalogItemInput, type Heir, type InventoryRoom,
   type PhotoEntry } from '../api/types'
 
 
 interface Props {
   item: CatalogItem | null
+  /** The heirs who can own an item, in the order of the Heirs tab */
+  heirs: Heir[]
   /** The houses an item can be in, and their rooms */
   houses: Building[]
   rooms: InventoryRoom[]
@@ -37,7 +39,7 @@ interface FormState {
   roomId: string
   existent: boolean
   valueEur: string
-  owner: string
+  ownerIds: string[]
   comments: string
 }
 
@@ -50,12 +52,12 @@ function initialState(item: CatalogItem | null, place: Place, locale: string): F
     roomId: item ? (item.roomId ?? '') : place.roomId,
     existent: item?.existent ?? true,
     valueEur: (item?.valueEur ?? 0).toFixed(2).replace('.', decimalSeparator(locale)),
-    owner: item?.owner ?? '',
+    ownerIds: item?.owners.map((owner) => owner.heirId) ?? [],
     comments: item?.comments ?? '',
   }
 }
 
-export default function CatalogItemDialog({ item, houses, rooms, place, onSave, onDelete, onClose }: Props) {
+export default function CatalogItemDialog({ item, heirs, houses, rooms, place, onSave, onDelete, onClose }: Props) {
   const { t } = useI18n()
   const { canEdit } = usePermissions()
   const ref = useModal()
@@ -92,7 +94,7 @@ export default function CatalogItemDialog({ item, houses, rooms, place, onSave, 
           roomId: form.roomId || null,
           existent: form.existent,
           valueEur: Number(value.replace(',', '.')),
-          owner: form.owner.trim(),
+          ownerIds: form.ownerIds,
           comments: form.comments.trim() || null,
         },
         photos,
@@ -158,10 +160,21 @@ export default function CatalogItemDialog({ item, houses, rooms, place, onSave, 
               <span>{t.date} <small>{t.optional}</small></span>
               <input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} />
             </label>
-            <label className="field field-wide">
-              <span>{t.owner}</span>
-              <input value={form.owner} onChange={(e) => set('owner', e.target.value)} placeholder="Heritage" />
-            </label>
+            <fieldset className="field field-wide catalog-owners">
+              <legend>{t.owners}</legend>
+              <div className="catalog-owner-list">
+                {heirs.map((heir) => (
+                  <label key={heir.id} className="checkbox">
+                    <input type="checkbox" checked={form.ownerIds.includes(heir.id)}
+                      onChange={(e) => set('ownerIds', e.target.checked
+                        ? heirs.filter((other) => other.id === heir.id || form.ownerIds.includes(other.id)).map((other) => other.id)
+                        : form.ownerIds.filter((id) => id !== heir.id))} />
+                    {heir.deceased ? `${heir.name} †` : heir.name}
+                  </label>
+                ))}
+              </div>
+              <small className="hint">{t.ownersHint}</small>
+            </fieldset>
             <label className="field field-wide">
               <span>{t.comments} <small>{t.optional}</small></span>
               <textarea rows={3} value={form.comments} onChange={(e) => set('comments', e.target.value)} />

@@ -27,7 +27,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
  * A database brought up to date with the migrations that V1 replaces keeps its data and gets a
- * history as if it had been created with V1. One that stopped before the last of them is refused.
+ * history as if it had been marked as V1, and gets the migrations after V1. One that stopped before
+ * the last of them is refused.
  */
 @SpringBootTest
 @SuppressWarnings("SqlResolve") // Flyway's history is not in the migrations
@@ -85,7 +86,7 @@ class SquashedMigrationsTests {
 
 		assertThat(jdbc.sql("SELECT version || ' ' || type FROM flyway_schema_history ORDER BY installed_rank")
 			.query(String.class)
-			.list()).containsExactly("1 BASELINE");
+			.list()).startsWith("1 BASELINE", "2 SQL").doesNotContain("1 SQL");
 	}
 
 	@Test
@@ -97,7 +98,11 @@ class SquashedMigrationsTests {
 
 		assertThatIllegalStateException().isThrownBy(() -> SquashedMigrations.convert(dataSource))
 			.withMessageContaining("V7__inventory_room_description.sql");
-		assertThat(jdbc.sql("SELECT count(*) FROM flyway_schema_history").query(Integer.class).single()).isOne();
+		// Its history is left as it was: V1 and the six migrations it ran
+		try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT count(*) FROM flyway_schema_history")) {
+			assertThat(rows.getInt(1)).isEqualTo(7);
+		}
 	}
 
 	@Test

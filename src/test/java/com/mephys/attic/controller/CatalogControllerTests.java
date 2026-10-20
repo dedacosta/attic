@@ -63,7 +63,7 @@ class CatalogControllerTests {
 			.andExpect(jsonPath("$.roomId").doesNotExist())
 			.andExpect(jsonPath("$.existent").value(true))
 			.andExpect(jsonPath("$.valueEur").value(0.0))
-			.andExpect(jsonPath("$.owner").value("Heritage"))
+			.andExpect(jsonPath("$.owners").isEmpty())
 			.andExpect(jsonPath("$.comments").doesNotExist())
 			.andExpect(jsonPath("$.pictures").isEmpty());
 	}
@@ -71,7 +71,7 @@ class CatalogControllerTests {
 	@Test
 	void createGetReplaceDelete() throws Exception {
 		String id = create("""
-				{"name":"Clock","quantity":2,"date":"1985-05-17","valueEur":120.5,"owner":"David",
+				{"name":"Clock","quantity":2,"date":"1985-05-17","valueEur":120.5,
 				 "comments":"Wind every Sunday"}
 				""");
 
@@ -291,6 +291,51 @@ class CatalogControllerTests {
 		mvc.perform(get("/api/catalog/{id}", id))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.propertyId").doesNotExist());
+	}
+
+	@Test
+	void itemBelongsToHeirsOrToTheHeritage() throws Exception {
+		String ana = createHeir("Ana");
+		String joao = createHeir("João");
+		String rui = createHeir("Rui");
+
+		// The owners in the order of the Heirs tab, each once
+		String id = create("{\"name\":\"Table\",\"ownerIds\":[\"" + rui + "\",\"" + ana + "\",\"" + rui + "\"]}");
+		mvc.perform(get("/api/catalog/{id}", id))
+			.andExpect(jsonPath("$.owners[*].name").value(contains("Ana", "Rui")))
+			.andExpect(jsonPath("$.owners[0].heirId").value(ana));
+
+		mvc.perform(put("/api/catalog/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Table\",\"ownerIds\":[\"" + joao + "\"]}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.owners[*].name").value(contains("João")));
+		mvc.perform(get("/api/catalog")).andExpect(jsonPath("$[?(@.id == '" + id + "')].owners[*].name").value(contains("João")));
+
+		mvc.perform(put("/api/catalog/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Table\",\"ownerIds\":[\"00000000-0000-4000-8000-000000000000\"]}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("an owner is not an heir"));
+
+		// An heir who is deleted no longer owns the item, which then belongs to the Heritage
+		mvc.perform(delete("/api/heirs/{id}", joao)).andExpect(status().isNoContent());
+		mvc.perform(get("/api/catalog/{id}", id)).andExpect(jsonPath("$.owners").isEmpty());
+
+		// Without owners, the item belongs to the Heritage
+		mvc.perform(put("/api/catalog/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Table\",\"ownerIds\":[\"" + ana + "\"]}"));
+		mvc.perform(put("/api/catalog/{id}", id).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"Table\"}"))
+			.andExpect(jsonPath("$.owners").isEmpty());
+	}
+
+	private String createHeir(String name) throws Exception {
+		String body = mvc.perform(post("/api/heirs").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"name\":\"" + name + "\"}"))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		return JsonPath.read(body, "$.id");
 	}
 
 	private String createProperty(String kind, String name) throws Exception {

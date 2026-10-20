@@ -49,13 +49,14 @@ export interface CatalogItem {
   roomId: string | null
   existent: boolean
   valueEur: number
-  owner: string
+  /** The heirs who own it, in the order of the Heirs tab; none for the Heritage */
+  owners: { heirId: string; name: string }[]
   comments: string | null
   /** Cover first */
   pictures: Picture[]
 }
 
-export type CatalogItemInput = Omit<CatalogItem, 'id' | 'pictures'>
+export type CatalogItemInput = Omit<CatalogItem, 'id' | 'pictures' | 'owners'> & { ownerIds: string[] }
 
 /** A line of the inventory, in a room or in a list of the house (other items, missing items) */
 export interface InventoryItem {

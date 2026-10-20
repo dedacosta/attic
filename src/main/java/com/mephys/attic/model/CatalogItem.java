@@ -3,21 +3,21 @@ package com.mephys.attic.model;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import org.jspecify.annotations.Nullable;
 
 /**
- * An item of the catalog. It can be in a building, and then in one of its rooms.
+ * An item of the catalog. It can be in a building, and then in one of its rooms. It belongs to the
+ * heirs of {@code ownerIds}, or to the Heritage when there are none.
  */
 public record CatalogItem(UUID id, String name, int quantity, @Nullable LocalDate date, @Nullable UUID propertyId,
-		@Nullable UUID roomId, boolean existent, BigDecimal valueEur, String owner, @Nullable String comments) {
+		@Nullable UUID roomId, boolean existent, BigDecimal valueEur, List<UUID> ownerIds, @Nullable String comments) {
 
 	public static final int DEFAULT_QUANTITY = 1;
 
 	public static final BigDecimal DEFAULT_VALUE_EUR = new BigDecimal("0.00");
-
-	public static final String DEFAULT_OWNER = "Heritage";
 
 	public CatalogItem {
 		if (name == null || name.isBlank()) {
@@ -31,7 +31,7 @@ public record CatalogItem(UUID id, String name, int quantity, @Nullable LocalDat
 		if (valueEur.signum() < 0) {
 			throw new IllegalArgumentException("valueEur must not be negative");
 		}
-		owner = (owner != null && !owner.isBlank()) ? owner : DEFAULT_OWNER;
+		ownerIds = (ownerIds != null) ? ownerIds.stream().distinct().toList() : List.of();
 		comments = (comments != null && !comments.isBlank()) ? comments.strip() : null;
 	}
 

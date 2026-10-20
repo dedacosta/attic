@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,15 +34,15 @@ public class CatalogRepository {
 
 	public CatalogItem save(CatalogItem item) {
 		jdbc.sql("""
-				INSERT INTO catalog_item (id, name, quantity, date, property_id, room_id, existent, value_cents, owner,
+				INSERT INTO catalog_item (id, name, quantity, date, property_id, room_id, existent, value_cents,
 					comments, created_at, updated_at)
-				VALUES (:id, :name, :quantity, :date, :propertyId, :roomId, :existent, :valueCents, :owner, :comments,
+				VALUES (:id, :name, :quantity, :date, :propertyId, :roomId, :existent, :valueCents, :comments,
 					strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 				ON CONFLICT (id) DO UPDATE SET
 					name = excluded.name, quantity = excluded.quantity, date = excluded.date,
 					property_id = excluded.property_id, room_id = excluded.room_id,
 					existent = excluded.existent,
-					value_cents = excluded.value_cents, owner = excluded.owner, comments = excluded.comments,
+					value_cents = excluded.value_cents, comments = excluded.comments,
 					updated_at = excluded.updated_at
 				""")
 			.param("id", item.id().toString())
@@ -51,18 +53,40 @@ public class CatalogRepository {
 			.param("roomId", (item.roomId() != null) ? item.roomId().toString() : null)
 			.param("existent", item.existent())
 			.param("valueCents", item.valueEur().movePointRight(2).longValueExact())
-			.param("owner", item.owner())
 			.param("comments", item.comments())
 			.update();
+		jdbc.sql("DELETE FROM catalog_item_owner WHERE item_id = ?").param(item.id().toString()).update();
+		for (UUID heirId : item.ownerIds()) {
+			jdbc.sql("INSERT INTO catalog_item_owner (item_id, heir_id) VALUES (?, ?)")
+				.params(item.id().toString(), heirId.toString())
+				.update();
+		}
 		return item;
 	}
 
 	public Optional<CatalogItem> findById(UUID id) {
-		return jdbc.sql("SELECT * FROM catalog_item WHERE id = ?").param(id.toString()).query(this::map).optional();
+		Map<UUID, List<UUID>> owners = owners(id);
+		return jdbc.sql("SELECT * FROM catalog_item WHERE id = ?")
+			.param(id.toString())
+			.query((rs, _) -> map(rs, owners))
+			.optional();
 	}
 
 	public List<CatalogItem> findAll() {
-		return jdbc.sql("SELECT * FROM catalog_item ORDER BY name").query(this::map).list();
+		Map<UUID, List<UUID>> owners = owners(null);
+		return jdbc.sql("SELECT * FROM catalog_item ORDER BY name").query((rs, _) -> map(rs, owners)).list();
+	}
+
+	/** The heirs who own the item, or every item if none is given, by item */
+	private Map<UUID, List<UUID>> owners(@Nullable UUID itemId) {
+		Map<UUID, List<UUID>> owners = new HashMap<>();
+		jdbc.sql("SELECT item_id, heir_id FROM catalog_item_owner WHERE :itemId IS NULL OR item_id = :itemId")
+			.param("itemId", (itemId != null) ? itemId.toString() : null)
+			.query((rs) -> {
+				owners.computeIfAbsent(UUID.fromString(rs.getString("item_id")), (_) -> new ArrayList<>())
+					.add(UUID.fromString(rs.getString("heir_id")));
+			});
+		return owners;
 	}
 
 	public boolean deleteById(UUID id) {
@@ -97,12 +121,13 @@ public class CatalogRepository {
 		pictures.reorder(itemId, pictureIds);
 	}
 
-	private CatalogItem map(ResultSet rs, int rowNum) throws SQLException {
+	private CatalogItem map(ResultSet rs, Map<UUID, List<UUID>> owners) throws SQLException {
 		String date = rs.getString("date");
-		return new CatalogItem(UUID.fromString(rs.getString("id")), rs.getString("name"), rs.getInt("quantity"),
+		UUID id = UUID.fromString(rs.getString("id"));
+		return new CatalogItem(id, rs.getString("name"), rs.getInt("quantity"),
 				(date != null) ? LocalDate.parse(date) : null, uuid(rs.getString("property_id")),
-				uuid(rs.getString("room_id")), rs.getBoolean("existent"), BigDecimal.valueOf(rs.getLong("value_cents"), 2), rs.getString("owner"),
-				rs.getString("comments"));
+				uuid(rs.getString("room_id")), rs.getBoolean("existent"), BigDecimal.valueOf(rs.getLong("value_cents"), 2),
+				owners.getOrDefault(id, List.of()), rs.getString("comments"));
 	}
 
 	private static @Nullable UUID uuid(@Nullable String id) {
