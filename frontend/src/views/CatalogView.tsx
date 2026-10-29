@@ -7,8 +7,8 @@ import PdfViewer from '../components/PdfViewer'
 import CatalogItemCard from '../components/CatalogItemCard'
 import CatalogItemDialog, { type Place } from '../components/CatalogItemDialog'
 import SearchBar from '../components/SearchBar'
-import { formatDate, normalize } from '../lib/format'
-import { ownerNames } from '../lib/export'
+import { formatDate, formatEuros, normalize } from '../lib/format'
+import { inventorySum, ownerNames } from '../lib/export'
 import { usePermissions } from '../lib/permissions'
 import { useI18n, type Messages } from '../i18n'
 import { FileIcon, PlusIcon } from '../components/icons'
@@ -207,6 +207,7 @@ export default function CatalogView() {
           {items && (
             <span className="count">
               {filtered ? t.filteredCount(visible.length, items.length) : t.itemCount(items.length)}
+              {' · '}{t.totalValue(formatEuros(inventorySum(visible), t.locale))}
             </span>
           )}
           <button type="button" className="button" onClick={() => download('pdf')} disabled={visible.length === 0}

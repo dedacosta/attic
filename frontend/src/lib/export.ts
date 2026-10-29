@@ -64,7 +64,7 @@ export function inventoryNote(rooms: InventoryRoomExport[], totalCount: number, 
 }
 
 /** Sums in cents, as 33.33 + 66.67 is not exactly 100 in floating point */
-export const inventorySum = (items: InventoryItem[]) =>
+export const inventorySum = (items: Pick<InventoryItem, 'valueEur'>[]) =>
   items.reduce((cents, item) => cents + Math.round(item.valueEur * 100), 0) / 100
 
 /** What the footer says of the heirs after the copyright. The heirs are counted without the deceased, who are still listed */
