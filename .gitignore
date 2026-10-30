@@ -34,6 +34,7 @@ build/
 
 ### SQLite data ###
 data/
+data.previous/
 
 ### Frontend ###
 frontend/node_modules/
@@ -42,3 +43,6 @@ frontend/*.tsbuildinfo
 
 ### Python ###
 __pycache__/
+
+### Deploy target ###
+deploy/deploy.conf

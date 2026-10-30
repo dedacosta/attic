@@ -1,0 +1,32 @@
+# The machine deploy.sh runs Attic on, and its settings there. Copy to deploy/deploy.conf (not in
+# git) and fill in. Every start writes them to <APPS_DIR>/attic/service/attic.env there: change them
+# here, then ./deploy/deploy.sh start.
+# Paths there are absolute (/home/pi/...): a ~ here would be your home on this computer.
+
+# Its address: an IP (192.168.1.20), a hostname (raspberrypi.local), a Tailscale name,
+# or a Host of ~/.ssh/config
+HOST=raspberrypi.local
+
+# The user to log in as there, e.g. pi; empty for your user name here or the one of ~/.ssh/config
+USER_NAME=
+
+# The SSH port; empty for 22 or the one of ~/.ssh/config
+SSH_PORT=
+
+# The port Attic listens on there, one of its own among your apps; empty for 8080
+APP_PORT=
+
+# The folder of your apps there; Attic goes in <APPS_DIR>/attic, with service/ (the releases),
+# data/ and backups/ in it. Empty for ~/apps. On a USB disk rather than the SD card, e.g.
+# /mnt/usb/apps: under /mnt or /media, the disk must be mounted. To change it later, move data/
+# and backups/ first: start says how.
+APPS_DIR=
+
+# How many daily backups to keep (empty for 30)
+BACKUP_KEEP=
+
+# How many releases to keep for going back (empty for 3)
+KEEP_RELEASES=
+
+# Where data-from-pi keeps the backups it fetches, on this computer; empty for ~/attic-backups-pi
+LOCAL_BACKUP_DIR=

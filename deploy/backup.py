@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Back up Attic into one file, attic-<date>.tar.gz: a consistent copy of the database plus the
-picture files and the sign-in log. Keeps the newest ATTIC_BACKUP_KEEP backups (default 30).
+picture files, the shared folder and the sign-in log. Keeps the newest ATTIC_BACKUP_KEEP backups (default 30).
 
-Settings come from the environment: ATTIC_DATA (the data directory with attic.db, pictures/ and logs/),
+Settings come from the environment: ATTIC_DATA (the data directory with attic.db, pictures/, folder/ and logs/),
 ATTIC_BACKUP_DIR (where backups go) and ATTIC_BACKUP_KEEP.
 """
 import datetime
@@ -43,6 +43,9 @@ with tempfile.TemporaryDirectory() as tmp:
         archive.add(snapshot, arcname='attic.db')
         if (data / 'pictures').is_dir():
             archive.add(data / 'pictures', arcname='pictures')
+        # The shared folder: documents put there by hand, shown in the app
+        if (data / 'folder').is_dir():
+            archive.add(data / 'folder', arcname='folder')
         # The sign-in log: who got into the app, and who tried
         if (data / 'logs').is_dir():
             archive.add(data / 'logs', arcname='logs')

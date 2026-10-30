@@ -1,7 +1,8 @@
 [Unit]
-Description=Back up Attic (database and pictures)
+Description=Back up Attic (database, pictures and shared folder)
 
 [Service]
 Type=oneshot
-EnvironmentFile=%h/.config/attic/attic.env
-ExecStart=/usr/bin/python3 %h/.local/share/attic/backup.py
+# @ATTIC_HOME@ is filled in by release.sh, which copies this file to ~/.config/systemd/user
+EnvironmentFile=@ATTIC_HOME@/service/attic.env
+ExecStart=/usr/bin/python3 @ATTIC_HOME@/service/backup.py

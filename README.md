@@ -82,8 +82,9 @@ forwarded headers of the local proxy.
 
 ## Running at home
 
-`deploy/` installs Attic as a systemd user service with daily backups and makes it reachable
-over HTTPS through `tailscale serve`. See [deploy/README.md](deploy/README.md).
+`deploy/deploy.sh` builds Attic and runs it on a Raspberry Pi (or any machine with Java) as a
+systemd user service with daily backups, keeping the last releases to go back to. Tailscale makes
+it reachable over HTTPS. See [deploy/README.md](deploy/README.md).
 
 ## License
 
